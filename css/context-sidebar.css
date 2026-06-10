@@ -1,0 +1,123 @@
+/* ───────────────────────────────────────────────────────────
+   context-sidebar.css — Context Sidebar (Masoret HaShas)
+
+   The sidebar is position:fixed on document.body, fully outside
+   the page sheet: it never affects page measurement, column
+   layout, or font sizing. Desktop: a panel beside the page.
+   Small screens: a bottom sheet.
+   ─────────────────────────────────────────────────────────── */
+
+#context-sidebar {
+  position: fixed;
+  left: 14px;
+  top: 64px;
+  width: min(390px, 92vw);
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+  z-index: 1200;
+  direction: rtl;
+  background: #fdf6e3;
+  color: #1c1206;
+  border: 1px solid #b9a77c;
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  font-family: 'FrankRuhl', 'Frank Ruhl Libre', serif;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+#context-sidebar[hidden] { display: none; }
+
+#context-sidebar .ctx-head {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #efe5cb;
+  border-bottom: 1px solid #b9a77c;
+  padding: 0.45rem 0.7rem;
+  font-weight: 700;
+}
+#context-sidebar.pinned .ctx-head { background: #e7d9b5; }
+#context-sidebar .ctx-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #5c4a2e;
+  padding: 2px 6px;
+}
+#context-sidebar .ctx-close:hover { color: #1c1206; }
+
+#context-sidebar .ctx-body { padding: 0.55rem 0.7rem 0.7rem; }
+#context-sidebar .ctx-row { margin-bottom: 0.25rem; }
+#context-sidebar .ctx-k {
+  font-weight: 700;
+  color: #5c4a2e;
+  margin-inline-end: 0.4rem;
+  font-size: 0.8em;
+}
+#context-sidebar .ctx-ref-en {
+  display: inline-block;
+  color: #8a7c62;
+  font-size: 0.75em;
+  margin-inline-start: 0.4rem;
+}
+
+#context-sidebar .ctx-snippet {
+  margin: 0.5rem 0;
+  padding: 0.45rem 0.6rem;
+  background: #f7efdb;
+  border: 1px solid #d8c89e;
+  border-radius: 4px;
+  text-align: justify;
+}
+#context-sidebar .ctx-muted { color: #8a7c62; font-size: 0.85em; }
+
+#context-sidebar .ctx-minidaf-ph {
+  display: block;
+  color: #b0a384;
+  font-size: 0.72em;
+  text-align: center;
+  margin-bottom: 0.4rem;
+}
+
+#context-sidebar .ctx-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+#context-sidebar .ctx-btn {
+  display: inline-block;
+  background: #2a2218;
+  color: #d4c5a0;
+  border: 1px solid #6b5f4a;
+  border-radius: 3px;
+  padding: 0.25rem 0.7rem;
+  text-decoration: none;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+#context-sidebar .ctx-btn:hover { background: #4a3d2e; }
+
+/* ── Anchor affordance (existing margin notes, no layout change) ── */
+.ctx-anchor { cursor: pointer; }
+.ctx-anchor:hover { background-color: rgba(200, 170, 110, 0.25); }
+.ctx-anchor:focus-visible {
+  outline: 2px solid #8a6d3b;
+  outline-offset: 1px;
+}
+
+/* ── Small screens: bottom sheet ───────────────────────────── */
+@media (max-width: 700px) {
+  #context-sidebar {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    max-height: 60vh;
+    border-radius: 12px 12px 0 0;
+    border-bottom: none;
+  }
+}
+
+@media print {
+  #context-sidebar { display: none !important; }
+}

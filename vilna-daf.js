@@ -1105,6 +1105,59 @@
 
     initHover(sheet);
     initZoomPan(sheet);
+
+    // Optional Context Sidebar (js/context-sidebar.js). Renders entirely
+    // outside the sheet; layout/measurement are unaffected if it's absent.
+    if (global.VilnaDafContextSidebar) {
+      try {
+        global.VilnaDafContextSidebar.attach({
+          sheet,
+          anchors: buildContextAnchors(model),
+          fetchSnippet: fetchContextSnippet,
+          appRouteFor,
+        });
+      } catch (e) { console.error('[vilna-daf] context sidebar:', e); }
+    }
+  }
+
+  // ── Context Sidebar integration (Masoret HaShas only for now) ──
+
+  function buildContextAnchors(model) {
+    const sideHe = model.side === 'a' ? 'ע״א' : 'ע״ב';
+    const cur = `${model.tractate} ${model.page}${model.side}`;
+    const curHe = `${model.tractateHe || model.tractate} ${heb(model.page)} ${sideHe}`;
+    return ((model.links || {}).mesoretHaShas || [])
+      .map((lk, i) => ({
+        id: `ctx-ms-${i}`,
+        kind: 'mesoret-hashas',
+        sourceRef: cur,
+        sourceDisplay: curHe,
+        targetRef: lk.sourceRef || '',
+        label: 'מסורת הש״ס',
+        displayText: stripText(lk.sourceHeRef || lk.sourceRef || ''),
+        source: 'mesoret-hashas',
+        confidence: 1,
+        raw: lk,
+        domId: `note-mesoretHaShas-${i}`,
+      }))
+      .filter(a => a.targetRef);
+  }
+
+  /** Fetch a plain-text snippet of a referenced source (Hebrew, stripped). */
+  async function fetchContextSnippet(targetRef) {
+    const segs = heSegments(await getText(targetRef));
+    const flat = (Array.isArray(segs) ? segs : [segs]).flat(3).filter(Boolean);
+    const text = flat.map(s => stripText(String(s).replace(/<[^>]+>/g, ' ')))
+      .join(' ').replace(/\s+/g, ' ').trim();
+    return text || null;
+  }
+
+  /** Map a Sefaria Bavli ref to this app's route, if it has one. */
+  function appRouteFor(targetRef) {
+    const m = /^(.+?)\s+(\d+)([ab])\b/.exec(targetRef || '');
+    if (!m) return null;
+    const en = Object.keys(SEFARIA_MAP).find(k => SEFARIA_MAP[k] === m[1]);
+    return en ? { tractate: en, page: +m[2], side: m[3] } : null;
   }
 
   // ═════════════════════════ PUBLIC API ═════════════════════════
