@@ -1,0 +1,9 @@
+Fonts in this directory are licensed under the SIL Open Font License 1.1
+(https://openfontlicense.org/) and are served by Google Fonts:
+
+- Frank Ruhl Libre (variable, wght 300-900) — Copyright the Frank Ruhl Libre
+  Project Authors (https://github.com/yanek/frank-ruhl-libre)
+- Noto Rashi Hebrew (variable, wght 100-900) — Copyright the Noto Project
+  Authors (https://github.com/notofonts/hebrew)
+
+Both families may be freely redistributed under the OFL.

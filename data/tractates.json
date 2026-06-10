@@ -1,0 +1,298 @@
+[
+ {
+  "name_en": "Berachot",
+  "name_he": "ברכות",
+  "sefaria_name": "Berakhot",
+  "last_page": 64,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Shabbat",
+  "name_he": "שבת",
+  "sefaria_name": "Shabbat",
+  "last_page": 157,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Eiruvin",
+  "name_he": "עירובין",
+  "sefaria_name": "Eiruvin",
+  "last_page": 105,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Pesachim",
+  "name_he": "פסחים",
+  "sefaria_name": "Pesachim",
+  "last_page": 121,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Shekalim",
+  "name_he": "שקלים",
+  "sefaria_name": "Shekalim",
+  "last_page": 22,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Yoma",
+  "name_he": "יומא",
+  "sefaria_name": "Yoma",
+  "last_page": 88,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Sukkah",
+  "name_he": "סוכה",
+  "sefaria_name": "Sukkah",
+  "last_page": 56,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Beitzah",
+  "name_he": "ביצה",
+  "sefaria_name": "Beitzah",
+  "last_page": 40,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Rosh Hashanah",
+  "name_he": "ראש השנה",
+  "sefaria_name": "Rosh Hashanah",
+  "last_page": 35,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Taanit",
+  "name_he": "תענית",
+  "sefaria_name": "Taanit",
+  "last_page": 31,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Megillah",
+  "name_he": "מגילה",
+  "sefaria_name": "Megillah",
+  "last_page": 32,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Moed Katan",
+  "name_he": "מועד קטן",
+  "sefaria_name": "Moed Katan",
+  "last_page": 29,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Chagigah",
+  "name_he": "חגיגה",
+  "sefaria_name": "Chagigah",
+  "last_page": 27,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Yevamot",
+  "name_he": "יבמות",
+  "sefaria_name": "Yevamot",
+  "last_page": 122,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Ketubot",
+  "name_he": "כתובות",
+  "sefaria_name": "Ketubot",
+  "last_page": 112,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Nedarim",
+  "name_he": "נדרים",
+  "sefaria_name": "Nedarim",
+  "last_page": 91,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Nazir",
+  "name_he": "נזיר",
+  "sefaria_name": "Nazir",
+  "last_page": 66,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Sotah",
+  "name_he": "סוטה",
+  "sefaria_name": "Sotah",
+  "last_page": 49,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Gittin",
+  "name_he": "גיטין",
+  "sefaria_name": "Gittin",
+  "last_page": 90,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Kiddushin",
+  "name_he": "קידושין",
+  "sefaria_name": "Kiddushin",
+  "last_page": 82,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Bava Kamma",
+  "name_he": "בבא קמא",
+  "sefaria_name": "Bava Kamma",
+  "last_page": 119,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Bava Metzia",
+  "name_he": "בבא מציעא",
+  "sefaria_name": "Bava Metzia",
+  "last_page": 119,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Bava Batra",
+  "name_he": "בבא בתרא",
+  "sefaria_name": "Bava Batra",
+  "last_page": 176,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Sanhedrin",
+  "name_he": "סנהדרין",
+  "sefaria_name": "Sanhedrin",
+  "last_page": 113,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Makkot",
+  "name_he": "מכות",
+  "sefaria_name": "Makkot",
+  "last_page": 24,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Shevuot",
+  "name_he": "שבועות",
+  "sefaria_name": "Shevuot",
+  "last_page": 49,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Avodah Zarah",
+  "name_he": "עבודה זרה",
+  "sefaria_name": "Avodah Zarah",
+  "last_page": 76,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Horayot",
+  "name_he": "הוריות",
+  "sefaria_name": "Horayot",
+  "last_page": 14,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Zevachim",
+  "name_he": "זבחים",
+  "sefaria_name": "Zevachim",
+  "last_page": 120,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Menachot",
+  "name_he": "מנחות",
+  "sefaria_name": "Menachot",
+  "last_page": 110,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Chullin",
+  "name_he": "חולין",
+  "sefaria_name": "Chullin",
+  "last_page": 142,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Bechorot",
+  "name_he": "בכורות",
+  "sefaria_name": "Bechorot",
+  "last_page": 61,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Arachin",
+  "name_he": "ערכין",
+  "sefaria_name": "Arachin",
+  "last_page": 34,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Temurah",
+  "name_he": "תמורה",
+  "sefaria_name": "Temurah",
+  "last_page": 34,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Keritot",
+  "name_he": "כריתות",
+  "sefaria_name": "Keritot",
+  "last_page": 28,
+  "ends_on_b": true,
+  "first_page": 2
+ },
+ {
+  "name_en": "Meilah",
+  "name_he": "מעילה",
+  "sefaria_name": "Meilah",
+  "last_page": 22,
+  "ends_on_b": false,
+  "first_page": 2
+ },
+ {
+  "name_en": "Niddah",
+  "name_he": "נידה",
+  "sefaria_name": "Niddah",
+  "last_page": 73,
+  "ends_on_b": false,
+  "first_page": 2
+ }
+]

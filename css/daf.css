@@ -1,0 +1,273 @@
+/* ───────────────────────────────────────────────────────────
+   daf.css — Vilna Tzurat HaDaf
+
+   Macro frame: header / body / bottom strip.
+   Body: real grid columns [margin 9%] [core] [margin 9%].
+   CORE: three absolutely-positioned stream overlays; inside each,
+   exactly two full-height floats whose shape-outside polygons carve
+   the stream's staircase. The text itself has no float, no width,
+   no overflow:hidden.
+   ─────────────────────────────────────────────────────────── */
+
+/* ── Fonts (variable, committed in fonts/ — SIL OFL) ─────── */
+@font-face {
+  font-family: 'FrankRuhl';
+  src: url('../fonts/FrankRuhlLibre-hebrew.woff2') format('woff2');
+  font-weight: 300 900; font-style: normal; font-display: block;
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'FrankRuhl';
+  src: url('../fonts/FrankRuhlLibre-latin.woff2') format('woff2');
+  font-weight: 300 900; font-style: normal; font-display: block;
+}
+@font-face {
+  font-family: 'RashiScript';
+  src: url('../fonts/NotoRashiHebrew-hebrew.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: block;
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'RashiScript';
+  src: url('../fonts/NotoRashiHebrew-latin.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: block;
+}
+
+/* ── Custom properties ──────────────────────────────────── */
+:root {
+  --paper: #f3ead6;
+  --ink: #1c1206;
+  --rule: #b9a77c;
+  --page-max-w: 800px;
+  --page-pad: 18px;
+
+  --font-gemara: 'FrankRuhl', 'Frank Ruhl Libre', serif;
+  --font-rashi: 'RashiScript', 'Noto Rashi Hebrew', serif;
+}
+
+/* The page sheet carries the global fill scale --s (set by JS). */
+.page-sheet {
+  --s: 1;
+  --fs-gem: calc(16px * var(--s));
+  --fs-comm: calc(var(--fs-gem) * 0.80);
+  --fs-margin: calc(var(--fs-gem) * 0.55);
+  --fs-header: calc(var(--fs-gem) * 0.90);
+  --lh-gem: 1.5;
+  --lh-comm: 1.35;
+  --lh-margin: 1.2;
+}
+
+/* ── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  font-family: var(--font-gemara);
+  background: #d8cfbc;
+  color: var(--ink);
+  direction: rtl;
+}
+
+/* ── Navigation bar ─────────────────────────────────────── */
+.nav-bar {
+  background: #1a150d; color: #d4c5a0;
+  padding: 0.4rem 1rem;
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.6rem; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 1000;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+}
+.nav-bar label { font-size: 0.75rem; font-weight: bold; }
+.nav-bar select, .nav-bar button {
+  background: #2a2218; color: #d4c5a0;
+  border: 1px solid #6b5f4a; border-radius: 3px;
+  padding: 0.25rem 0.5rem; font-size: 0.8rem;
+  font-family: var(--font-gemara); cursor: pointer;
+}
+.nav-bar button:hover { background: #4a3d2e; }
+.nav-bar button:disabled { opacity: 0.35; cursor: not-allowed; }
+.nav-bar .page-indicator { font-weight: bold; font-size: 0.95rem; }
+.nav-bar select { min-width: 110px; direction: rtl; }
+
+/* ── Page sheet (fixed aspect 0.707, height set by JS) ──── */
+.page-sheet {
+  width: min(var(--page-max-w), 97vw);
+  margin: 0.5rem auto;
+  padding: var(--page-pad);
+  background: var(--paper);
+  box-shadow: 0 3px 18px rgba(0,0,0,0.28);
+  border: 1px solid var(--rule);
+  position: relative;
+}
+
+/* ── Header: daf at the outer corner, perek trio centered ─ */
+.daf-header {
+  position: relative;
+  text-align: center;
+  font-size: var(--fs-header);
+  line-height: 1.1;
+  font-weight: 700;
+  padding-bottom: calc(0.45 * var(--fs-header));
+  margin-bottom: calc(0.5 * var(--fs-header));
+}
+.daf-header .hdr-daf { position: absolute; top: 0; white-space: nowrap; }
+.daf-header .hdr-center {
+  display: inline-flex;
+  gap: calc(1.6 * var(--fs-header));
+  justify-content: center;
+}
+
+/* ── Body: real grid columns (RTL: first column = right) ── */
+.sheet-body {
+  display: grid;
+  grid-template-columns: 9% 1fr 9%;
+  column-gap: calc(0.55 * var(--fs-gem));
+}
+.core-wrap { min-width: 0; }
+.core { position: relative; width: 100%; }
+
+/* ── Streams: absolute overlays; text flows around carves ─ */
+.stream {
+  position: absolute;
+  left: 0; right: 0;
+  text-align: justify;
+  text-align-last: right;
+  pointer-events: none; /* containers overlap; only text reacts */
+}
+.stream .gseg, .stream .comment, .stream sup.ref-key, .stream .first-word {
+  pointer-events: auto;
+}
+.carve { pointer-events: none; }
+
+.stream-gemara {
+  font-family: var(--font-gemara);
+  font-size: var(--fs-gem);
+  line-height: var(--lh-gem);
+}
+.stream-rashi, .stream-tosafot {
+  font-family: var(--font-rashi);
+  font-size: var(--fs-comm);
+  line-height: var(--lh-comm);
+}
+
+/* Dibbur hamatchil */
+.stream-rashi b, .stream-tosafot b,
+.stream-rashi strong, .stream-tosafot strong {
+  font-family: var(--font-gemara);
+  font-weight: 700;
+}
+/* Page-opening DH in square caps, Vilna style */
+.stream-rashi .comment:first-of-type > b:first-child,
+.stream-tosafot .comment:first-of-type > b:first-child {
+  font-size: 1.45em;
+}
+
+.stream-gemara big { font-size: 1.3em; font-weight: 700; }
+
+/* Boxed first word at a chapter start — positioned by JS; its footprint
+   is part of the Gemara polygon. */
+.first-word {
+  position: absolute;
+  font-size: calc(var(--fs-gem) * 2.3);
+  font-weight: 700;
+  line-height: 1.05;
+  border: 2px solid var(--ink);
+  padding: 1px 7px;
+}
+
+/* Letter-keys inline in the Gemara */
+sup.ref-key {
+  font-size: 0.55em;
+  font-weight: 700;
+  line-height: 0;
+  color: #444;
+  margin-inline-end: 1px;
+}
+sup.ref-key.key-em { color: #5c3d2e; }
+sup.ref-key.key-ms { color: #2e5c3d; }
+sup.ref-key.key-to { color: #3d2e5c; }
+
+/* ── Margin columns: in-flow tracks, content clipped to core ── */
+.daf-margin { position: relative; min-width: 0; }
+.daf-margin .marg-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* Blocks share the column height proportionally to their content, so a
+     long Ein Mishpat can never push Torah Or off the sheet entirely. */
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-margin);
+  line-height: var(--lh-margin);
+  font-family: var(--font-rashi);
+  color: #2a2014;
+  text-align: justify;
+  text-align-last: auto;
+}
+.daf-margin .marg-block { min-height: 2em; overflow: hidden; flex: 0 1 auto; }
+.marg-title {
+  display: block;
+  font-family: var(--font-gemara);
+  font-weight: 700;
+  font-size: 0.85em;
+  text-align: center;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 2px;
+}
+.marg-block { margin-bottom: calc(0.6 * var(--fs-margin)); }
+.marg-note { display: block; margin-bottom: 1px; }
+.marg-note .key { font-weight: 700; font-family: var(--font-gemara); }
+/* Torah Or: full verse text, then the source ref */
+.marg-note .verse-text { font-family: var(--font-gemara); }
+.marg-note .verse-text + .note-ref { color: #555; font-size: 0.9em; }
+.marg-note .verse-text + .note-ref::before { content: '('; }
+.marg-note .verse-text + .note-ref::after { content: ')'; }
+
+/* ── Bottom strip: Rabbeinu Chananel / Rav Nissim Gaon ──── */
+.daf-bottom-strip {
+  margin-top: calc(0.5 * var(--fs-gem));
+  padding-top: calc(0.3 * var(--fs-gem));
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-rashi);
+  font-size: var(--fs-margin);
+  line-height: var(--lh-margin);
+  text-align: justify;
+}
+.daf-bottom-strip .strip-title {
+  font-family: var(--font-gemara);
+  font-weight: 700;
+}
+.daf-bottom-strip .strip-block { margin-bottom: 2px; }
+
+/* ── Hover highlighting ─────────────────────────────────── */
+.comment { cursor: pointer; }
+.hl-seg { background-color: rgba(200,170,110,0.25); transition: background-color 0.1s; }
+.hl-flash { animation: hl-flash 1.5s ease-out; }
+@keyframes hl-flash {
+  0% { background-color: rgba(220,180,100,0.4); }
+  100% { background-color: transparent; }
+}
+
+/* ── States ─────────────────────────────────────────────── */
+.empty-state { text-align: center; padding: 4rem 2rem; font-size: 1.2rem; }
+.empty-state .icon { font-size: 3rem; display: block; margin-bottom: 0.8rem; }
+.loading { text-align: center; padding: 3rem; font-size: 1.1rem; }
+.loading .spinner {
+  display: inline-block; width: 1.5rem; height: 1.5rem;
+  border: 3px solid #ccc; border-top-color: var(--ink);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+  margin-left: 0.5rem; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-state {
+  text-align: center; padding: 2rem; color: #8b2500;
+  background: #fef0ed; border: 1px solid #e8b4a0; border-radius: 6px; margin: 1.5rem;
+}
+
+/* ── Print ──────────────────────────────────────────────── */
+@media print {
+  body { background: white; }
+  .nav-bar { display: none !important; }
+  .page-sheet { box-shadow: none; margin: 0; }
+}

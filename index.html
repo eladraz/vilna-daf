@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>תלמוד בבלי — צורת הדף</title>
+  <link rel="stylesheet" href="css/daf.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- Navigation Bar                                         -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <nav class="nav-bar">
+    <span class="page-indicator" id="page-indicator">תלמוד בבלי</span>
+
+    <label for="tractate-select">מסכת:</label>
+    <select id="tractate-select">
+      <option value="">— בחר מסכת —</option>
+    </select>
+
+    <label for="page-select">דף:</label>
+    <select id="page-select">
+      <option value="">— בחר דף —</option>
+    </select>
+
+    <div class="nav-buttons">
+      <button id="btn-prev" disabled title="דף קודם">◄ הקודם</button>
+      <button id="btn-next" disabled title="דף הבא">הבא ►</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- Daf Content Area                                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <main id="daf-content"></main>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- Library + App                                          -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <script src="vilna-daf.js"></script>
+  <script>
+    // ── Bootstrap ────────────────────────────────────────────
+    (async () => {
+      const renderer = new VilnaDaf({ container: '#daf-content' });
+      const tractates = await renderer.getTractates();
+
+      // ── Populate navigation ────────────────────────────────
+      const tractateSel = document.getElementById('tractate-select');
+      const pageSel = document.getElementById('page-select');
+      const prevBtn = document.getElementById('btn-prev');
+      const nextBtn = document.getElementById('btn-next');
+      const indicator = document.getElementById('page-indicator');
+
+      let currentTractate = null, currentInfo = null;
+      let currentPage = 2, currentSide = 'a';
+
+      for (const t of tractates) {
+        const opt = document.createElement('option');
+        opt.value = t.name_en;
+        opt.textContent = `${t.name_he} — ${t.name_en}`;
+        tractateSel.appendChild(opt);
+      }
+
+      function populatePages(info) {
+        pageSel.innerHTML = '';
+        if (!info) return;
+        for (let p = 2; p <= info.last_page; p++) {
+          pageSel.appendChild(pageOption(p, 'a'));
+          if (p < info.last_page || info.ends_on_b) pageSel.appendChild(pageOption(p, 'b'));
+        }
+      }
+      function pageOption(p, s) {
+        const o = document.createElement('option');
+        o.value = `${p}-${s}`;
+        o.textContent = `${VilnaDaf.heb(p)} ${s === 'a' ? 'ע״א' : 'ע״ב'}`;
+        return o;
+      }
+      function updateButtons() {
+        prevBtn.disabled = (currentPage === 2 && currentSide === 'a');
+        const last = currentInfo?.last_page || 0;
+        const eb = currentInfo?.ends_on_b || false;
+        nextBtn.disabled = eb ? (currentPage === last && currentSide === 'b') : (currentPage === last && currentSide === 'a');
+      }
+
+      async function go(tractate, page, side) {
+        currentTractate = tractate; currentPage = page; currentSide = side;
+        currentInfo = tractates.find(t => t.name_en === tractate);
+        populatePages(currentInfo);
+        pageSel.value = `${page}-${side}`;
+        tractateSel.value = tractate;
+        updateButtons();
+        try {
+          const model = await renderer.load(tractate, page, side);
+          indicator.textContent = `${model.tractateHe || tractate} ${VilnaDaf.heb(page)} ${side === 'a' ? 'ע״א' : 'ע״ב'}`;
+          // Update URL without reload
+          const url = new URL(location);
+          url.searchParams.set('tractate', tractate);
+          url.searchParams.set('page', page);
+          url.searchParams.set('side', side);
+          history.replaceState(null, '', url);
+        } catch(e) { console.error(e); }
+      }
+
+      tractateSel.addEventListener('change', () => {
+        const v = tractateSel.value;
+        if (!v) return;
+        const info = tractates.find(t => t.name_en === v);
+        go(v, info.first_page || 2, 'a');
+      });
+      pageSel.addEventListener('change', () => {
+        const [p, s] = pageSel.value.split('-');
+        go(currentTractate, parseInt(p), s);
+      });
+      prevBtn.addEventListener('click', () => {
+        if (currentSide === 'b') { currentSide = 'a'; }
+        else if (currentPage > 2) { currentPage--; currentSide = 'b'; }
+        else return;
+        go(currentTractate, currentPage, currentSide);
+      });
+      nextBtn.addEventListener('click', () => {
+        const last = currentInfo?.last_page || 0;
+        const eb = currentInfo?.ends_on_b || false;
+        if (currentSide === 'a') {
+          if (currentPage < last || eb) currentSide = 'b'; else return;
+        } else { currentPage++; currentSide = 'a'; }
+        go(currentTractate, currentPage, currentSide);
+      });
+
+      // Keyboard: left=next, right=prev
+      document.addEventListener('keydown', e => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+        if (e.key === 'ArrowLeft') { e.preventDefault(); nextBtn.click(); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); prevBtn.click(); }
+      });
+
+      // ── Load from URL or default ───────────────────────────
+      const params = new URLSearchParams(location.search);
+      const startTractate = params.get('tractate') || params.get('masechet') || params.get('m');
+      if (startTractate) {
+        const startPage = parseInt(params.get('page') || params.get('daf') || params.get('d') || '2');
+        const startSide = (params.get('side') || params.get('amud') || params.get('s') || 'a').toLowerCase();
+        await go(startTractate, startPage, startSide);
+      } else {
+        populatePages(tractates.find(t => t.name_en === 'Berachot'));
+      }
+    })();
+  </script>
+</body>
+</html>
