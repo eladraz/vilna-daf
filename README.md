@@ -42,6 +42,58 @@ The renderer is a self-contained library (`vilna-daf.js`, 22 KB, zero dependenci
 </script>
 ```
 
+### Starting Vilna Daf with arguments
+
+Everything the settings menu (`…`) does is also available programmatically. Pass a
+`settings` object to the constructor (all keys optional — omitted keys keep the classic
+Vilna defaults), or change settings later with `updateSettings`, which reconstructs the
+current page around the new selection:
+
+```html
+<link rel="stylesheet" href="css/daf.css">
+<script src="vilna-daf.js"></script>
+<script>
+  const renderer = new VilnaDaf({
+    container: '#daf-content',
+    settings: {
+      edition: 'vocalized',        // center text: 'aramaic' (default) | 'vocalized'
+                                   //   | 'wikisource' | 'english'
+      inner: 'rashi',              // binding-side wrap column (see catalog below)
+      outer: 'steinsaltz',         // page-edge wrap column
+      lang: 'he',                  // commentary language: 'he' | 'en'
+      extras: ['gilyonHaShas', 'rabbeinuChananel', 'steinsaltz'],
+                                   // extra commentaries below the core / in margins
+      commFont: 'frank',           // commentary font: 'rashi' (default) | 'frank'
+                                   //   | any CSS font-family, e.g. 'David Libre'
+      gemaraFont: 'frank',         // center-text font: 'frank' (default) | 'rashi'
+                                   //   | any CSS font-family
+      fontScale: 1.15,             // multiply all font sizes (0.7–1.5, default 1)
+    },
+  });
+  await renderer.load('Berachot', 2, 'a');
+
+  // Later — page re-renders around the change ('extras' replaces the whole array):
+  await renderer.updateSettings({ edition: 'aramaic', fontScale: 1 });
+</script>
+```
+
+The valid ids come from the exposed catalogs:
+
+| Catalog | Contents |
+|---------|----------|
+| `VilnaDaf.EDITIONS` | The four center-text editions and their Sefaria version names |
+| `VilnaDaf.WRAP_COMMENTARIES` | Texts a wrap column can hold (Rashi, Tosafot, Rashbam, Ran, Rif, Rosh, Rabbeinu Chananel/Gershom, Ktav Yad Rashi, the Tosafot family, Steinsaltz, …) — each `{id, he, ref}` |
+| `VilnaDaf.EXTRA_COMMENTARIES` | The toggleable extra commentaries, grouped `rishonim` / `acharonim` / `modern` |
+| `VilnaDaf.DEFAULT_SETTINGS` | The shipped defaults (the classic Vilna page) |
+
+Notes: a selected source that does not exist for the current daf is silently omitted
+(nothing is ever fabricated); `fontScale` enlarges the text at the expense of the fixed
+sheet aspect — dense pages render longer rather than clipping; custom font families must
+be available in the browser (installed locally or loaded via your own `@font-face`).
+
+The bundled `index.html` persists the same settings object to `localStorage`
+(key `vilnaDafSettings`) and passes it to this constructor on startup.
+
 ### API
 
 #### `new VilnaDaf(opts)`
@@ -49,6 +101,12 @@ The renderer is a self-contained library (`vilna-daf.js`, 22 KB, zero dependenci
 | Option | Type | Description |
 |--------|------|-------------|
 | `container` | `string \| HTMLElement` | CSS selector or DOM element to render into |
+| `settings` | `object` | Source/typography selection (see "Starting Vilna Daf with arguments") |
+
+#### `await renderer.updateSettings(patch)`
+
+Merge a settings patch (per key; `extras` replaces the whole array) and re-render the
+current page around it.
 
 #### `await renderer.load(tractate, page, side)`
 
@@ -145,6 +203,24 @@ the first-word box). Only **end positions** are computed; starts are fixed.
 - **Text selection**: Native selection works — no per-word span wrapping.
 - **Offline-first**: Pre-fetch data as JSON to `data/{Tractate}/{page}{side}.json`.
 - **Generalized**: Same code renders any daf. Zero per-daf tuning.
+- **Source selection** (the `…` menu): the page reconstructs around the sources you pick —
+  - Center text edition: Davidson Aramaic (default), Davidson Vocalized (with nikud),
+    Wikisource Talmud Bavli, or Davidson English.
+  - The two wrap columns can hold any per-daf commentary (Rashi, Tosafot, Rashbam, Ran,
+    Rif, Rosh, Rabbeinu Chananel/Gershom, Ktav Yad Rashi, the Tosafot family,
+    Steinsaltz, and more).
+  - Typography: commentary font switchable from Rashi script to Frank Ruhl (easier to
+    read) or any custom CSS font family; same for the center text; global font-size
+    slider (70%–150%).
+  - Extra commentaries toggle on/off, grouped Rishonim / Acharonim / modern (including
+    **Steinsaltz**), rendered below the core or in the margins; Hebrew/English preference
+    applies across commentaries. A source that doesn't exist for the current daf is
+    silently omitted. Selections persist in `localStorage`; defaults reproduce the
+    classic Vilna page.
+
+  Programmatic use: `new VilnaDaf({ container, settings })` and
+  `renderer.updateSettings(patch)`; catalogs are exposed as `VilnaDaf.EDITIONS`,
+  `VilnaDaf.WRAP_COMMENTARIES`, `VilnaDaf.EXTRA_COMMENTARIES`, `VilnaDaf.DEFAULT_SETTINGS`.
 
 ## Project Structure
 

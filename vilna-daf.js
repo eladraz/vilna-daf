@@ -43,6 +43,121 @@
     Meilah: 'Meilah', Niddah: 'Niddah',
   };
 
+  // ── Source catalogs (Settings feature) ─────────────────────────
+  // The page reconstructs around whatever the user selects here; the
+  // shipped defaults reproduce the classic Vilna page exactly.
+
+  /** Editions of the main (center) text. `strip` = apply the Vilna
+   *  diacritics/punctuation strip; `dir` = text direction of the stream. */
+  const EDITIONS = {
+    vocalized: { he: 'ארמית מנוקדת', version: 'hebrew|William Davidson Edition - Vocalized Aramaic', strip: false, dir: 'rtl' },
+    aramaic: { he: 'ארמית ללא ניקוד', version: 'hebrew|William Davidson Edition - Aramaic', strip: true, dir: 'rtl' },
+    wikisource: { he: 'ויקיטקסט תלמוד בבלי', version: 'hebrew|Wikisource Talmud Bavli', strip: true, dir: 'rtl' },
+    english: { he: 'English — William Davidson', version: 'english|William Davidson Edition - English', strip: false, dir: 'ltr' },
+  };
+
+  const refOn = name => m => `${name} on ${m}`;
+  const refFixed = ref => () => ref;
+
+  /** Texts that can occupy the two wrap columns (inner/outer). */
+  const WRAP_COMMENTARIES = [
+    { id: 'rashi', he: 'רש״י', ref: refOn('Rashi') },
+    { id: 'tosafot', he: 'תוספות', ref: refOn('Tosafot') },
+    { id: 'rashbam', he: 'רשב״ם', ref: refOn('Rashbam') },
+    { id: 'ran', he: 'ר״ן', ref: refOn('Ran') },
+    { id: 'rif', he: 'רי״ף', ref: m => `Rif ${m}` },
+    { id: 'rosh', he: 'רא״ש', ref: refOn('Rosh') },
+    { id: 'rabbeinuChananel', he: 'רבינו חננאל', ref: refOn('Rabbeinu Chananel') },
+    { id: 'rabbeinuGershom', he: 'רבינו גרשום', ref: refOn('Rabbeinu Gershom') },
+    { id: 'mefaresh', he: 'מפרש (תמיד)', ref: refFixed('Mefaresh on Tamid') },
+    { id: 'ktavYadRashi', he: 'כתב יד רש״י', ref: refOn('Ktav Yad Rashi') },
+    { id: 'tosafotYeshanim', he: 'תוספות ישנים', ref: refOn('Tosafot Yeshanim') },
+    { id: 'tosafotRid', he: 'תוספות רי״ד', ref: refOn('Tosafot Rid') },
+    { id: 'tosafotShantz', he: 'תוספות שאנץ', ref: refOn('Tosafot Shantz') },
+    { id: 'tosafotHaRosh', he: 'תוספות הרא״ש', ref: refOn('Tosafot HaRosh') },
+    { id: 'tosafotRiHaZaken', he: 'תוספות ר״י הזקן', ref: refOn('Tosafot Ri HaZaken') },
+    { id: 'tosafotChadMikamei', he: 'תוספות חד מקמאי (יבמות)', ref: refFixed('Tosafot Chad Mikamei on Yevamot') },
+    { id: 'piskeiTosafot', he: 'פסקי תוספות', ref: refOn('Piskei Tosafot') },
+    { id: 'steinsaltz', he: 'שטיינזלץ', ref: refOn('Steinsaltz') },
+  ];
+
+  /** Additional commentaries, toggled on/off. `slot:'margin'` renders in the
+   *  inner margin; everything else in the strip below the core. A commentary
+   *  that does not exist for the current daf is silently omitted. */
+  const EXTRA_COMMENTARIES = [
+    // ── ראשונים ──
+    { id: 'rabbeinuChananel', he: 'רבינו חננאל', ref: refOn('Rabbeinu Chananel'), group: 'rishonim' },
+    { id: 'ravNissimGaon', he: 'רב נסים גאון', ref: refOn('Rav Nissim Gaon'), group: 'rishonim' },
+    { id: 'chiddusheiRamban', he: 'חידושי הרמב״ן', ref: refOn('Chiddushei Ramban'), group: 'rishonim' },
+    { id: 'rashba', he: 'רשב״א', ref: refOn('Rashba'), group: 'rishonim' },
+    { id: 'ritva', he: 'ריטב״א', ref: refOn('Ritva'), group: 'rishonim' },
+    { id: 'meiri', he: 'מאירי', ref: refOn('Meiri'), group: 'rishonim' },
+    { id: 'yadRamah', he: 'יד רמ״ה', ref: refOn('Yad Ramah'), group: 'rishonim' },
+    { id: 'riMigash', he: 'ר״י מיגאש', ref: refOn('Ri Migash'), group: 'rishonim' },
+    { id: 'commentaryRosh', he: 'פירוש הרא״ש', ref: refOn('Commentary of the Rosh'), group: 'rishonim' },
+    { id: 'mordechai', he: 'מרדכי (בבא בתרא)', ref: refFixed('Mordechai on Bava Batra'), group: 'rishonim' },
+    { id: 'chiddusheiRaah', he: 'חידושי הרא״ה (כתובות)', ref: refFixed("Chiddushei HaRa'ah on Ketubot"), group: 'rishonim' },
+    { id: 'chiddusheiRambam', he: 'חידושי הרמב״ם (ר״ה)', ref: refFixed('Chiddushei HaRambam on Rosh Hashanah'), group: 'rishonim' },
+    // ── אחרונים ──
+    { id: 'hagahotHaBach', he: 'הגהות הב״ח', ref: refOn('Hagahot HaBach'), group: 'acharonim', slot: 'margin' },
+    { id: 'gilyonHaShas', he: 'גליון הש״ס', ref: refOn('Gilyon HaShas'), group: 'acharonim', slot: 'margin' },
+    { id: 'arukhLaNer', he: 'ערוך לנר', ref: refOn('Arukh LaNer'), group: 'acharonim' },
+    { id: 'benYehoyada', he: 'בן יהוידע', ref: refOn('Ben Yehoyada'), group: 'acharonim' },
+    { id: 'benayahu', he: 'בניהו', ref: refOn('Benayahu'), group: 'acharonim' },
+    { id: 'akivaEiger', he: 'חידושי רבי עקיבא איגר', ref: refOn('Chiddushei Rabbi Akiva Eiger'), group: 'acharonim' },
+    { id: 'chidusheiAgadot', he: 'חידושי אגדות (מהר״ל)', ref: refOn('Chidushei Agadot'), group: 'acharonim' },
+    { id: 'chidusheiHalachot', he: 'חידושי הלכות (מהרש״א)', ref: refOn('Chidushei Halachot'), group: 'acharonim' },
+    { id: 'chatamSofer', he: 'חידושי חתם סופר', ref: refOn('Chidushei Chatam Sofer'), group: 'acharonim' },
+    { id: 'chokhmatShlomo', he: 'חכמת שלמה', ref: refOn('Chokhmat Shlomo'), group: 'acharonim' },
+    { id: 'einAyah', he: 'עין איה', ref: refOn('Ein Ayah'), group: 'acharonim' },
+    { id: 'haflaah', he: 'הפלאה (כתובות)', ref: refFixed('Haflaah on Ketubot'), group: 'acharonim' },
+    { id: 'yaavetz', he: 'הגהות יעב״ץ', ref: refOn("Haggahot Ya'avetz"), group: 'acharonim' },
+    { id: 'maharam', he: 'מהר״ם', ref: refOn('Maharam'), group: 'acharonim' },
+    { id: 'maharamSchiff', he: 'מהר״ם שיף', ref: refOn('Maharam Schiff'), group: 'acharonim' },
+    { id: 'maritHaAyin', he: 'מראית העין', ref: refOn('Marit HaAyin'), group: 'acharonim' },
+    { id: 'peneiYehoshua', he: 'פני יהושע', ref: refOn('Penei Yehoshua'), group: 'acharonim' },
+    { id: 'petachEinayim', he: 'פתח עינים', ref: refOn('Petach Einayim'), group: 'acharonim' },
+    { id: 'rashash', he: 'רש״ש', ref: refOn('Rashash'), group: 'acharonim' },
+    { id: 'shaareiToratBavel', he: 'שערי תורת בבל', ref: refOn("Sha'arei Torat Bavel"), group: 'acharonim' },
+    { id: 'shitaMekubetzet', he: 'שיטה מקובצת', ref: refOn('Shita Mekubetzet'), group: 'acharonim' },
+    { id: 'tzlach', he: 'צל״ח', ref: refOn('Tziyyun LeNefesh Chayyah'), group: 'acharonim' },
+    { id: 'beerSheva', he: 'באר שבע', ref: refOn("Be'er Sheva"), group: 'acharonim' },
+    { id: 'chiddusheiHaRim', he: 'חידושי הרי״ם', ref: refOn('Chiddushei HaRim'), group: 'acharonim' },
+    { id: 'dorRevii', he: 'דור רביעי (חולין)', ref: refFixed("Dor Revi'i on Chullin"), group: 'acharonim' },
+    { id: 'gevuratAri', he: 'גבורת ארי', ref: refOn('Gevurat Ari'), group: 'acharonim' },
+    // ── בני ימינו ──
+    { id: 'steinsaltz', he: 'שטיינזלץ', ref: refOn('Steinsaltz'), group: 'modern' },
+    { id: 'dafShevui', he: 'דף שבועי', ref: m => `Daf Shevui to ${m}`, group: 'modern' },
+    { id: 'reshimotShiurim', he: 'רשימות שיעורים', ref: refOn('Reshimot Shiurim'), group: 'modern' },
+    { id: 'beurReuven', he: 'באור ראובן (ב״ק)', ref: refFixed('Beur Reuven on Bava Kamma'), group: 'modern' },
+    { id: 'ahevukha', he: 'אהבוך עד מות', ref: refOn('Ahevukha Ad Mavet'), group: 'modern' },
+    { id: 'rereadingRabbis', he: 'Rereading the Rabbis', ref: refOn("Rereading the Rabbis; A Woman's Voice"), group: 'modern' },
+  ];
+
+  const WRAP_BY_ID = Object.fromEntries(WRAP_COMMENTARIES.map(c => [c.id, c]));
+  const EXTRA_BY_ID = Object.fromEntries(EXTRA_COMMENTARIES.map(c => [c.id, c]));
+
+  /** The shipped defaults — exactly the classic Vilna page rendered so far. */
+  const DEFAULT_SETTINGS = {
+    edition: 'aramaic',   // key into EDITIONS
+    inner: 'rashi',       // wrap column on the binding side
+    outer: 'tosafot',     // wrap column on the page edge
+    lang: 'he',           // commentary language preference: 'he' | 'en'
+    extras: ['hagahotHaBach', 'gilyonHaShas', 'rabbeinuChananel', 'ravNissimGaon'],
+    // Typography. Fonts take 'rashi' | 'frank' | any CSS font-family string.
+    commFont: 'rashi',    // commentary columns, margins, bottom strip
+    gemaraFont: 'frank',  // the center text
+    fontScale: 1,         // user multiplier on all font sizes (0.7–1.5)
+  };
+
+  /** Resolve a font setting to a CSS font-family value. */
+  function fontFamilyCSS(v, fallback) {
+    if (!v || v === fallback) return null; // keep the stylesheet default
+    if (v === 'rashi') return 'var(--font-rashi)';
+    if (v === 'frank') return 'var(--font-gemara)';
+    return `"${String(v).replace(/"/g, '')}", var(--font-gemara), serif`;
+  }
+
   // Sheet aspect ratio w/h of a Vilna amud (matches the reference PDFs).
   const SHEET_ASPECT = 0.707;
 
@@ -165,17 +280,29 @@
     return arr.filter(s => s && String(s).trim()).map(s => String(s));
   }
 
+  // U+00A0 from &nbsp; always becomes a plain space, strip or no strip.
+  function softClean(s) { return sanitizeHtml(s).replace(/ /g, ' '); }
+
   function cleanGemara(s) { return stripHtml(sanitizeHtml(s)); }
   function cleanComment(s) { return stripHtml(boldDH(sanitizeHtml(s))); }
 
-  /** Normalize a raw model (cached JSON or live fetch) into render-ready form. */
-  function normalizeModel(model) {
-    const gemara = (model.gemara || []).map(seg => normSeg(seg).map(cleanGemara).join(' '));
-    const rashi = (model.rashi || []).map(seg => normSeg(seg).map(cleanComment));
-    const tosafot = (model.tosafot || []).map(seg => normSeg(seg).map(cleanComment));
+  /**
+   * Normalize a raw model (cached JSON or live fetch) into render-ready form.
+   * The Vilna diacritics/punctuation strip applies only where the selected
+   * sources call for it: vocalized and English editions keep their pointing
+   * and punctuation; English commentaries are sanitized but not stripped.
+   */
+  function normalizeModel(model, settings) {
+    const s = settings || model.settings || DEFAULT_SETTINGS;
+    const ed = EDITIONS[s.edition] || EDITIONS.aramaic;
+    const cleanG = ed.strip ? cleanGemara : softClean;
+    const cleanC = s.lang === 'he' ? cleanComment : softClean;
+    const gemara = (model.gemara || []).map(seg => normSeg(seg).map(cleanG).join(' '));
+    const rashi = (model.rashi || []).map(seg => normSeg(seg).map(cleanC));
+    const tosafot = (model.tosafot || []).map(seg => normSeg(seg).map(cleanC));
     const extras = {};
     for (const [key, ex] of Object.entries(model.extras || {})) {
-      const parts = (ex.segments || []).flatMap(normSeg).map(cleanComment);
+      const parts = (ex.segments || []).flatMap(normSeg).map(cleanC);
       if (parts.length) extras[key] = { title: ex.title, html: parts.join(' ') };
     }
     return Object.assign({}, model, { gemara, rashi, tosafot, extras });
@@ -206,6 +333,15 @@
   function heSegments(data) {
     if (!data) return [];
     const v = pickHebrew(data.versions || []);
+    return (v && v.text) || [];
+  }
+
+  /** Segments in the preferred language, falling back to the other. */
+  function segmentsByLang(data, lang) {
+    if (!data || !data.versions || !data.versions.length) return [];
+    const v = data.versions.find(x => x.language === lang)
+      || (lang === 'he' ? pickHebrew(data.versions) : null)
+      || data.versions[0];
     return (v && v.text) || [];
   }
 
@@ -309,20 +445,77 @@
     };
   }
 
-  async function loadModel(tractate, page, side) {
+  async function loadModel(tractate, page, side, settings) {
+    let base = null;
     try {
       const r = await fetch(`data/${tractate}/${page}${side}.json`);
-      if (r.ok) return await r.json();
+      if (r.ok) base = await r.json();
     } catch (e) { /* fall through to live */ }
-    const model = await fetchDafLive(tractate, page, side);
-    if (!model.tractateHe) {
-      // Header is Hebrew-only — never fall back to the English name.
-      try {
-        const ts = await (await fetch('data/tractates.json')).json();
-        const ti = ts.find(x => x.name_en === tractate);
-        if (ti) model.tractateHe = ti.name_he;
-      } catch (e) { /* leave blank */ }
+    if (!base) {
+      base = await fetchDafLive(tractate, page, side);
+      if (!base.tractateHe) {
+        // Header is Hebrew-only — never fall back to the English name.
+        try {
+          const ts = await (await fetch('data/tractates.json')).json();
+          const ti = ts.find(x => x.name_en === tractate);
+          if (ti) base.tractateHe = ti.name_he;
+        } catch (e) { /* leave blank */ }
+      }
     }
+    return applySettings(base, settings || DEFAULT_SETTINGS);
+  }
+
+  /**
+   * Reconstruct the model around the user's source selection. The cached
+   * model covers the defaults; anything else is fetched live, in parallel.
+   * A selected text that does not exist for this daf yields an empty stream
+   * (probe-and-render: omit, never fabricate).
+   */
+  async function applySettings(base, s) {
+    const model = Object.assign({}, base);
+    const sefName = base.sefaria_name || SEFARIA_MAP[base.tractate] || base.tractate;
+    const daf = `${base.page}${base.side}`;
+    const jobs = [];
+
+    model.settings = s;
+    const ed = EDITIONS[s.edition] || EDITIONS.aramaic;
+    if (s.edition !== DEFAULT_SETTINGS.edition) {
+      jobs.push((async () => {
+        const d = await getText(`${sefName}.${daf}`, ed.version);
+        let segs = (d && d.versions && d.versions[0] && d.versions[0].text) || [];
+        if (!segs.length) segs = segmentsByLang(await getText(`${sefName}.${daf}`), s.edition === 'english' ? 'en' : 'he');
+        model.gemara = segs;
+      })());
+    }
+
+    const fetchWrap = async id => {
+      const def = WRAP_BY_ID[id];
+      if (!def) return [];
+      return segmentsByLang(await getText(`${def.ref(sefName)}.${daf}`), s.lang);
+    };
+    // The internal stream names stay rashi/tosafot (= inner/outer columns);
+    // the selected texts are poured into them.
+    if (s.inner !== DEFAULT_SETTINGS.inner || s.lang !== 'he') {
+      jobs.push(fetchWrap(s.inner).then(t => { model.rashi = t; }));
+    }
+    if (s.outer !== DEFAULT_SETTINGS.outer || s.lang !== 'he') {
+      jobs.push(fetchWrap(s.outer).then(t => { model.tosafot = t; }));
+    }
+
+    const extras = {};
+    for (const id of s.extras || []) {
+      const def = EXTRA_BY_ID[id];
+      if (!def) continue;
+      const cached = s.lang === 'he' && base.extras && base.extras[id];
+      if (cached) { extras[id] = { title: def.he, segments: cached.segments }; continue; }
+      jobs.push((async () => {
+        const segs = segmentsByLang(await getText(`${def.ref(sefName)}.${daf}`), s.lang);
+        if (segs.length) extras[id] = { title: def.he, segments: segs };
+      })());
+    }
+
+    await Promise.all(jobs);
+    model.extras = extras;
     return model;
   }
 
@@ -632,8 +825,10 @@
 
   function buildBottomStrip(model) {
     const parts = [];
-    for (const key of ['rabbeinuChananel', 'ravNissimGaon']) {
-      const ex = model.extras[key];
+    // Catalog order; margin-slot extras render in the margins, not here.
+    for (const def of EXTRA_COMMENTARIES) {
+      if (def.slot === 'margin') continue;
+      const ex = model.extras[def.id];
       if (ex) parts.push(`<div class="strip-block"><span class="strip-title">${ex.title}</span> ${ex.html}</div>`);
     }
     if (!parts.length) return null;
@@ -646,7 +841,8 @@
 
   function makeCtx(core, model, scale) {
     const W = core.clientWidth;
-    const fsGem = LAYOUT.fsGem * scale;
+    const us = (model.settings && model.settings.fontScale) || 1;
+    const fsGem = LAYOUT.fsGem * scale * us;
     const fsComm = fsGem * LAYOUT.ratioComm;
     const lhGem = fsGem * LAYOUT.lhGem;
     const lhComm = fsComm * LAYOUT.lhComm;
@@ -729,7 +925,9 @@
       // live against a fixed probe core height.
       core.style.height = '100px';
       const chromeH = sheet.getBoundingClientRect().height - 100;
-      targetCoreH = targetSheetH - chromeH;
+      // With many extra commentaries the bottom strip can exceed the sheet
+      // budget; keep a sane core and let the page run long (logged below).
+      targetCoreH = Math.max(0.45 * targetSheetH, targetSheetH - chromeH);
 
       const ctx = makeCtx(core, model, scale);
       result = relax(core, containers, model, ctx, seed || estimateEnds(model, ctx));
@@ -833,9 +1031,10 @@
 
   // ═════════════════════════ render one daf ═════════════════════════
 
-  async function renderDaf(container, rawModel) {
-    const model = normalizeModel(rawModel);
-    if (!model.gemara.some(s => s && s.trim())) {
+  async function renderDaf(container, rawModel, settings) {
+    const s = settings || rawModel.settings || DEFAULT_SETTINGS;
+    const model = normalizeModel(rawModel, s);
+    if (!model.gemara.some(x => x && x.trim())) {
       // Render nothing rather than a blank sheet (e.g. Bavli-printed Shekalim
       // is the Yerushalmi and is not addressable as a Bavli daf on Sefaria).
       throw new Error('אין טקסט גמרא זמין לדף זה');
@@ -844,6 +1043,13 @@
     container.dir = 'rtl';
 
     const sheet = el('div', `page-sheet side-${model.side}`);
+    // Typography settings ride on CSS custom properties; the fill loop's
+    // global scale --s multiplies on top of the user scale --us.
+    if (s.fontScale && s.fontScale !== 1) sheet.style.setProperty('--us', String(s.fontScale));
+    const commFam = fontFamilyCSS(s.commFont, 'rashi');
+    const gemFam = fontFamilyCSS(s.gemaraFont, 'frank');
+    if (commFam) sheet.style.setProperty('--font-comm', commFam);
+    if (gemFam) sheet.style.setProperty('--font-main', gemFam);
     sheet.appendChild(buildHeader(model));
 
     const body = el('div', 'sheet-body');
@@ -860,7 +1066,10 @@
     sheet.appendChild(body);
 
     const strip = buildBottomStrip(model);
-    if (strip) sheet.appendChild(strip);
+    if (strip) {
+      if (s.lang === 'en') strip.classList.add('stream-ltr');
+      sheet.appendChild(strip);
+    }
     container.appendChild(sheet);
 
     // Stream containers: absolute, full core, two carve floats + flowing text.
@@ -871,10 +1080,13 @@
       ['rashi', 'stream-rashi', buildCommHTML('rashi', model)],
       ['tosafot', 'stream-tosafot', buildCommHTML('tosafot', model)],
     ];
+    const ed = EDITIONS[s.edition] || EDITIONS.aramaic;
     for (const [name, cls, html] of defs) {
       const c = el('div', `stream ${cls}`);
       c.id = `${name}-block`;
       c.innerHTML = `<div class="carve carve-r"></div><div class="carve carve-l"></div>${html}`;
+      // Direction follows the selected source, not the page chrome.
+      if (name === 'gemara' ? ed.dir === 'ltr' : s.lang === 'en') c.classList.add('stream-ltr');
       core.appendChild(c);
       containers[name] = c;
     }
@@ -905,22 +1117,36 @@
       if (!this._container) throw new Error('VilnaDaf: container not found');
       this._tractates = null;
       this._current = null;
+      this._loc = null;
+      this.settings = Object.assign({}, DEFAULT_SETTINGS, opts.settings);
     }
 
     async load(tractate, page, side) {
+      this._loc = { tractate, page, side };
       this._container.innerHTML =
         `<div class="page-sheet"><div class="loading"><span class="spinner"></span>טוען ${tractate} ${heb(page)}${side}...</div></div>`;
       this._container.dir = 'rtl';
       try {
-        const model = await loadModel(tractate, page, side);
+        const model = await loadModel(tractate, page, side, this.settings);
         this._current = model;
-        await renderDaf(this._container, model);
+        await renderDaf(this._container, model, this.settings);
         if (this._onLoad) this._onLoad(model);
         return model;
       } catch (err) {
         this._container.innerHTML =
           `<div class="page-sheet"><div class="error-state"><p>❌ ${err.message}</p></div></div>`;
         throw err;
+      }
+    }
+
+    /**
+     * Merge a settings patch and reconstruct the current page around it.
+     * `extras` replaces the whole array; everything else merges per key.
+     */
+    async updateSettings(patch) {
+      this.settings = Object.assign({}, this.settings, patch);
+      if (this._loc) {
+        return this.load(this._loc.tractate, this._loc.page, this._loc.side);
       }
     }
 
@@ -943,6 +1169,11 @@
 
   VilnaDaf.heb = heb;
   VilnaDaf.HEBREW_NUMERAL = heb;
+  // Catalogs for building a settings UI on top of the library.
+  VilnaDaf.EDITIONS = EDITIONS;
+  VilnaDaf.WRAP_COMMENTARIES = WRAP_COMMENTARIES;
+  VilnaDaf.EXTRA_COMMENTARIES = EXTRA_COMMENTARIES;
+  VilnaDaf.DEFAULT_SETTINGS = DEFAULT_SETTINGS;
   VilnaDaf._internals = { solve, normalizeModel, stripHtml, sanitizeHtml }; // for tests
 
   global.VilnaDaf = VilnaDaf;

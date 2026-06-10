@@ -45,10 +45,15 @@
   --font-rashi: 'RashiScript', 'Noto Rashi Hebrew', serif;
 }
 
-/* The page sheet carries the global fill scale --s (set by JS). */
+/* The page sheet carries the global fill scale --s and the user font
+   scale --us (both set by JS); --font-main / --font-comm are the
+   user-selectable faces for the center text and the commentary. */
 .page-sheet {
   --s: 1;
-  --fs-gem: calc(16px * var(--s));
+  --us: 1;
+  --font-main: var(--font-gemara);
+  --font-comm: var(--font-rashi);
+  --fs-gem: calc(16px * var(--s) * var(--us));
   --fs-comm: calc(var(--fs-gem) * 0.80);
   --fs-margin: calc(var(--fs-gem) * 0.55);
   --fs-header: calc(var(--fs-gem) * 0.90);
@@ -141,12 +146,12 @@ body {
 .carve { pointer-events: none; }
 
 .stream-gemara {
-  font-family: var(--font-gemara);
+  font-family: var(--font-main);
   font-size: var(--fs-gem);
   line-height: var(--lh-gem);
 }
 .stream-rashi, .stream-tosafot {
-  font-family: var(--font-rashi);
+  font-family: var(--font-comm);
   font-size: var(--fs-comm);
   line-height: var(--lh-comm);
 }
@@ -200,7 +205,7 @@ sup.ref-key.key-to { color: #3d2e5c; }
   flex-direction: column;
   font-size: var(--fs-margin);
   line-height: var(--lh-margin);
-  font-family: var(--font-rashi);
+  font-family: var(--font-comm);
   color: #2a2014;
   text-align: justify;
   text-align-last: auto;
@@ -229,7 +234,7 @@ sup.ref-key.key-to { color: #3d2e5c; }
   margin-top: calc(0.5 * var(--fs-gem));
   padding-top: calc(0.3 * var(--fs-gem));
   border-top: 1px solid var(--rule);
-  font-family: var(--font-rashi);
+  font-family: var(--font-comm);
   font-size: var(--fs-margin);
   line-height: var(--lh-margin);
   text-align: justify;
@@ -239,6 +244,70 @@ sup.ref-key.key-to { color: #3d2e5c; }
   font-weight: 700;
 }
 .daf-bottom-strip .strip-block { margin-bottom: 2px; }
+
+/* ── LTR sources (English edition / English commentaries) ─ */
+.stream-ltr {
+  direction: ltr;
+  text-align-last: left;
+}
+
+/* ── Settings panel ("…" menu) ──────────────────────────── */
+.settings-wrap { position: relative; }
+#btn-settings { font-weight: 700; letter-spacing: 1px; }
+.settings-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1100;
+  width: min(440px, 94vw);
+  max-height: 75vh;
+  overflow-y: auto;
+  background: #221b10;
+  color: #d4c5a0;
+  border: 1px solid #6b5f4a;
+  border-radius: 4px;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.5);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.8rem;
+  text-align: right;
+}
+.settings-panel[hidden] { display: none; }
+.settings-panel h3 {
+  font-size: 0.8rem;
+  border-bottom: 1px solid #6b5f4a;
+  margin: 0.7rem 0 0.35rem;
+  padding-bottom: 2px;
+}
+.settings-panel h3:first-child { margin-top: 0; }
+.settings-panel h4 {
+  font-size: 0.72rem;
+  color: #a89878;
+  margin: 0.45rem 0 0.2rem;
+}
+.settings-panel label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; padding: 1px 0; }
+.settings-panel .opt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 0.8rem;
+}
+.settings-panel select {
+  width: 100%;
+  background: #2a2218; color: #d4c5a0;
+  border: 1px solid #6b5f4a; border-radius: 3px;
+  padding: 0.2rem 0.3rem;
+  font-family: var(--font-gemara);
+}
+.settings-panel .set-row { display: flex; gap: 0.8rem; }
+.settings-panel .set-row > div { flex: 1; }
+.settings-panel .hint { color: #8a7c62; font-size: 0.68rem; margin-top: 0.5rem; }
+.settings-panel .set-reset {
+  margin-top: 0.6rem;
+  background: #2a2218; color: #d4c5a0;
+  border: 1px solid #6b5f4a; border-radius: 3px;
+  padding: 0.25rem 0.7rem; cursor: pointer;
+  font-family: var(--font-gemara);
+}
+.settings-panel .set-reset:hover { background: #4a3d2e; }
 
 /* ── Hover highlighting ─────────────────────────────────── */
 .comment { cursor: pointer; }

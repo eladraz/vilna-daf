@@ -29,6 +29,11 @@
       <button id="btn-prev" disabled title="דף קודם">◄ הקודם</button>
       <button id="btn-next" disabled title="דף הבא">הבא ►</button>
     </div>
+
+    <div class="settings-wrap">
+      <button id="btn-settings" title="הגדרות תצוגה">…</button>
+      <div id="settings-panel" class="settings-panel" hidden></div>
+    </div>
   </nav>
 
   <!-- ═══════════════════════════════════════════════════════ -->
@@ -43,8 +48,124 @@
   <script>
     // ── Bootstrap ────────────────────────────────────────────
     (async () => {
-      const renderer = new VilnaDaf({ container: '#daf-content' });
+      // ── Settings: persisted source selection ───────────────
+      const SETTINGS_KEY = 'vilnaDafSettings';
+      function loadSettings() {
+        try {
+          const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+          if (s && typeof s === 'object') return s;
+        } catch (e) { /* corrupted — fall back to defaults */ }
+        return {};
+      }
+      function saveSettings(s) {
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) {}
+      }
+
+      const renderer = new VilnaDaf({ container: '#daf-content', settings: loadSettings() });
       const tractates = await renderer.getTractates();
+
+      // ── Settings panel ("…" menu) ──────────────────────────
+      const settingsBtn = document.getElementById('btn-settings');
+      const panel = document.getElementById('settings-panel');
+      const GROUP_TITLES = { rishonim: 'ראשונים', acharonim: 'אחרונים', modern: 'בני ימינו' };
+
+      function buildPanel() {
+        const s = renderer.settings;
+        const editionRadios = Object.entries(VilnaDaf.EDITIONS).map(([id, ed]) =>
+          `<label><input type="radio" name="set-edition" value="${id}" ${s.edition === id ? 'checked' : ''}> ${ed.he}</label>`
+        ).join('');
+        const wrapOptions = sel => VilnaDaf.WRAP_COMMENTARIES.map(c =>
+          `<option value="${c.id}" ${sel === c.id ? 'selected' : ''}>${c.he}</option>`
+        ).join('');
+        const groups = ['rishonim', 'acharonim', 'modern'].map(g => {
+          const boxes = VilnaDaf.EXTRA_COMMENTARIES.filter(c => c.group === g).map(c =>
+            `<label><input type="checkbox" name="set-extra" value="${c.id}" ${(s.extras || []).includes(c.id) ? 'checked' : ''}> ${c.he}</label>`
+          ).join('');
+          return `<h4>${GROUP_TITLES[g]}</h4><div class="opt-grid">${boxes}</div>`;
+        }).join('');
+        const fontRadios = (name, value, def) => {
+          const std = value === 'rashi' || value === 'frank' || !value;
+          const cur = value || def;
+          return `<label><input type="radio" name="${name}" value="rashi" ${cur === 'rashi' ? 'checked' : ''}> כתב רש״י</label>
+            <label><input type="radio" name="${name}" value="frank" ${cur === 'frank' ? 'checked' : ''}> פרנק־ריהל (קריא יותר)</label>
+            <label><input type="radio" name="${name}" value="custom" ${std ? '' : 'checked'}> מותאם אישית:
+              <input type="text" class="set-customfont" data-for="${name}" placeholder="שם גופן (CSS)"
+                     value="${std ? '' : String(cur).replace(/"/g, '&quot;')}"></label>`;
+        };
+        const pct = Math.round((s.fontScale || 1) * 100);
+        panel.innerHTML =
+          `<h3>נוסח הגמרא</h3>${editionRadios}` +
+          `<h3>עמודות הפירוש</h3>
+           <div class="set-row">
+             <div><h4>פנימית (צד הכריכה)</h4><select id="set-inner">${wrapOptions(s.inner)}</select></div>
+             <div><h4>חיצונית</h4><select id="set-outer">${wrapOptions(s.outer)}</select></div>
+           </div>` +
+          `<h3>שפת המפרשים</h3>
+           <label><input type="radio" name="set-lang" value="he" ${s.lang !== 'en' ? 'checked' : ''}> עברית</label>
+           <label><input type="radio" name="set-lang" value="en" ${s.lang === 'en' ? 'checked' : ''}> English</label>` +
+          `<h3>גופן וגודל</h3>
+           <h4>גופן המפרשים</h4>${fontRadios('set-commfont', s.commFont, 'rashi')}
+           <h4>גופן הגמרא</h4>${fontRadios('set-gemfont', s.gemaraFont, 'frank')}
+           <h4>גודל הגופן</h4>
+           <label><input type="range" id="set-fontscale" min="0.7" max="1.5" step="0.05" value="${s.fontScale || 1}">
+             <span id="set-fontscale-val">${pct}%</span></label>` +
+          `<h3>מפרשים נוספים</h3>${groups}` +
+          `<div class="hint">מקור שאינו קיים לדף הנוכחי יושמט מהתצוגה.</div>` +
+          `<button class="set-reset" id="set-reset">איפוס לברירת המחדל</button>`;
+      }
+
+      function fontPatch(name) {
+        const key = name === 'set-commfont' ? 'commFont' : 'gemaraFont';
+        const sel = panel.querySelector(`input[name="${name}"]:checked`);
+        const custom = panel.querySelector(`.set-customfont[data-for="${name}"]`);
+        const v = sel && sel.value === 'custom' ? (custom.value.trim() || null) : sel && sel.value;
+        if (v) applyPanel({ [key]: v });
+      }
+
+      async function applyPanel(patch) {
+        saveSettings(Object.assign({}, renderer.settings, patch));
+        try { await renderer.updateSettings(patch); } catch (e) { console.error(e); }
+      }
+
+      panel.addEventListener('change', e => {
+        const t = e.target;
+        if (t.name === 'set-edition') applyPanel({ edition: t.value });
+        else if (t.name === 'set-lang') applyPanel({ lang: t.value });
+        else if (t.id === 'set-inner') applyPanel({ inner: t.value });
+        else if (t.id === 'set-outer') applyPanel({ outer: t.value });
+        else if (t.name === 'set-commfont' || t.name === 'set-gemfont') fontPatch(t.name);
+        else if (t.classList.contains('set-customfont')) {
+          const name = t.dataset.for;
+          const radio = panel.querySelector(`input[name="${name}"][value="custom"]`);
+          if (radio) radio.checked = true;
+          fontPatch(name);
+        }
+        else if (t.id === 'set-fontscale') applyPanel({ fontScale: parseFloat(t.value) });
+        else if (t.name === 'set-extra') {
+          const extras = [...panel.querySelectorAll('input[name="set-extra"]:checked')].map(x => x.value);
+          applyPanel({ extras });
+        }
+      });
+      // Live percentage label while dragging; the re-render fires on release.
+      panel.addEventListener('input', e => {
+        if (e.target.id === 'set-fontscale') {
+          panel.querySelector('#set-fontscale-val').textContent = `${Math.round(e.target.value * 100)}%`;
+        }
+      });
+      panel.addEventListener('click', e => {
+        if (e.target.id === 'set-reset') {
+          renderer.settings = Object.assign({}, VilnaDaf.DEFAULT_SETTINGS);
+          buildPanel();
+          applyPanel({});
+        }
+      });
+      settingsBtn.addEventListener('click', () => {
+        if (panel.hidden) buildPanel();
+        panel.hidden = !panel.hidden;
+      });
+      document.addEventListener('click', e => {
+        if (!panel.hidden && !e.target.closest('.settings-wrap')) panel.hidden = true;
+      });
 
       // ── Populate navigation ────────────────────────────────
       const tractateSel = document.getElementById('tractate-select');
