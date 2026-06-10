@@ -1114,40 +1114,76 @@
           sheet,
           anchors: buildContextAnchors(model),
           fetchSnippet: fetchContextSnippet,
+          fetchVerseContext,
           appRouteFor,
         });
       } catch (e) { console.error('[vilna-daf] context sidebar:', e); }
     }
   }
 
-  // ── Context Sidebar integration (Masoret HaShas only for now) ──
+  // ── Context Sidebar integration (Masoret HaShas + Torah Or) ──
 
   function buildContextAnchors(model) {
     const sideHe = model.side === 'a' ? 'ע״א' : 'ע״ב';
     const cur = `${model.tractate} ${model.page}${model.side}`;
     const curHe = `${model.tractateHe || model.tractate} ${heb(model.page)} ${sideHe}`;
-    return ((model.links || {}).mesoretHaShas || [])
-      .map((lk, i) => ({
-        id: `ctx-ms-${i}`,
-        kind: 'mesoret-hashas',
-        sourceRef: cur,
-        sourceDisplay: curHe,
-        targetRef: lk.sourceRef || '',
-        label: 'מסורת הש״ס',
-        displayText: stripText(lk.sourceHeRef || lk.sourceRef || ''),
-        source: 'mesoret-hashas',
-        confidence: 1,
-        raw: lk,
-        domId: `note-mesoretHaShas-${i}`,
-      }))
-      .filter(a => a.targetRef);
+    const mk = (lk, i, kind, label, linkKey) => ({
+      id: `ctx-${kind === 'mesoret-hashas' ? 'ms' : 'to'}-${i}`,
+      kind,
+      sourceRef: cur,
+      sourceDisplay: curHe,
+      targetRef: lk.sourceRef || '',
+      label,
+      displayText: stripText(lk.sourceHeRef || lk.sourceRef || ''),
+      source: kind,
+      confidence: 1,
+      raw: lk,
+      domId: `note-${linkKey}-${i}`,
+    });
+    const links = model.links || {};
+    return [
+      ...(links.mesoretHaShas || []).map((lk, i) => mk(lk, i, 'mesoret-hashas', 'מסורת הש״ס', 'mesoretHaShas')),
+      ...(links.torahOr || []).map((lk, i) => mk(lk, i, 'torah-or', 'תורה אור', 'torahOr')),
+    ].filter(a => a.targetRef);
+  }
+
+  /**
+   * Verse context for a Tanakh ref ("Hosea 5:11"): the target pasuk plus
+   * its neighbors, fetched as the whole chapter so one request serves the
+   * trio. Returns {prev, target, next} (any may be null) or null.
+   */
+  async function fetchVerseContext(targetRef) {
+    const m = /^(.+?)\s+(\d+[ab]?):(\d+)/.exec(targetRef || '');
+    if (!m) return null;
+    const verse = +m[3];
+    const segs = heSegments(await getText(`${m[1]} ${m[2]}`));
+    if (!Array.isArray(segs) || !segs.length) return null;
+    const clean = s => (s == null ? null
+      : stripText(htmlToPlain(s)).replace(/\s+/g, ' ').trim() || null);
+    return {
+      prev: clean(segs[verse - 2]),
+      target: clean(segs[verse - 1]),
+      next: clean(segs[verse]),
+    };
+  }
+
+  /**
+   * HTML → plain text via the DOM: decodes entities (&thinsp; &nbsp; …)
+   * and drops tags without splitting words; <br> still becomes a space.
+   * Entity decoding must happen BEFORE stripText, which would otherwise
+   * eat the entity's semicolon and leave a literal "&thinsp".
+   */
+  function htmlToPlain(s) {
+    const d = document.createElement('div');
+    d.innerHTML = String(s).replace(/<br\s*\/?>/gi, ' ');
+    return d.textContent;
   }
 
   /** Fetch a plain-text snippet of a referenced source (Hebrew, stripped). */
   async function fetchContextSnippet(targetRef) {
     const segs = heSegments(await getText(targetRef));
     const flat = (Array.isArray(segs) ? segs : [segs]).flat(3).filter(Boolean);
-    const text = flat.map(s => stripText(String(s).replace(/<[^>]+>/g, ' ')))
+    const text = flat.map(s => stripText(htmlToPlain(s)))
       .join(' ').replace(/\s+/g, ' ').trim();
     return text || null;
   }

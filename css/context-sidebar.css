@@ -9,7 +9,7 @@
 
 #context-sidebar {
   position: fixed;
-  left: 14px;
+  left: 14px; /* default; .side-left/.side-right follow the anchor */
   top: 64px;
   width: min(390px, 92vw);
   max-height: calc(100vh - 90px);
@@ -26,6 +26,8 @@
   line-height: 1.45;
 }
 #context-sidebar[hidden] { display: none; }
+#context-sidebar.side-left { left: 14px; right: auto; }
+#context-sidebar.side-right { right: 14px; left: auto; }
 
 #context-sidebar .ctx-head {
   position: sticky;
@@ -73,6 +75,15 @@
   text-align: justify;
 }
 #context-sidebar .ctx-muted { color: #8a7c62; font-size: 0.85em; }
+
+/* Torah Or: target pasuk highlighted between its muted neighbors */
+#context-sidebar .ctx-verse-ctx { color: #8a7c62; }
+#context-sidebar .ctx-verse-target {
+  background: rgba(200, 170, 110, 0.4);
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 700;
+}
 
 #context-sidebar .ctx-minidaf-ph {
   display: block;

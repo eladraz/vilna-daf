@@ -42,7 +42,7 @@
   const cache = new Map();
 
   let host = null;
-  let opts = { anchors: [], fetchSnippet: null, appRouteFor: null };
+  let opts = { anchors: [], fetchSnippet: null, fetchVerseContext: null, appRouteFor: null };
   let byId = {};
   let activeId = null;
   let pinned = false;
@@ -79,14 +79,23 @@
 
   // ── Show / hide state machine ──────────────────────────────────
 
-  function show(anchor, pin) {
+  function show(anchor, pin, anchorEl) {
     // A pinned card is replaced only by an explicit click/Enter.
     if (pinned && !pin) return;
     clearTimeout(hideTimer);
     pinned = pinned || !!pin;
     activeId = anchor.id;
     renderCard(anchor);
-    ensureHost().hidden = false;
+    ensureHost();
+    // Open on the viewport half opposite the anchor, so the sidebar never
+    // covers the margin column the user is reading from.
+    if (anchorEl && anchorEl.getBoundingClientRect) {
+      const r = anchorEl.getBoundingClientRect();
+      const anchorOnRight = r.left + r.width / 2 > window.innerWidth / 2;
+      host.classList.toggle('side-left', anchorOnRight);
+      host.classList.toggle('side-right', !anchorOnRight);
+    }
+    host.hidden = false;
     host.classList.toggle('pinned', pinned);
   }
 
@@ -114,9 +123,10 @@
   }
 
   function sefariaUrl(ref) {
-    const m = /^(.+?)\s+(\d+[ab](?::\d+(?:-\d+)?)?)$/.exec(ref);
+    // "Shabbat 24a:3" / "Hosea 5:11" → Sefaria's title_words.section.segment
+    const m = /^(.+?)\s+(\d+[ab]?(?::\d+(?:-\d+)?)?)$/.exec(ref);
     if (m) return 'https://www.sefaria.org/' + m[1].replace(/ /g, '_') + '.' + m[2].replace(/:/g, '.');
-    return 'https://www.sefaria.org/' + ref.replace(/ /g, '_');
+    return 'https://www.sefaria.org/' + ref.replace(/ /g, '_').replace(/:/g, '.');
   }
 
   function renderCard(anchor) {
@@ -137,14 +147,17 @@
            <span class="ctx-v">${esc(anchor.displayText || anchor.targetRef)}
              <span class="ctx-ref-en" dir="ltr">${esc(anchor.targetRef)}</span></span></div>
          <div class="ctx-snippet" aria-live="polite"></div>
-         <div class="ctx-minidaf"></div>
+         ${anchor.kind === 'torah-or' ? '' : '<div class="ctx-minidaf"></div>'}
          <div class="ctx-actions">
            <a class="ctx-btn" href="${esc(sefariaUrl(anchor.targetRef))}" target="_blank" rel="noopener">פתח בספריא ↗</a>
            ${appHref ? `<a class="ctx-btn" href="${esc(appHref)}">פתח כאן</a>` : ''}
          </div>
        </div>`;
-    renderSnippet(anchor, h.querySelector('.ctx-snippet'));
-    renderMiniDafPreview(anchor.targetRef, anchor.sourceRef, h.querySelector('.ctx-minidaf'));
+    const snippetEl = h.querySelector('.ctx-snippet');
+    if (anchor.kind === 'torah-or') renderVerseContext(anchor, snippetEl);
+    else renderSnippet(anchor, snippetEl);
+    const mini = h.querySelector('.ctx-minidaf');
+    if (mini) renderMiniDafPreview(anchor.targetRef, anchor.sourceRef, mini);
   }
 
   // ── Snippet: model text first, lazy fetch once, Map-cached ─────
@@ -152,40 +165,91 @@
   function rawHeText(raw) {
     if (!raw || raw.he == null) return null;
     const t = Array.isArray(raw.he) ? raw.he.flat(3).filter(Boolean).join(' ') : String(raw.he);
-    const plain = t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    // DOM round-trip decodes entities (&thinsp; &nbsp; …) and drops tags
+    // without splitting words; <br> becomes a space.
+    const d = document.createElement('div');
+    d.innerHTML = t.replace(/<br\s*\/?>/gi, ' ');
+    const plain = d.textContent.replace(/\s+/g, ' ').trim();
     return plain || null;
+  }
+
+  // Re-render the snippet area of the card currently on screen, if any.
+  function rerenderIfActive(anchor) {
+    if (activeId !== anchor.id || !host || host.hidden) return;
+    const el = host.querySelector('.ctx-snippet');
+    if (!el) return;
+    if (anchor.kind === 'torah-or') renderVerseContext(anchor, el);
+    else renderSnippet(anchor, el);
   }
 
   function renderSnippet(anchor, el) {
     if (!el) return;
-    const ref = anchor.targetRef;
+    const key = anchor.kind + '|' + anchor.targetRef;
 
-    if (!cache.has(ref)) {
+    if (!cache.has(key)) {
       const inline = rawHeText(anchor.raw);
       if (inline) {
-        cache.set(ref, { status: 'ready', text: inline });
+        cache.set(key, { status: 'ready', text: inline });
       } else if (opts.fetchSnippet) {
-        cache.set(ref, { status: 'loading' });
-        opts.fetchSnippet(ref)
-          .then(text => cache.set(ref, text ? { status: 'ready', text } : { status: 'empty' }))
-          .catch(() => cache.set(ref, { status: 'error' }))
-          .finally(() => {
-            // Re-render only if this card is still the one on screen.
-            if (activeId === anchor.id && host && !host.hidden) {
-              renderSnippet(anchor, host.querySelector('.ctx-snippet'));
-            }
-          });
+        cache.set(key, { status: 'loading' });
+        opts.fetchSnippet(anchor.targetRef)
+          .then(text => cache.set(key, text ? { status: 'ready', text } : { status: 'empty' }))
+          .catch(() => cache.set(key, { status: 'error' }))
+          .finally(() => rerenderIfActive(anchor));
       } else {
-        cache.set(ref, { status: 'empty' });
+        cache.set(key, { status: 'empty' });
       }
     }
 
-    const c = cache.get(ref);
+    const c = cache.get(key);
     if (c.status === 'ready') {
       const text = c.text.length > SNIPPET_MAX ? c.text.slice(0, SNIPPET_MAX) + '…' : c.text;
       el.innerHTML = `<span class="ctx-snippet-text">${esc(text)}</span>`;
     } else if (c.status === 'loading') {
       el.innerHTML = '<span class="ctx-muted">טוען את לשון המקור…</span>';
+    } else {
+      el.innerHTML = '<span class="ctx-muted">לשון המקור אינה טעונה.</span>';
+    }
+  }
+
+  /**
+   * Torah Or card body: the target pasuk highlighted, framed by the
+   * previous and next pesukim when the chapter is available. The pasuk
+   * itself usually arrives inline with the link, so it shows instantly;
+   * the neighbors are fetched once per targetRef (same Map cache).
+   */
+  function renderVerseContext(anchor, el) {
+    if (!el) return;
+    const key = anchor.kind + '|' + anchor.targetRef;
+
+    if (!cache.has(key)) {
+      const inline = rawHeText(anchor.raw);
+      if (opts.fetchVerseContext) {
+        cache.set(key, { status: 'loading', verses: { target: inline } });
+        opts.fetchVerseContext(anchor.targetRef)
+          .then(v => {
+            if (v && v.target) cache.set(key, { status: 'ready', verses: v });
+            else cache.set(key, inline ? { status: 'ready', verses: { target: inline } } : { status: 'empty' });
+          })
+          .catch(() => {
+            cache.set(key, inline ? { status: 'ready', verses: { target: inline } } : { status: 'error' });
+          })
+          .finally(() => rerenderIfActive(anchor));
+      } else {
+        cache.set(key, inline ? { status: 'ready', verses: { target: inline } } : { status: 'empty' });
+      }
+    }
+
+    const c = cache.get(key);
+    const v = c.verses || {};
+    if (v.target) {
+      el.innerHTML =
+        (v.prev ? `<span class="ctx-verse ctx-verse-ctx">${esc(v.prev)}</span> ` : '') +
+        `<span class="ctx-verse ctx-verse-target">${esc(v.target)}</span>` +
+        (v.next ? ` <span class="ctx-verse ctx-verse-ctx">${esc(v.next)}</span>` : '') +
+        (c.status === 'loading' ? ' <span class="ctx-muted">טוען הקשר…</span>' : '');
+    } else if (c.status === 'loading') {
+      el.innerHTML = '<span class="ctx-muted">טוען את לשון הפסוק…</span>';
     } else {
       el.innerHTML = '<span class="ctx-muted">לשון המקור אינה טעונה.</span>';
     }
@@ -217,18 +281,18 @@
       el.setAttribute('role', 'button');
       el.setAttribute('aria-label', `${anchor.label}: ${anchor.displayText || anchor.targetRef}`);
 
-      el.addEventListener('pointerenter', () => show(anchor, false));
+      el.addEventListener('pointerenter', () => show(anchor, false, el));
       el.addEventListener('pointerleave', scheduleHide);
-      el.addEventListener('focus', () => show(anchor, false));
+      el.addEventListener('focus', () => show(anchor, false, el));
       el.addEventListener('blur', scheduleHide);
       el.addEventListener('click', e => {
         e.stopPropagation();
-        show(anchor, true); // pin; clicking another anchor replaces the card
+        show(anchor, true, el); // pin; another anchor's click replaces the card
       });
       el.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          show(anchor, true);
+          show(anchor, true, el);
         }
       });
     }
