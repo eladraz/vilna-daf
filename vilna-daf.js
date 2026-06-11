@@ -1121,30 +1121,34 @@
     }
   }
 
-  // ── Context Sidebar integration (Masoret HaShas + Torah Or) ──
+  // ── Context Sidebar integration (Masoret HaShas, Torah Or, Ein Mishpat) ──
+
+  const CTX_KINDS = [
+    { kind: 'mesoret-hashas', short: 'ms', label: 'מסורת הש״ס', linkKey: 'mesoretHaShas' },
+    { kind: 'torah-or', short: 'to', label: 'תורה אור', linkKey: 'torahOr' },
+    { kind: 'ein-mishpat', short: 'em', label: 'עין משפט נר מצוה', linkKey: 'einMishpat' },
+  ];
 
   function buildContextAnchors(model) {
     const sideHe = model.side === 'a' ? 'ע״א' : 'ע״ב';
     const cur = `${model.tractate} ${model.page}${model.side}`;
     const curHe = `${model.tractateHe || model.tractate} ${heb(model.page)} ${sideHe}`;
-    const mk = (lk, i, kind, label, linkKey) => ({
-      id: `ctx-${kind === 'mesoret-hashas' ? 'ms' : 'to'}-${i}`,
-      kind,
-      sourceRef: cur,
-      sourceDisplay: curHe,
-      targetRef: lk.sourceRef || '',
-      label,
-      displayText: stripText(lk.sourceHeRef || lk.sourceRef || ''),
-      source: kind,
-      confidence: 1,
-      raw: lk,
-      domId: `note-${linkKey}-${i}`,
-    });
     const links = model.links || {};
-    return [
-      ...(links.mesoretHaShas || []).map((lk, i) => mk(lk, i, 'mesoret-hashas', 'מסורת הש״ס', 'mesoretHaShas')),
-      ...(links.torahOr || []).map((lk, i) => mk(lk, i, 'torah-or', 'תורה אור', 'torahOr')),
-    ].filter(a => a.targetRef);
+    return CTX_KINDS.flatMap(def =>
+      (links[def.linkKey] || []).map((lk, i) => ({
+        id: `ctx-${def.short}-${i}`,
+        kind: def.kind,
+        sourceRef: cur,
+        sourceDisplay: curHe,
+        targetRef: lk.sourceRef || '',
+        label: def.label,
+        displayText: stripText(lk.sourceHeRef || lk.sourceRef || ''),
+        source: def.kind,
+        confidence: 1,
+        raw: lk,
+        domId: `note-${def.linkKey}-${i}`,
+      }))
+    ).filter(a => a.targetRef);
   }
 
   /**

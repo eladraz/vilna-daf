@@ -1,5 +1,6 @@
 /**
- * context-sidebar.js — Context Sidebar for Masoret HaShas references.
+ * context-sidebar.js — Context Sidebar for the daf's reference apparatus
+ * (Masoret HaShas, Torah Or, Ein Mishpat Ner Mitzvah).
  *
  * A small, isolated module: the renderer hands it the anchor objects it
  * built from the page model (see ANCHOR SHAPE below) plus two optional
@@ -56,7 +57,7 @@
     host = document.createElement('aside');
     host.id = 'context-sidebar';
     host.setAttribute('role', 'complementary');
-    host.setAttribute('aria-label', 'הקשר — מסורת הש״ס');
+    host.setAttribute('aria-label', 'תיבת הקשר למראי מקומות');
     host.dir = 'rtl';
     host.hidden = true;
     document.body.appendChild(host);
@@ -147,7 +148,7 @@
            <span class="ctx-v">${esc(anchor.displayText || anchor.targetRef)}
              <span class="ctx-ref-en" dir="ltr">${esc(anchor.targetRef)}</span></span></div>
          <div class="ctx-snippet" aria-live="polite"></div>
-         ${anchor.kind === 'torah-or' ? '' : '<div class="ctx-minidaf"></div>'}
+         ${anchor.kind === 'mesoret-hashas' ? '<div class="ctx-minidaf"></div>' : ''}
          <div class="ctx-actions">
            <a class="ctx-btn" href="${esc(sefariaUrl(anchor.targetRef))}" target="_blank" rel="noopener">פתח בספריא ↗</a>
            ${appHref ? `<a class="ctx-btn" href="${esc(appHref)}">פתח כאן</a>` : ''}
