@@ -996,22 +996,37 @@
     });
   }
 
+  /**
+   * Zoom/pan. Mouse: ctrl+wheel zooms, drag pans once zoomed, double-click
+   * resets. Touch: one finger pans the sheet ("grab and go"), two fingers
+   * pinch-zoom around their midpoint. Touch panning starts only after a
+   * small movement threshold, so taps still click anchors and comments.
+   */
   function initZoomPan(sheet) {
     let s = 1, tx = 0, ty = 0, drag = false, sx = 0, sy = 0;
     const MIN = 0.4, MAX = 6;
+    const TAP_SLOP = 8; // px before a touch becomes a pan
+    const touches = new Map(); // pointerId -> {x, y}
+    let pinchD = 0, touchPanning = false;
+
     function ap() {
       sheet.style.transform = `scale(${s}) translate(${tx}px,${ty}px)`;
       sheet.style.transformOrigin = 'top center';
       sheet.style.cursor = s > 1.02 ? (drag ? 'grabbing' : 'grab') : '';
     }
+    function zoomAt(ns, cx, cy) {
+      ns = Math.max(MIN, Math.min(MAX, ns));
+      const r = sheet.getBoundingClientRect();
+      tx += (cx - r.left) * (1 / ns - 1 / s);
+      ty += (cy - r.top) * (1 / ns - 1 / s);
+      s = ns; ap();
+    }
+
+    // ── Mouse ──
     sheet.addEventListener('wheel', e => {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
-      const ns = Math.max(MIN, Math.min(MAX, s * (e.deltaY > 0 ? 0.9 : 1.1)));
-      const r = sheet.getBoundingClientRect();
-      const cx = e.clientX - r.left, cy = e.clientY - r.top;
-      tx += cx * (1 / ns - 1 / s); ty += cy * (1 / ns - 1 / s);
-      s = ns; ap();
+      zoomAt(s * (e.deltaY > 0 ? 0.9 : 1.1), e.clientX, e.clientY);
     }, { passive: false });
     sheet.addEventListener('mousedown', e => {
       if (s < 1.02 || e.button !== 0 || e.target.closest('.comment,.ref-key,a,button,select,input')) return;
@@ -1027,6 +1042,67 @@
       if (e.target.closest('.comment,.ref-key,a,button,select,input')) return;
       s = 1; tx = 0; ty = 0; ap();
     });
+
+    // ── Touch ──
+    const dist = () => {
+      const [a, b] = [...touches.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    };
+    const mid = () => {
+      const [a, b] = [...touches.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    };
+    sheet.addEventListener('pointerdown', e => {
+      if (e.pointerType !== 'touch') return;
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
+      if (touches.size === 2) { pinchD = dist(); touchPanning = true; }
+    });
+    sheet.addEventListener('pointermove', e => {
+      if (e.pointerType !== 'touch' || !touches.has(e.pointerId)) return;
+      const t = touches.get(e.pointerId);
+      const px = t.x, py = t.y;
+      t.x = e.clientX; t.y = e.clientY;
+
+      if (touches.size === 2) {
+        // Pinch: scale by distance ratio around the midpoint, pan by its drift.
+        const d = dist(), m = mid();
+        if (pinchD) {
+          zoomAt(s * (d / pinchD), m.x, m.y);
+          tx += (t.x - px) / 2 / s; ty += (t.y - py) / 2 / s;
+          ap();
+        }
+        pinchD = d;
+        e.preventDefault();
+      } else if (touches.size === 1) {
+        if (!touchPanning && Math.hypot(t.x - t.x0, t.y - t.y0) < TAP_SLOP) return;
+        touchPanning = true;
+        tx += (t.x - px) / s; ty += (t.y - py) / s;
+        ap();
+        e.preventDefault();
+      }
+    }, { passive: false });
+    let lastTap = { t: 0, x: 0, y: 0 };
+    const endTouch = e => {
+      if (e.pointerType !== 'touch') return;
+      const t = touches.get(e.pointerId);
+      // Double-tap (two clean taps, close together) resets the view —
+      // the touch counterpart of the desktop double-click.
+      if (t && touches.size === 1 && !touchPanning
+          && Math.hypot(e.clientX - t.x0, e.clientY - t.y0) < TAP_SLOP) {
+        const now = Date.now();
+        if (now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) {
+          s = 1; tx = 0; ty = 0; ap();
+          lastTap = { t: 0, x: 0, y: 0 };
+        } else {
+          lastTap = { t: now, x: e.clientX, y: e.clientY };
+        }
+      }
+      touches.delete(e.pointerId);
+      if (touches.size < 2) pinchD = 0;
+      if (touches.size === 0) touchPanning = false;
+    };
+    sheet.addEventListener('pointerup', endTouch);
+    sheet.addEventListener('pointercancel', endTouch);
   }
 
   // ═════════════════════════ render one daf ═════════════════════════

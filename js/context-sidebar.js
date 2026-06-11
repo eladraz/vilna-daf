@@ -74,6 +74,13 @@
       document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && host && !host.hidden) closeAll();
       });
+      // Tapping/clicking anywhere outside the sidebar and outside an
+      // anchor closes the card — the touch equivalent of Escape.
+      document.addEventListener('click', e => {
+        if (host && !host.hidden && !e.target.closest('#context-sidebar') && !e.target.closest('.ctx-anchor')) {
+          closeAll();
+        }
+      });
     }
     return host;
   }
@@ -282,8 +289,10 @@
       el.setAttribute('role', 'button');
       el.setAttribute('aria-label', `${anchor.label}: ${anchor.displayText || anchor.targetRef}`);
 
-      el.addEventListener('pointerenter', () => show(anchor, false, el));
-      el.addEventListener('pointerleave', scheduleHide);
+      // Hover previews are a mouse affordance; on touch, the tap's click
+      // opens the pinned card directly (and tapping elsewhere closes it).
+      el.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') show(anchor, false, el); });
+      el.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') scheduleHide(); });
       el.addEventListener('focus', () => show(anchor, false, el));
       el.addEventListener('blur', scheduleHide);
       el.addEventListener('click', e => {

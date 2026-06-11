@@ -334,6 +334,36 @@ sup.ref-key.key-to { color: #3d2e5c; }
   background: #fef0ed; border: 1px solid #e8b4a0; border-radius: 6px; margin: 1.5rem;
 }
 
+/* ── Touch devices: our gestures, not the browser's ──────
+   One finger pans the sheet, two fingers pinch-zoom (handled
+   in JS via pointer events); touch-action:none keeps native
+   scroll/zoom from fighting them on the sheet itself. */
+@media (pointer: coarse) {
+  .page-sheet { touch-action: none; }
+}
+
+/* ── Mobile: the top bar is the masechet/daf selector ───── */
+@media (max-width: 700px) {
+  .nav-bar {
+    gap: 0.35rem;
+    padding: 0.45rem 0.5rem;
+  }
+  /* Selection is the bar: hide the labels and the long indicator. */
+  .nav-bar label, .nav-bar .page-indicator { display: none; }
+  .nav-bar select {
+    flex: 1 1 7rem;
+    min-width: 0;
+    font-size: 1rem;          /* >=16px also prevents iOS focus-zoom */
+    padding: 0.45rem 0.4rem;  /* comfortable touch target */
+  }
+  .nav-bar button {
+    font-size: 1rem;
+    padding: 0.45rem 0.6rem;
+  }
+  .nav-buttons { display: flex; gap: 0.35rem; }
+  .page-sheet { margin: 0.25rem auto; }
+}
+
 /* ── Print ──────────────────────────────────────────────── */
 @media print {
   body { background: white; }
