@@ -222,6 +222,16 @@ the first-word box). Only **end positions** are computed; starts are fixed.
   `renderer.updateSettings(patch)`; catalogs are exposed as `VilnaDaf.EDITIONS`,
   `VilnaDaf.WRAP_COMMENTARIES`, `VilnaDaf.EXTRA_COMMENTARIES`, `VilnaDaf.DEFAULT_SETTINGS`.
 
+## AI חברותא
+
+The tornado button (bottom-left) opens an AI study companion with the full daf as
+context. Two providers: **Claude** (keyless, works inside a Claude artifact
+environment) and **ChatGPT** via OpenAI ChatKit — no chatgpt.com iframe, no ChatGPT
+credentials, no client-side API key; the browser only receives a short-lived session
+secret from your own backend. See [docs/CHATKIT.md](docs/CHATKIT.md) and the
+reference server in `server/` (`node server/chavruta-server.mjs`,
+tests: `node server/test-server.mjs`).
+
 ## Project Structure
 
 ```

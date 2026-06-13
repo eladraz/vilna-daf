@@ -1195,6 +1195,19 @@
         });
       } catch (e) { console.error('[vilna-daf] context sidebar:', e); }
     }
+
+    // Optional AI chavruta (js/chavruta/*). Same guarded pattern: hand it
+    // the raw model; it lives entirely outside the sheet.
+    if (global.VilnaChavruta && global.VilnaChavruta.controller) {
+      try {
+        global.VilnaChavruta._heb = heb;
+        // Neighbor loader for the context builder: cache, else live fetch,
+        // so the AI gets the prev/next amud even when they aren't pre-cached.
+        global.VilnaChavruta._neighborLoader = (tractate, page, side) =>
+          loadModel(tractate, page, side, DEFAULT_SETTINGS);
+        global.VilnaChavruta.controller.setDaf({ model: rawModel, sheet });
+      } catch (e) { console.error('[vilna-daf] chavruta:', e); }
+    }
   }
 
   // ── Context Sidebar integration (Masoret HaShas, Torah Or, Ein Mishpat) ──

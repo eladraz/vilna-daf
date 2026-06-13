@@ -77,6 +77,7 @@
       // Tapping/clicking anywhere outside the sidebar and outside an
       // anchor closes the card — the touch equivalent of Escape.
       document.addEventListener('click', e => {
+        if (!e.target.isConnected) return; // re-rendered inside-click
         if (host && !host.hidden && !e.target.closest('#context-sidebar') && !e.target.closest('.ctx-anchor')) {
           closeAll();
         }
