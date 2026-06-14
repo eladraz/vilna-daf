@@ -98,6 +98,9 @@ body {
 /* ── Page sheet (fixed aspect 0.707, height set by JS) ──── */
 .page-sheet {
   width: min(var(--page-max-w), 97vw);
+  /* Never exceed the container: when the AI panel shrinks #daf-content the
+     sheet caps to it (and the ResizeObserver re-lays-out the daf). */
+  max-width: 100%;
   margin: 0.5rem auto;
   padding: var(--page-pad);
   background: var(--paper);
@@ -181,6 +184,19 @@ body {
   padding: 1px 7px;
 }
 
+/* Catchword (custos): the next amud's first word on its own line at the
+   end of the Gemara flow, slightly indented — traditional Vilna style. */
+.catchword {
+  display: block;
+  font-size: 0.66em;
+  line-height: 1.4;
+  opacity: 0.80;
+  pointer-events: none;
+  text-align: right;
+  padding-inline-end: 1.5em;
+  margin-top: 0.3em;
+}
+
 /* Letter-keys inline in the Gemara */
 sup.ref-key {
   font-size: 0.55em;
@@ -194,15 +210,15 @@ sup.ref-key.key-ms { color: #2e5c3d; }
 sup.ref-key.key-to { color: #3d2e5c; }
 
 /* ── Margin columns: in-flow tracks, content clipped to core ── */
-.daf-margin { position: relative; min-width: 0; }
+.daf-margin { position: relative; min-width: 0; overflow: visible; }
 .daf-margin .marg-clip {
+  /* Top-anchored, no bottom constraint: the apparatus grows downward as
+     tall as its content (תורה אור / גליון הש״ס are no longer clipped).
+     Absolutely positioned so it doesn't grow the grid row — the sheet
+     keeps its fixed 0.707 aspect; long apparatus simply extends lower. */
   position: absolute;
-  inset: 0;
-  overflow: hidden;
-  /* Blocks share the column height proportionally to their content, so a
-     long Ein Mishpat can never push Torah Or off the sheet entirely. */
-  display: flex;
-  flex-direction: column;
+  top: 0; left: 0; right: 0;
+  overflow: visible;
   font-size: var(--fs-margin);
   line-height: var(--lh-margin);
   font-family: var(--font-comm);
@@ -210,7 +226,7 @@ sup.ref-key.key-to { color: #3d2e5c; }
   text-align: justify;
   text-align-last: auto;
 }
-.daf-margin .marg-block { min-height: 2em; overflow: hidden; flex: 0 1 auto; }
+.daf-margin .marg-block { overflow: visible; }
 .marg-title {
   display: block;
   font-family: var(--font-gemara);

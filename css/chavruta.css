@@ -63,6 +63,22 @@
   touch-action: none;
 }
 
+/* When the panel is open on a wide screen, shrink the page beside it so
+   the daf and the context sidebar are never covered (--chv-panel-w is set
+   by JS to the live panel width). On phones the panel is full-screen, so
+   this is gated above the mobile breakpoint. */
+@media (min-width: 701px) {
+  body.chv-panel-open #daf-content {
+    margin-right: var(--chv-panel-w, 380px);
+    transition: margin-right 200ms ease-out;
+  }
+  body.chv-panel-open .nav-bar { padding-right: var(--chv-panel-w, 380px); }
+  body.chv-panel-open #context-sidebar.side-right {
+    right: calc(14px + var(--chv-panel-w, 380px));
+    width: min(390px, calc(100vw - var(--chv-panel-w, 380px) - 28px));
+  }
+}
+
 /* header */
 .chv-head {
   display: flex;

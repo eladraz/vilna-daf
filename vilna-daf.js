@@ -757,6 +757,18 @@
     return null;
   }
 
+  /** First plain (stripped) word of a raw model's Gemara — the catchword. */
+  function firstGemaraWord(rawModel) {
+    for (const seg of (rawModel && rawModel.gemara) || []) {
+      const html = Array.isArray(seg) ? seg.join(' ') : String(seg || '');
+      if (!html.trim()) continue;
+      const ext = extractFirstWord(html);
+      const w = ext && stripText(ext.word).trim();
+      if (w) return w;
+    }
+    return '';
+  }
+
   // Commentary: one continuous justified paragraph; comments separated by
   // their own trailing colons (Vilna style), each an inline span for hover.
   function buildCommHTML(layer, model) {
@@ -770,10 +782,14 @@
     return h;
   }
 
-  function marginNotesHTML(entries) {
+  // Margins show only the short Hebrew ref citation (as in the printed
+  // Vilna daf); the full source text lives in the hover popup. תורה אור is
+  // the exception — its pasuk text is shown inline (showVerse), matching the
+  // traditional layout.
+  function marginNotesHTML(entries, showVerse = false) {
     return entries.map(e =>
       `<span class="marg-note" id="${e.id}" data-seg="${e.segNum}"><span class="key">${e.letter}</span> ` +
-      (e.verse ? `<span class="verse-text">${e.verse}</span> ` : '') +
+      (showVerse && e.verse ? `<span class="verse-text">${e.verse}</span> ` : '') +
       `<span class="note-ref">${e.ref}</span></span>`
     ).join('');
   }
@@ -816,9 +832,11 @@
         ? marginBlock(model.extras.gilyonHaShas.title, `<span class="marg-note">${model.extras.gilyonHaShas.html}</span>`) : '') +
       '</div>';
     const outer = el('div', 'daf-margin margin-outer');
+    // Vilna order: תורה אור at the top of the outer margin, עין משפט below —
+    // so Torah Or stays visible even when Ein Mishpat has many entries.
     outer.innerHTML = '<div class="marg-clip">' +
-      marginBlock('עין משפט נר מצוה', marginNotesHTML(keyIdx.einMishpat.entries)) +
-      marginBlock('תורה אור', marginNotesHTML(keyIdx.torahOr.entries)) +
+      marginBlock('תורה אור', marginNotesHTML(keyIdx.torahOr.entries, true)) +
+      marginBlock('עין משפט נר מצוה', marginNotesHTML(keyIdx.einMishpat.entries, false)) +
       '</div>';
     return { inner, outer };
   }
@@ -1107,7 +1125,7 @@
 
   // ═════════════════════════ render one daf ═════════════════════════
 
-  async function renderDaf(container, rawModel, settings) {
+  async function renderDaf(container, rawModel, settings, reflowOnResize) {
     const s = settings || rawModel.settings || DEFAULT_SETTINGS;
     const model = normalizeModel(rawModel, s);
     if (!model.gemara.some(x => x && x.trim())) {
@@ -1179,8 +1197,54 @@
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     await layoutPage(sheet, core, containers, model);
 
+    // Responsive reflow — OFF by default, and never on mobile. When ON, the
+    // daf re-lays-out to fit a narrower container (window resize / AI panel),
+    // since the polygon carves are baked to a specific core width. When OFF,
+    // the sheet keeps its laid-out size (pinned) so a narrow viewport never
+    // squishes the Gemara/commentary — the page scrolls instead.
+    const mobile = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
+    if (reflowOnResize && !mobile) {
+      let lastW = Math.round(core.clientWidth);
+      let reflowPending = false;
+      const ro = new ResizeObserver(() => {
+        const w = Math.round(core.clientWidth);
+        if (!w || Math.abs(w - lastW) < 2 || reflowPending) return;
+        reflowPending = true;
+        requestAnimationFrame(() => {
+          reflowPending = false;
+          const nw = Math.round(core.clientWidth);
+          if (!nw || Math.abs(nw - lastW) < 2) return;
+          lastW = nw;
+          layoutPage(sheet, core, containers, model);
+        });
+      });
+      ro.observe(core);
+    } else {
+      // Freeze the sheet at its laid-out width so CSS (97vw) can't shrink it
+      // and desync the baked polygons; overrides the .page-sheet max-width.
+      const w = Math.round(sheet.getBoundingClientRect().width);
+      if (w) { sheet.style.width = `${w}px`; sheet.style.maxWidth = 'none'; }
+    }
+
     initHover(sheet);
     initZoomPan(sheet);
+
+    // Catchword (custos): the first word of the next amud, in small print at
+    // the bottom of the Gemara column — the word that opens the next page.
+    // Fetched lazily (don't block the render); skipped if navigation moved on.
+    (async () => {
+      try {
+        const nextSide = model.side === 'a' ? 'b' : 'a';
+        const nextPage = model.side === 'a' ? model.page : model.page + 1;
+        const nextRaw = await loadModel(model.tractate, nextPage, nextSide, s);
+        const word = firstGemaraWord(nextRaw);
+        if (word && containers.gemara.isConnected && !containers.gemara.querySelector('.catchword')) {
+          const cw = el('div', 'catchword'); // own line at the end of the flow
+          cw.textContent = word;
+          containers.gemara.appendChild(cw);
+        }
+      } catch (e) { /* no next amud available — omit the catchword */ }
+    })();
 
     // Optional Context Sidebar (js/context-sidebar.js). Renders entirely
     // outside the sheet; layout/measurement are unaffected if it's absent.
@@ -1212,21 +1276,27 @@
 
   // ── Context Sidebar integration (Masoret HaShas, Torah Or, Ein Mishpat) ──
 
-  const CTX_KINDS = [
-    { kind: 'mesoret-hashas', short: 'ms', label: 'מסורת הש״ס', linkKey: 'mesoretHaShas' },
-    { kind: 'torah-or', short: 'to', label: 'תורה אור', linkKey: 'torahOr' },
-    { kind: 'ein-mishpat', short: 'em', label: 'עין משפט נר מצוה', linkKey: 'einMishpat' },
-  ];
-
   function buildContextAnchors(model) {
     const sideHe = model.side === 'a' ? 'ע״א' : 'ע״ב';
     const cur = `${model.tractate} ${model.page}${model.side}`;
     const curHe = `${model.tractateHe || model.tractate} ${heb(model.page)} ${sideHe}`;
     const links = model.links || {};
-    return CTX_KINDS.flatMap(def =>
+    // The popup opens toward the physical margin its commentary lives in,
+    // and the margins flip between amud א and ב (see renderDaf's append
+    // order): inner margin (מסורת הש״ס) is right on amud א, left on amud ב;
+    // outer margin (עין משפט, תורה אור) is the opposite.
+    const innerSide = model.side === 'a' ? 'right' : 'left';
+    const outerSide = model.side === 'a' ? 'left' : 'right';
+    const kinds = [
+      { kind: 'mesoret-hashas', short: 'ms', label: 'מסורת הש״ס', linkKey: 'mesoretHaShas', side: innerSide },
+      { kind: 'torah-or', short: 'to', label: 'תורה אור', linkKey: 'torahOr', side: outerSide },
+      { kind: 'ein-mishpat', short: 'em', label: 'עין משפט נר מצוה', linkKey: 'einMishpat', side: outerSide },
+    ];
+    return kinds.flatMap(def =>
       (links[def.linkKey] || []).map((lk, i) => ({
         id: `ctx-${def.short}-${i}`,
         kind: def.kind,
+        side: def.side,
         sourceRef: cur,
         sourceDisplay: curHe,
         targetRef: lk.sourceRef || '',
@@ -1301,6 +1371,9 @@
       this._current = null;
       this._loc = null;
       this.settings = Object.assign({}, DEFAULT_SETTINGS, opts.settings);
+      // Off by default: when true, the daf re-lays-out to fit a narrower
+      // container (window resize / AI panel). Forced off on mobile.
+      this.reflowOnResize = !!opts.reflowOnResize;
     }
 
     async load(tractate, page, side) {
@@ -1311,7 +1384,7 @@
       try {
         const model = await loadModel(tractate, page, side, this.settings);
         this._current = model;
-        await renderDaf(this._container, model, this.settings);
+        await renderDaf(this._container, model, this.settings, this.reflowOnResize);
         if (this._onLoad) this._onLoad(model);
         return model;
       } catch (err) {

@@ -102,6 +102,27 @@ The bundled `index.html` persists the same settings object to `localStorage`
 |--------|------|-------------|
 | `container` | `string \| HTMLElement` | CSS selector or DOM element to render into |
 | `settings` | `object` | Source/typography selection (see "Starting Vilna Daf with arguments") |
+| `reflowOnResize` | `boolean` | **Default `false`.** Responsive reflow — see below. |
+
+#### `reflowOnResize` (default `false`)
+
+The Vilna daf is a fixed-proportion page whose Gemara/Rashi/Tosafot columns are computed
+for one specific width. By default the rendered sheet keeps that size: if the window (or the
+available space when the AI panel opens) is narrower than the daf, the page **scrolls** —
+the text is never squished.
+
+Set `reflowOnResize: true` to opt into responsive behavior: a `ResizeObserver` re-lays-out
+the daf to fit whenever its container narrows (window resize, or the AI panel reserving
+space). This keeps everything on-screen at the cost of re-flowing the columns (and a brief
+relayout) on each width change.
+
+```js
+new VilnaDaf({ container: '#daf-content', reflowOnResize: true });
+```
+
+This option is **forced off on mobile** (viewport ≤ 700 px) regardless of the value, because
+reflowing a touch-zoomable daf on every viewport change is disorienting; phones get the
+stable fixed layout. The bundled `index.html` leaves it at the default (off).
 
 #### `await renderer.updateSettings(patch)`
 

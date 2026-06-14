@@ -205,6 +205,7 @@
       const onMove = ev => {
         const w = Math.min(window.innerWidth * 0.5, Math.max(300, window.innerWidth - ev.clientX));
         panel.style.width = `${w}px`;
+        document.documentElement.style.setProperty('--chv-panel-w', `${Math.round(w)}px`);
       };
       const onUp = () => {
         grip.removeEventListener('pointermove', onMove);
@@ -248,9 +249,28 @@
   }
   function chatkitHost() { return els.chatkitHost; }
 
-  function open() { panel.hidden = false; requestAnimationFrame(() => panel.classList.add('open')); }
+  // Reserve room for the panel so the daf + context sidebar shrink beside
+  // it instead of being covered (CSS uses --chv-panel-w on wide screens).
+  function applyPageShrink(on) {
+    const root = document.documentElement;
+    if (on) {
+      root.style.setProperty('--chv-panel-w', `${Math.round(panel.getBoundingClientRect().width)}px`);
+      document.body.classList.add('chv-panel-open');
+    } else {
+      document.body.classList.remove('chv-panel-open');
+    }
+  }
+
+  function open() {
+    panel.hidden = false;
+    requestAnimationFrame(() => {
+      panel.classList.add('open');
+      applyPageShrink(true); // measure the panel after its CSS width applies
+    });
+  }
   function close() {
     panel.classList.remove('open');
+    applyPageShrink(false);
     setTimeout(() => { panel.hidden = true; }, 220);
   }
   function isOpen() { return panel && !panel.hidden; }

@@ -48,6 +48,7 @@
   let activeId = null;
   let pinned = false;
   let hideTimer = null;
+  let switchTimer = null;
   let escBound = false;
 
   // ── Host element (outside the page sheet) ──────────────────────
@@ -88,37 +89,59 @@
 
   // ── Show / hide state machine ──────────────────────────────────
 
-  function show(anchor, pin, anchorEl) {
+  function show(anchor, pin) {
     // A pinned card is replaced only by an explicit click/Enter.
     if (pinned && !pin) return;
     clearTimeout(hideTimer);
+    clearTimeout(switchTimer);
     pinned = pinned || !!pin;
     activeId = anchor.id;
     renderCard(anchor);
     ensureHost();
-    // Open on the viewport half opposite the anchor, so the sidebar never
-    // covers the margin column the user is reading from.
-    if (anchorEl && anchorEl.getBoundingClientRect) {
-      const r = anchorEl.getBoundingClientRect();
-      const anchorOnRight = r.left + r.width / 2 > window.innerWidth / 2;
-      host.classList.toggle('side-left', anchorOnRight);
-      host.classList.toggle('side-right', !anchorOnRight);
+    // Which edge the card opens on. Each commentary declares its side
+    // (anchor.side): the right-margin apparatus — מסורת הש״ס, עין משפט,
+    // תורה אור — open on the right; a left-margin source would set 'left'.
+    // Fall back to a viewport heuristic only when no side is declared.
+    let useRight;
+    if (anchor.side === 'right') useRight = true;
+    else if (anchor.side === 'left') useRight = false;
+    else {
+      const anchorEl = document.getElementById(anchor.domId);
+      useRight = anchorEl
+        ? (anchorEl.getBoundingClientRect().left + anchorEl.getBoundingClientRect().width / 2) < window.innerWidth / 2
+        : true;
     }
+    host.classList.toggle('side-right', useRight);
+    host.classList.toggle('side-left', !useRight);
     host.hidden = false;
     host.classList.toggle('pinned', pinned);
   }
 
+  /**
+   * Hover-show with a short intent delay: when a preview is already open
+   * (and unpinned), wait a beat before swapping to a different anchor, so
+   * the user has time to steer the cursor toward the open card without it
+   * changing under them. The first open is near-instant.
+   */
+  function requestShow(anchor) {
+    clearTimeout(switchTimer);
+    const swapping = host && !host.hidden && !pinned && activeId && activeId !== anchor.id;
+    switchTimer = setTimeout(() => show(anchor, false), swapping ? 260 : 60);
+  }
+
   function scheduleHide() {
     if (pinned) return;
+    clearTimeout(switchTimer);
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
       if (!pinned) { host.hidden = true; activeId = null; }
-    }, 250);
+    }, 600); // generous: time to steer the cursor onto the card, even past Gemara text
   }
 
   function closeAll() {
     pinned = false;
     clearTimeout(hideTimer);
+    clearTimeout(switchTimer);
     if (host) { host.hidden = true; host.classList.remove('pinned'); }
     activeId = null;
   }
@@ -292,18 +315,19 @@
 
       // Hover previews are a mouse affordance; on touch, the tap's click
       // opens the pinned card directly (and tapping elsewhere closes it).
-      el.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') show(anchor, false, el); });
+      el.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') requestShow(anchor); });
       el.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') scheduleHide(); });
-      el.addEventListener('focus', () => show(anchor, false, el));
+      el.addEventListener('focus', () => show(anchor, false)); // keyboard: immediate
       el.addEventListener('blur', scheduleHide);
       el.addEventListener('click', e => {
         e.stopPropagation();
-        show(anchor, true, el); // pin; another anchor's click replaces the card
+        clearTimeout(switchTimer);
+        show(anchor, true); // pin; another anchor's click replaces the card
       });
       el.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          show(anchor, true, el);
+          show(anchor, true);
         }
       });
     }
