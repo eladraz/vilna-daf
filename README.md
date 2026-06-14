@@ -303,15 +303,23 @@ Hebrew-only header, < 2 s cached load, and relaxation convergence (≤ 8 rounds)
 - Server-side rendering
 - Vocalized/pointed text (uses plain Vilna edition where available)
 
-## Credits
+## Credits — Powered by Sefaria
 
-Text from [Sefaria](https://www.sefaria.org) — the William Davidson digital edition of the
-Koren Noé Talmud, with commentary by Rabbi Adin Even-Israel Steinsaltz. Licensed under
-[CC-BY-NC](https://creativecommons.org/licenses/by-nc/4.0/). See [LICENSE.md](LICENSE.md)
-for details.
+This project would not exist without **[Sefaria](https://www.sefaria.org)**. Every word of
+Talmud, every commentary, the vocalization, the cross-references and the chapter structure are
+served live from Sefaria's free, open API — Sefaria is the foundation this renderer is built
+on, and we are deeply grateful for their work in making Torah open and accessible to all.
 
-Fonts: FrankRuehl CLM (Culmus Project, GPL) and Noto Rashi Hebrew (Google Fonts, SIL Open
-Font License).
+The primary text is the **William Davidson digital edition of the Koren Noé Talmud**, with
+commentary by **Rabbi Adin Even-Israel Steinsaltz**, made available by Sefaria under a
+[Creative Commons Attribution-NonCommercial 4.0 (CC-BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/)
+license. Anyone using or deploying this software must keep the Sefaria attribution (it is
+shown in the page footer and required by the text license) and must comply with CC-BY-NC —
+**no commercial use of the text** without separate permission from the rights holders (Koren
+Publishers Jerusalem). Full terms in [LICENSE.md](LICENSE.md) and at
+[sefaria.org](https://www.sefaria.org/terms).
+
+Fonts: Frank Ruhl Libre and Noto Rashi Hebrew (Google Fonts, SIL Open Font License 1.1).
 
 ## License
 

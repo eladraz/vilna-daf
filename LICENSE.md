@@ -30,7 +30,14 @@ SOFTWARE.
 
 ---
 
-## Talmud Text — Sefaria / William Davidson Edition
+## Talmud Text — Powered by Sefaria
+
+**This software is built on [Sefaria](https://www.sefaria.org).** All Talmud text,
+commentary, vocalization, cross-references, and chapter structure are served from
+Sefaria's free, open API; the project depends on it entirely. Sefaria's attribution
+must be preserved in any use or deployment — it is shown in the application footer and
+is a condition of the text license. See Sefaria's terms at
+<https://www.sefaria.org/terms>.
 
 The Talmud text and commentaries displayed by this software are sourced from
 [Sefaria](https://www.sefaria.org) via their public API. The primary text version
@@ -72,10 +79,15 @@ License 1.1. https://fonts.google.com/specimen/Noto+Rashi+Hebrew
 
 ---
 
-## Attribution
+## Attribution (required)
 
-When displaying this content, appropriate attribution must be given:
+Anyone who uses, modifies, or deploys this software **must keep the Sefaria
+attribution visible** (the application shows it in the page footer) and must
+link back to Sefaria. The required credit:
 
-> Talmud and commentaries from [Sefaria](https://www.sefaria.org), the William
-> Davidson Talmud, used under CC-BY-NC. Commentary by Rabbi Adin Even-Israel
-> Steinsaltz. Hebrew vocalization by Dicta.
+> Talmud text, vocalization, and commentary courtesy of
+> [Sefaria](https://www.sefaria.org) — the William Davidson Talmud, used under
+> CC-BY-NC 4.0. Commentary by Rabbi Adin Even-Israel Steinsaltz. Hebrew
+> vocalization by Dicta.
+
+Removing or obscuring the Sefaria attribution is not permitted.

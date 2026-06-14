@@ -380,6 +380,21 @@ sup.ref-key.key-to { color: #3d2e5c; }
   .page-sheet { margin: 0.25rem auto; }
 }
 
+/* ── Site footer: Sefaria attribution (required text credit) ── */
+.site-footer {
+  max-width: var(--page-max-w);
+  margin: 0.6rem auto 1.4rem;
+  padding: 0.6rem 1rem;
+  text-align: center;
+  font-family: var(--font-gemara);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #5c4a2e;
+}
+.site-footer p { margin: 0.15rem 0; }
+.site-footer a { color: #5c3d2e; text-decoration: underline; }
+.site-footer a:hover { color: var(--ink); }
+
 /* ── Print ──────────────────────────────────────────────── */
 @media print {
   body { background: white; }

@@ -72,7 +72,8 @@
     margin-right: var(--chv-panel-w, 380px);
     transition: margin-right 200ms ease-out;
   }
-  body.chv-panel-open .nav-bar { padding-right: var(--chv-panel-w, 380px); }
+  body.chv-panel-open .nav-bar,
+  body.chv-panel-open .site-footer { padding-right: var(--chv-panel-w, 380px); }
   body.chv-panel-open #context-sidebar.side-right {
     right: calc(14px + var(--chv-panel-w, 380px));
     width: min(390px, calc(100vw - var(--chv-panel-w, 380px) - 28px));
