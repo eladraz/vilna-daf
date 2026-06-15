@@ -1,80 +1,59 @@
 # AI chavruta providers
 
-The tornado opens a provider picker. One rule everywhere: **users never
-need an API key, and no provider password ever touches our pages.**
+The site has **no backend** — everything runs in the browser. The tornado
+opens a provider picker with two groups.
 
-## Why "log in with your ChatGPT/Claude/Gemini subscription" isn't a thing
-
-Consumer AI subscriptions are not accessible to third-party websites via
-plain web login: OpenAI/Anthropic/Google do not let an arbitrary site bill
-a user's subscription (the OAuth programs that will allow it — e.g.
-OpenAI's "Sign in with ChatGPT" — require developer registration and are
-not generally available). Anything that *asks users for their ChatGPT
-password* is a phishing pattern and is deliberately not implemented here.
-
-So the picker is organized around what a simple user can actually do:
-
-## Tier 1 — no server, no keys (works on the static site)
+## No key
 
 | Provider | Login experience | How it works |
 |----------|------------------|--------------|
-| **GPT / Claude — Puter** | a free account in a popup, like any app | [Puter.js](https://docs.puter.com) "user pays" platform: the page loads `js.puter.com/v2`, the user signs in with a free Puter account, and `puter.ai.chat()` serves GPT/Claude-class models keylessly. Usage rides on the user's free Puter allowance — the site holds nothing. |
-| **AI בדפדפן (Gemini Nano)** | none at all | Chrome's built-in on-device model (the Prompt API / `LanguageModel`). Private, free, offline-capable; the daf context is trimmed to fit its small window, so it's labeled experimental. Card auto-disables on browsers without it. |
-| **Claude** | the user's regular claude.ai login | open the app inside Claude (artifact environment) — the keyless `api.anthropic.com` endpoint then bills the viewer's own Claude account. On a plain website, Claude instead uses the site server below (and the card says so). |
+| **GPT / Claude — Puter** | a free account in a popup, like any app | [Puter.js](https://docs.puter.com) "user pays" platform: the page loads `js.puter.com/v2`, the user signs in with a free Puter account, and `puter.ai.chat()` serves GPT/Claude-class models keylessly. |
+| **AI בדפדפן (Gemini Nano)** | none at all | Chrome's built-in on-device model (the Prompt API / `LanguageModel`). Private, free, offline-capable; the daf context is trimmed to fit its small window. Card auto-disables on browsers without it. |
 
-## Tier 2 — via the site's backend (keys are the site owner's)
+## Bring your own API key
 
-`server/chavruta-server.mjs` (Node ≥ 18, no deps);
-tests: `node server/test-server.mjs` (providers mocked, no keys needed).
-Users authenticate to **the site** (demo email login → replace with real
-auth); they still never see any key.
+For **Claude**, **ChatGPT**, **Gemini**, and **DeepSeek** the browser calls
+the vendor's API *directly* with the user's own key. There is no server in
+the middle. On first use (or via ⚙ → "מפתח API") a popup asks for the key,
+explaining that the site has no backend, that the key is stored **only in
+this browser** (`localStorage`, key `vilnaChavruta.key.<provider>`), is sent
+**only** to that vendor, and is **never displayed** (masked input). The
+Reset button clears it along with everything else.
 
-| Provider | How it connects | Mode |
-|----------|-----------------|------|
-| Claude | `POST /api/chat` proxy (server-side `ANTHROPIC_API_KEY`) | our chat UI |
-| ChatGPT | OpenAI ChatKit — backend mints a short-lived `client_secret` (see [CHATKIT.md](CHATKIT.md)) | ChatKit widget |
-| Gemini | same `/api/chat` proxy (server-side `GEMINI_API_KEY`) | our chat UI |
-| Grok | placeholder ("בקרוב") | — |
+| Provider | Endpoint (called from the browser) | Model | Key from |
+|----------|-----------------------------------|-------|----------|
+| Claude | `api.anthropic.com/v1/messages` (with `anthropic-dangerous-direct-browser-access`) | `claude-sonnet-4-6` | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| ChatGPT | `api.openai.com/v1/chat/completions` | `gpt-4o` | [platform.openai.com](https://platform.openai.com/api-keys) |
+| Gemini | `generativelanguage.googleapis.com` (`generateContent`) | `gemini-2.0-flash` | [aistudio.google.com](https://aistudio.google.com/apikey) |
+| DeepSeek | `api.deepseek.com/chat/completions` | `deepseek-chat` | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
 
-When OpenAI's "Sign in with ChatGPT" opens to general registration, it
-slots in as another Tier-1 provider: OAuth popup, user's own plan,
-no keys — the registry in `js/chavruta/provider.js` is built for that.
+Each provider's response (and SSE stream) is normalized to one shape so the
+chat UI has a single parser. A missing key throws `{ needKey: true }` and the
+UI opens the key popup.
 
-## The unified /api/chat proxy
+> **Note:** putting an API key in the browser means anyone with access to
+> that browser/profile can read it from `localStorage`; it is the user's own
+> key and their own risk. This trades the security of a server-held key for
+> the simplicity of a zero-backend static site — the deliberate design here.
 
-Request (cookie-authenticated, Origin-checked, rate-limited, size-capped):
+## Optional backend (legacy)
 
-```json
-{ "provider": "claude" | "gemini",
-  "system": "<the daf context payload>",
-  "messages": [{ "role": "user"|"assistant", "content": "..." }],
-  "max_tokens": 1500, "stream": true }
-```
+`server/chavruta-server.mjs` (a server-held-key proxy + OpenAI ChatKit, see
+[CHATKIT.md](CHATKIT.md)) remains in the repo for deployments that prefer to
+hold keys server-side, but the shipped `index.html` uses the browser-only
+BYO-key model above and does not require it.
 
-The server holds the keys, forwards to Anthropic or Google, and returns one
-**neutral wire format** regardless of provider: non-streaming responses are
-`{content:[{type:"text",text}]}`; streaming responses are SSE frames of
-`{"type":"content_block_delta","delta":{"text":...}}`. The frontend has a
-single parser; adding a provider touches only the server.
-
-## Login flow ("why didn't ChatGPT ask for my email?")
-
-By design, none of the providers log you into *their* account — that would
-mean typing a ChatGPT/Google password into our pages (phishing-shaped, and
-blocked by the providers anyway). Instead you log into **this site**: when
-the backend answers 401, the chat shows an inline login form (email). The
-reference server's `POST /api/login` is a DEMO that accepts any email and
-sets a signed httpOnly session cookie — replace `requireAuthenticatedUser()`
-(and the login endpoint) with your real auth; nothing else changes.
-
-`GET /api/me` lets the frontend check the session. The OpenAI/Anthropic
-`user`/identity fields only ever see `sha256(USER_HASH_SALT:userId)`.
+The optional `server/chavruta-server.mjs` exposes a unified `/api/chat`
+proxy (cookie-authenticated, Origin-checked, rate-limited) plus OpenAI
+ChatKit; it holds the keys server-side and returns one neutral wire format.
+It is documented in [CHATKIT.md](CHATKIT.md) and not used by the shipped
+browser-only build.
 
 ## Adding a provider
 
-1. Server: add a `proxy<Name>()` that converts the neutral request to the
-   provider's API and its response/SSE back to the neutral dialect; wire it
-   into `/api/chat`'s provider switch; add the key env var.
-2. Frontend: add one entry to `PROVIDERS` in `js/chavruta/provider.js`
-   (label, `mode: 'messages'`, hint). Done — chat UI, sessions, suggested
-   questions, and deep links all work through the neutral format.
+Add one entry to `PROVIDERS` in `js/chavruta/provider.js` (`group: 'key'`,
+`needsKey: true`) and a `KEY_PROVIDERS` entry (endpoint, model, vendor, key
+URL). If it speaks the OpenAI chat-completions shape, the existing
+`callOpenAILike` + `readOpenAILike` handle it; otherwise add a small caller
+and SSE reader. The chat UI, sessions, suggested questions, deep links, and
+the key popup all work automatically.

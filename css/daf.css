@@ -74,6 +74,11 @@ body {
   direction: rtl;
 }
 
+/* The daf's zoom/pan transform can extend the page sideways; clip it so the
+   sticky nav never scrolls right and the page has no stray horizontal
+   scroll (panning a zoomed daf is handled by the gesture, not page scroll). */
+html, body { overflow-x: hidden; }
+
 /* ── Navigation bar ─────────────────────────────────────── */
 .nav-bar {
   background: #1a150d; color: #d4c5a0;
@@ -270,6 +275,7 @@ sup.ref-key.key-to { color: #3d2e5c; }
 /* ── Settings panel ("…" menu) ──────────────────────────── */
 .settings-wrap { position: relative; }
 #btn-settings { font-weight: 700; letter-spacing: 1px; }
+#btn-reset { font-size: 1.05rem; line-height: 1; padding-top: 0.2rem; padding-bottom: 0.2rem; }
 .settings-panel {
   position: absolute;
   top: calc(100% + 6px);
@@ -351,11 +357,13 @@ sup.ref-key.key-to { color: #3d2e5c; }
 }
 
 /* ── Touch devices: our gestures, not the browser's ──────
-   One finger pans the sheet, two fingers pinch-zoom (handled
-   in JS via pointer events); touch-action:none keeps native
-   scroll/zoom from fighting them on the sheet itself. */
+   Two fingers pinch-zoom (handled in JS via pointer events).
+   touch-action:pan-y lets the page scroll vertically at base scale
+   (so the footer below the sheet stays reachable) while disabling the
+   browser's own pinch-zoom; once zoomed in, JS switches it to none and
+   owns all panning. */
 @media (pointer: coarse) {
-  .page-sheet { touch-action: none; }
+  .page-sheet { touch-action: pan-y; }
 }
 
 /* ── Mobile: the top bar is the masechet/daf selector ───── */

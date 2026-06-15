@@ -47,6 +47,8 @@
       <button id="btn-settings" title="הגדרות תצוגה">…</button>
       <div id="settings-panel" class="settings-panel" hidden></div>
     </div>
+
+    <button id="btn-reset" title="איפוס: מחיקת כל ההגדרות, הגופנים, הבחירות והעוגיות וחזרה לברירת המחדל">↺</button>
   </nav>
 
   <!-- ═══════════════════════════════════════════════════════ -->
@@ -206,6 +208,33 @@
       });
       document.addEventListener('click', e => {
         if (!panel.hidden && !e.target.closest('.settings-wrap')) panel.hidden = true;
+      });
+
+      // ── Reset: clear all persisted state and return to defaults ──
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        if (!confirm('לאפס את כל ההגדרות, הגופנים, הגדלים, הבחירות והעוגיות ולחזור לברירת המחדל?')) return;
+        // localStorage: every key this site owns (settings, chavruta provider/sessions).
+        try {
+          for (const k of Object.keys(localStorage)) {
+            if (/^vilna/i.test(k)) localStorage.removeItem(k);
+          }
+        } catch (e) {}
+        // Artifact persistent storage, if present (chavruta sessions).
+        try { if (window.storage && window.storage.removeItem) window.storage.removeItem('vilnaChavruta.v1'); } catch (e) {}
+        // Cookies (e.g. Google Analytics _ga*) — expire on every domain scope.
+        try {
+          const host = location.hostname;
+          const domains = ['', host, '.' + host, host.replace(/^[^.]+\./, '.')];
+          for (const c of document.cookie.split(';')) {
+            const name = c.split('=')[0].trim();
+            if (!name) continue;
+            for (const d of domains) {
+              document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/' + (d ? ';domain=' + d : '');
+            }
+          }
+        } catch (e) {}
+        // Reload fresh on the default daf (Berachot 2a) with default settings.
+        location.replace(location.pathname + '?tractate=Berachot&page=2&side=a');
       });
 
       // ── Populate navigation ────────────────────────────────

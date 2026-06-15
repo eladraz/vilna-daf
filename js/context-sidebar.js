@@ -250,6 +250,8 @@
    * itself usually arrives inline with the link, so it shows instantly;
    * the neighbors are fetched once per targetRef (same Map cache).
    */
+  const VERSE_WINDOW = 20; // verses shown on each side of the target
+
   function renderVerseContext(anchor, el) {
     if (!el) return;
     const key = anchor.kind + '|' + anchor.targetRef;
@@ -257,29 +259,33 @@
     if (!cache.has(key)) {
       const inline = rawHeText(anchor.raw);
       if (opts.fetchVerseContext) {
-        cache.set(key, { status: 'loading', verses: { target: inline } });
+        cache.set(key, { status: 'loading', inline });
         opts.fetchVerseContext(anchor.targetRef)
-          .then(v => {
-            if (v && v.target) cache.set(key, { status: 'ready', verses: v });
-            else cache.set(key, inline ? { status: 'ready', verses: { target: inline } } : { status: 'empty' });
-          })
-          .catch(() => {
-            cache.set(key, inline ? { status: 'ready', verses: { target: inline } } : { status: 'error' });
-          })
+          .then(v => cache.set(key, (v && v.verses && v.verses.length)
+            ? { status: 'ready', verses: v.verses, target: v.target }
+            : (inline ? { status: 'ready', inline } : { status: 'empty' })))
+          .catch(() => cache.set(key, inline ? { status: 'ready', inline } : { status: 'error' }))
           .finally(() => rerenderIfActive(anchor));
       } else {
-        cache.set(key, inline ? { status: 'ready', verses: { target: inline } } : { status: 'empty' });
+        cache.set(key, inline ? { status: 'ready', inline } : { status: 'empty' });
       }
     }
 
     const c = cache.get(key);
-    const v = c.verses || {};
-    if (v.target) {
-      el.innerHTML =
-        (v.prev ? `<span class="ctx-verse ctx-verse-ctx">${esc(v.prev)}</span> ` : '') +
-        `<span class="ctx-verse ctx-verse-target">${esc(v.target)}</span>` +
-        (v.next ? ` <span class="ctx-verse ctx-verse-ctx">${esc(v.next)}</span>` : '') +
-        (c.status === 'loading' ? ' <span class="ctx-muted">טוען הקשר…</span>' : '');
+    if (c.verses && c.verses.length) {
+      // Whole-chapter context, windowed around the target, target highlighted.
+      const ti = Math.max(0, c.verses.findIndex(x => x.n === c.target));
+      const start = Math.max(0, ti - VERSE_WINDOW);
+      const end = Math.min(c.verses.length, ti + VERSE_WINDOW + 1);
+      el.innerHTML = c.verses.slice(start, end).map(x =>
+        `<span class="ctx-verse ${x.n === c.target ? 'ctx-verse-target' : 'ctx-verse-ctx'}">${esc(x.text)}</span>`
+      ).join(' ');
+      // Bring the highlighted verse into view inside the card (not the page).
+      const tgt = el.querySelector('.ctx-verse-target');
+      if (tgt && host) host.scrollTop = Math.max(0, tgt.offsetTop - host.clientHeight / 3);
+    } else if (c.inline) {
+      el.innerHTML = `<span class="ctx-verse ctx-verse-target">${esc(c.inline)}</span>`
+        + (c.status === 'loading' ? ' <span class="ctx-muted">טוען הקשר…</span>' : '');
     } else if (c.status === 'loading') {
       el.innerHTML = '<span class="ctx-muted">טוען את לשון הפסוק…</span>';
     } else {

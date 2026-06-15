@@ -418,13 +418,24 @@
     ]);
     const gemData = heSegments(gemDataV).length ? gemDataV : await getText(ref);
 
+    // Sefaria returns each apparatus reference once per anchor segment (and
+    // per direction), so the same source can appear several times — e.g. the
+    // 4 Torah Or verses on Rosh Hashanah 2b arrive as 8 links. Keep only the
+    // first occurrence of each source ref so the margin matches the printed
+    // Vilna apparatus.
     const mesoret = [], einMishpat = [], torahOr = [];
+    const seenM = new Set(), seenE = new Set(), seenT = new Set();
+    const pushUniq = (arr, seen, lk) => {
+      const key = lk.sourceRef || lk.sourceHeRef || JSON.stringify(lk);
+      if (seen.has(key)) return;
+      seen.add(key); arr.push(lk);
+    };
     for (const lk of (Array.isArray(linksData) ? linksData : [])) {
       const cat = (lk.category || '').toLowerCase();
       const typ = (lk.type || '').toLowerCase();
-      if (cat === 'talmud' || typ.includes('mesoret') || typ.includes('masoret')) mesoret.push(lk);
-      else if (cat === 'halakhah' || typ.includes('mishpat') || typ.includes('ner')) einMishpat.push(lk);
-      else if (cat === 'tanakh' || typ.includes('torah or')) torahOr.push(lk);
+      if (cat === 'talmud' || typ.includes('mesoret') || typ.includes('masoret')) pushUniq(mesoret, seenM, lk);
+      else if (cat === 'halakhah' || typ.includes('mishpat') || typ.includes('ner')) pushUniq(einMishpat, seenE, lk);
+      else if (cat === 'tanakh' || typ.includes('torah or')) pushUniq(torahOr, seenT, lk);
     }
 
     const extras = {};
@@ -694,14 +705,16 @@
       idx[d.key] = { cls: d.cls, title: d.title, entries: [] };
       (links[d.key] || []).forEach((lk, i) => {
         const m = (lk.anchorRef || '').match(/:(\d+)/);
-        // Torah Or links carry the full verse text — render it whole.
-        const heRaw = Array.isArray(lk.he) ? lk.he.join(' ') : (lk.he || '');
+        // Margin shows only the ONE quoted pasuk (first verse if the ref is a
+        // range); the full chapter context lives in the hover popup.
+        const heArr = Array.isArray(lk.he) ? lk.he.flat(3).filter(Boolean) : (lk.he ? [lk.he] : []);
+        const oneVerse = heArr.length ? String(heArr[0]) : '';
         idx[d.key].entries.push({
           id: `note-${d.key}-${i}`,
           segNum: m ? parseInt(m[1]) : 0,
           letter: hebLetter(i),
           ref: stripText((lk.sourceHeRef || lk.sourceRef || '')),
-          verse: heRaw ? cleanGemara(heRaw) : '',
+          verse: oneVerse ? cleanGemara(oneVerse) : '',
           cls: d.cls,
         });
       });
@@ -1027,11 +1040,33 @@
     const touches = new Map(); // pointerId -> {x, y}
     let pinchD = 0, touchPanning = false;
 
-    function ap() {
+    function setTransform() {
       sheet.style.transform = `scale(${s}) translate(${tx}px,${ty}px)`;
       sheet.style.transformOrigin = 'top center';
       sheet.style.cursor = s > 1.02 ? (drag ? 'grabbing' : 'grab') : '';
+      // At base scale let the browser scroll the page (reach the footer);
+      // once zoomed, we own all panning so the sheet can't be lost.
+      sheet.style.touchAction = s > 1.02 ? 'none' : 'pan-y';
     }
+    // Keep the sheet glued to the selection bar: its top never gaps below
+    // the nav at any zoom, it re-centers horizontally and snaps flush under
+    // the nav when it fits, and a tall zoomed-in sheet may pan up (top under
+    // the nav) but always keeps a strip visible — never lost.
+    const navEl = document.querySelector('.nav-bar');
+    function clamp() {
+      const r = sheet.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight, M = 64;
+      const top = navEl ? navEl.getBoundingClientRect().bottom : 0;
+      let dx = 0, dy = 0;
+      if (r.width <= vw) dx = (vw - r.width) / 2 - r.left;       // fits → center
+      else if (r.right < M) dx = M - r.right;
+      else if (r.left > vw - M) dx = (vw - M) - r.left;
+      if (r.height <= vh - top) dy = top - r.top;               // fits → flush under nav
+      else if (r.top > top) dy = top - r.top;                   // close any top gap
+      else if (r.bottom < top + M) dy = (top + M) - r.bottom;   // keep a strip visible
+      if (dx || dy) { tx += dx / s; ty += dy / s; setTransform(); }
+    }
+    function ap() { setTransform(); clamp(); }
     function zoomAt(ns, cx, cy) {
       ns = Math.max(MIN, Math.min(MAX, ns));
       const r = sheet.getBoundingClientRect();
@@ -1092,6 +1127,9 @@
         pinchD = d;
         e.preventDefault();
       } else if (touches.size === 1) {
+        // Only pan once zoomed in; at base scale let the page scroll
+        // natively (so the Sefaria footer below the sheet is reachable).
+        if (s <= 1.02) return;
         if (!touchPanning && Math.hypot(t.x - t.x0, t.y - t.y0) < TAP_SLOP) return;
         touchPanning = true;
         tx += (t.x - px) / s; ty += (t.y - py) / s;
@@ -1311,23 +1349,20 @@
   }
 
   /**
-   * Verse context for a Tanakh ref ("Hosea 5:11"): the target pasuk plus
-   * its neighbors, fetched as the whole chapter so one request serves the
-   * trio. Returns {prev, target, next} (any may be null) or null.
+   * Verse context for a Tanakh ref ("Hosea 5:11"): the whole chapter with
+   * the target verse marked, so the popup can show the surrounding paragraph
+   * / chapter (scrollable). Returns { verses:[{n,text}], target } or null.
    */
   async function fetchVerseContext(targetRef) {
     const m = /^(.+?)\s+(\d+[ab]?):(\d+)/.exec(targetRef || '');
     if (!m) return null;
-    const verse = +m[3];
+    const target = +m[3];
     const segs = heSegments(await getText(`${m[1]} ${m[2]}`));
     if (!Array.isArray(segs) || !segs.length) return null;
-    const clean = s => (s == null ? null
-      : stripText(htmlToPlain(s)).replace(/\s+/g, ' ').trim() || null);
-    return {
-      prev: clean(segs[verse - 2]),
-      target: clean(segs[verse - 1]),
-      next: clean(segs[verse]),
-    };
+    const clean = s => stripText(htmlToPlain(Array.isArray(s) ? s.join(' ') : (s || '')))
+      .replace(/\s+/g, ' ').trim();
+    const verses = segs.map((s, i) => ({ n: i + 1, text: clean(s) })).filter(v => v.text);
+    return verses.length ? { verses, target } : null;
   }
 
   /**

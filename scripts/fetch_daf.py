@@ -170,20 +170,33 @@ def fetch_daf(tractate, page, side):
     except Exception:
         pass
 
+    # Sefaria lists each reference once per anchor segment/direction, so the
+    # same source can repeat (e.g. Torah Or on Rosh Hashanah 2b: 4 verses ->
+    # 8 links). Keep the first occurrence of each source ref so the margin
+    # matches the printed Vilna apparatus.
     mesoret, ein_mishpat, torah_or = [], [], []
+    seen_m, seen_e, seen_t = set(), set(), set()
     KEEP = ("anchorRef", "category", "type", "sourceRef", "sourceHeRef", "he")
+
+    def push_uniq(arr, seen, slim):
+        key = slim.get("sourceRef") or slim.get("sourceHeRef")
+        if key in seen:
+            return
+        seen.add(key)
+        arr.append(slim)
+
     for lk in links:
         cat = (lk.get("category") or "").lower()
         typ = (lk.get("type") or "").lower()
         slim = {k: lk.get(k) for k in KEEP if lk.get(k) is not None}
         if cat == "talmud" or "mesoret" in typ or "masoret" in typ:
             slim.pop("he", None)
-            mesoret.append(slim)
+            push_uniq(mesoret, seen_m, slim)
         elif cat == "halakhah" or "mishpat" in typ or "ner" in typ:
             slim.pop("he", None)
-            ein_mishpat.append(slim)
+            push_uniq(ein_mishpat, seen_e, slim)
         elif cat == "tanakh" or "torah or" in typ:
-            torah_or.append(slim)
+            push_uniq(torah_or, seen_t, slim)
 
     extras = {}
     for key, ref_tpl, he_title in EXTRAS:

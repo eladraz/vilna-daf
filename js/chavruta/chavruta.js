@@ -106,22 +106,15 @@
       if (s && s.messages.length && s.messages[s.messages.length - 1].content === text) {
         s.messages.pop(); NS.sessions._save();
       }
-      if (e.status === 401) {
-        // Site login required (cookie session on our backend).
-        NS.ui.showLoginForm(async email => {
-          try {
-            await NS.provider.auth.login(email);
-            sendMessage(text);
-          } catch (le) {
-            NS.ui.showError('ההתחברות נכשלה.', 'message');
-          }
-        });
+      if (e.needKey || e.status === 401) {
+        // Missing or rejected API key — prompt for it, then resend.
+        openKeyModal(NS.provider.current(), () => sendMessage(text));
         return;
       }
       let msg = 'השיחה נכשלה.';
       if (e.status === 429) msg = 'יותר מדי בקשות — המתן רגע ונסה שוב.';
       else if (e instanceof TypeError || !e.status) {
-        msg = 'אין חיבור לספק — ודא שהשרת פעיל (server/chavruta-server.mjs), או החלף ספק (⚙).';
+        msg = 'אין חיבור לספק — בדוק את המפתח/החיבור, או החלף ספק (⚙).';
       }
       NS.ui.showError(msg, 'message');
     } finally {
@@ -157,6 +150,9 @@
           state.sessionId = null;
           refreshSessionUI();
         }
+      } else if (act === 'apikey') {
+        const cur = NS.provider.current();
+        if (NS.provider.needsKey(cur)) openKeyModal(cur, () => {});
       } else if (act === 'provider' && NS.provider.ENABLE_MULTI_PROVIDER) {
         openProviderModal();
       }
@@ -208,11 +204,11 @@
       providerModal.innerHTML =
         `<div class="chv-provider-box" dir="rtl">
            <h3>חיבור ספק AI</h3>
-           <p class="chv-provider-note">ללא מפתחות API וללא סיסמאות של הספקים — לעולם.</p>
-           <h4 class="chv-provider-group">ללא שרת — מתאים לכולם</h4>
+           <p class="chv-provider-note">אין שרת לאתר — הכל רץ בדפדפן. ספקי המפתח קוראים ישירות אל הספק במפתח שלך, שנשמר רק בדפדפן.</p>
+           <h4 class="chv-provider-group">ללא מפתח</h4>
            <div class="chv-provider-cards">${cardsOf('free')}</div>
-           <h4 class="chv-provider-group">דרך שרת האתר (למפעיל האתר)</h4>
-           <div class="chv-provider-cards">${cardsOf('server')}</div>
+           <h4 class="chv-provider-group">עם מפתח API משלך</h4>
+           <div class="chv-provider-cards">${cardsOf('key')}</div>
            <button class="chv-provider-close">סגור</button>
          </div>`;
       // The on-device option exists only on supporting browsers; when the
@@ -235,65 +231,74 @@
         }
         const card = e.target.closest('.chv-provider-card');
         if (card && !card.disabled && NS.provider.setCurrent(card.dataset.provider)) {
-          NS.provider._resetTransport(); // re-probe proxy vs direct
+          const id = card.dataset.provider;
           providerModal.remove(); providerModal = null;
-          openPanel();
+          // BYO-key providers prompt for the key before opening the chat.
+          if (NS.provider.needsKey(id) && !NS.provider.hasKey(id)) openKeyModal(id, () => openPanel());
+          else openPanel();
         }
       });
     }
     document.body.appendChild(providerModal);
   }
 
-  // ── open / setDaf ──────────────────────────────────────────────
+  // ── API-key modal: browser-only, no backend, never displayed ────
 
-  async function mountChatKit() {
-    const host = NS.ui.chatkitHost();
-    try {
-      await NS.chatkit.mount(host, { pageId: state.dafKey });
-    } catch (e) {
-      if (e.status === 401) {
-        // Site login (our session cookie) — never a ChatGPT password.
-        host.innerHTML =
-          `<div class="chv-chatkit-error chv-login">
-             <div>נדרשת התחברות לאתר כדי להשתמש ב־ChatGPT<br>
-               <small>(התחברות לאתר שלנו — לא סיסמת ChatGPT)</small></div>
-             <input type="email" class="chv-login-mail" placeholder="כתובת אימייל" dir="ltr">
-             <button class="chv-retry chv-login-go">התחבר</button>
-           </div>`;
-        const input = host.querySelector('.chv-login-mail');
-        const go = async () => {
-          const v = input.value.trim();
-          if (!v) { input.focus(); return; }
-          try { await NS.provider.auth.login(v); mountChatKit(); }
-          catch (le) { input.value = ''; input.placeholder = 'ההתחברות נכשלה — נסה שוב'; }
-        };
-        host.querySelector('.chv-login-go').onclick = go;
-        input.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
-        input.focus();
-        return;
-      }
-      host.innerHTML =
-        `<div class="chv-chatkit-error">חיבור ChatGPT אינו זמין (השרת אינו פעיל?).
-           <button class="chv-retry" data-chv-ck-retry>נסה שוב</button>
-           <button class="chv-retry" data-chv-ck-switch>החלף ספק</button>
-         </div>`;
-      host.querySelector('[data-chv-ck-retry]').onclick = () => mountChatKit();
-      host.querySelector('[data-chv-ck-switch]').onclick = () => openProviderModal();
-    }
+  let keyModal = null;
+  function openKeyModal(providerId, onDone) {
+    const meta = NS.provider.keyMeta(providerId);
+    const label = (NS.provider.PROVIDERS[providerId] || {}).label || providerId;
+    if (keyModal) { keyModal.remove(); keyModal = null; }
+    keyModal = document.createElement('div');
+    keyModal.className = 'chv-provider-modal';
+    keyModal.innerHTML =
+      `<div class="chv-provider-box chv-key-box" dir="rtl">
+         <h3>מפתח API — ${label}</h3>
+         <p class="chv-provider-note">
+           לאתר הזה <b>אין שרת</b>. המפתח נשמר רק בזיכרון הדפדפן שלך (במכשיר הזה),
+           נשלח ישירות אל ${meta ? meta.vendor : 'הספק'} בלבד, ואינו מוצג בשום מקום —
+           אפשר להזין אותו בבטחה.
+         </p>
+         <input type="password" class="chv-key-input" autocomplete="off" spellcheck="false"
+                placeholder="${meta ? meta.keyHint : 'מפתח API'}" dir="ltr">
+         ${meta ? `<p class="chv-key-where"><a href="${meta.keyUrl}" target="_blank" rel="noopener">היכן משיגים מפתח ↗</a></p>` : ''}
+         <div class="chv-key-actions">
+           <button class="chv-key-save">שמור והתחל</button>
+           <button class="chv-provider-close">ביטול</button>
+         </div>
+       </div>`;
+    const input = keyModal.querySelector('.chv-key-input');
+    const close = () => { if (keyModal) { keyModal.remove(); keyModal = null; } };
+    const save = () => {
+      const v = input.value.trim();
+      if (!v) { input.focus(); return; }
+      NS.provider.setKey(providerId, v);
+      close();
+      if (onDone) onDone();
+    };
+    keyModal.querySelector('.chv-key-save').addEventListener('click', save);
+    keyModal.querySelector('.chv-provider-close').addEventListener('click', close);
+    keyModal.addEventListener('click', e => { if (e.target === keyModal) close(); });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
+    document.body.appendChild(keyModal);
+    input.focus();
   }
+
+  // ── open / setDaf ──────────────────────────────────────────────
 
   async function openPanel() {
     if (!state.model) return;
     if (NS.provider.needsConnection()) { openProviderModal(); return; }
+    const cur = NS.provider.current();
+    // BYO-key provider with no key yet → prompt, then reopen.
+    if (NS.provider.needsKey(cur) && !NS.provider.hasKey(cur)) {
+      openKeyModal(cur, () => openPanel());
+      return;
+    }
     NS.ui.open();
     NS.ui.setBadge(false);
     NS.ui.setDafLabel(hebLabel(state.model));
 
-    if (NS.provider.mode() === 'widget') {
-      NS.ui.setMode('widget');
-      mountChatKit();
-      return;
-    }
     NS.ui.setMode('messages');
     const sess = ensureSession();
     refreshSessionUI();
@@ -325,13 +330,9 @@
       state.sessionId = null; // old session stays saved; new daf → new/latest session
       if (NS.ui.isOpen()) {
         NS.ui.setDafLabel(hebLabel(model));
-        if (NS.provider.mode() === 'widget') {
-          mountChatKit(); // remount with the new daf as page_id
-        } else {
-          const sess = ensureSession();
-          refreshSessionUI();
-          if (!sess.suggestedQuestions) generateSuggestions();
-        }
+        const sess = ensureSession();
+        refreshSessionUI();
+        if (!sess.suggestedQuestions) generateSuggestions();
       }
     }
   }
@@ -339,8 +340,6 @@
   /** §7.2 — daf context-menu entry point. */
   function askFromDaf(question) {
     if (!NS.ui.isOpen()) openPanel();
-    // ChatKit brings its own input — we can only open the panel there.
-    if (NS.provider.mode() === 'widget') return;
     // openPanel is async-ish (suggestions fire in background); send directly.
     setTimeout(() => sendMessage(question), 60);
   }
