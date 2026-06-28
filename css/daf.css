@@ -413,7 +413,45 @@ sup.ref-key.key-to { color: #3d2e5c; }
 
 /* ── Print ──────────────────────────────────────────────── */
 @media print {
-  body { background: white; }
-  .nav-bar { display: none !important; }
-  .page-sheet { box-shadow: none; margin: 0; }
+  /* Paper size follows the print dialog selection; even margins all round. */
+  @page { size: auto; margin: 10mm; }
+
+  html, body { background: #fff !important; overflow: visible !important; }
+
+  /* Hide all on-screen chrome — only the daf prints. */
+  .nav-bar, #chavruta-fab, #chavruta-panel, #context-sidebar,
+  .chv-ctxmenu, .chv-provider-modal, .site-footer { display: none !important; }
+
+  /* The JS beforeprint handler sizes #daf-content to the *scaled* sheet box
+     (W*k × H*k) so it reserves the correct layout footprint — no blank 2nd
+     page, no horizontal overflow. Do NOT force margin/overflow here; the
+     handler positions and centres the sheet itself. */
+  #daf-content { overflow: hidden !important; }
+
+  /* Black ink on white throughout (drop the parchment palette). */
+  .page-sheet, .page-sheet * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
+  /* Full-page framed sheet. NOTE: no `transform: none` / `max-width` / `margin`
+     overrides here — those would defeat the inline `transform: scale(k)` the
+     beforeprint handler sets to fit the whole carved daf on one page. */
+  .page-sheet {
+    margin: 0 !important;          /* drop the on-screen 0.5rem gap; JS positions it */
+    background: #fff !important;
+    border: 1.5px solid #000 !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+    break-inside: avoid;
+  }
+
+  /* Keep the structural ink marks crisp in black. */
+  .first-word { border-color: #000 !important; }
+  .daf-header, .daf-footer { border-color: #000 !important; }
+  .marg-title, .commentary-sep, .daf-bottom-strip { border-color: #000 !important; }
+  sup.ref-key { color: #000 !important; }
+  .catchword { opacity: 1 !important; }
 }

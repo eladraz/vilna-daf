@@ -48,6 +48,14 @@
       <div id="settings-panel" class="settings-panel" hidden></div>
     </div>
 
+    <button id="btn-print" title="הדפסה — דף שלם בשחור-לבן (בחר גודל נייר בחלון ההדפסה)" aria-label="הדפסה">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 9V2h12v7"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+    </button>
+
     <button id="btn-reset" title="איפוס: מחיקת כל ההגדרות, הגופנים, הבחירות והעוגיות וחזרה לברירת המחדל">↺</button>
   </nav>
 
@@ -209,6 +217,57 @@
       document.addEventListener('click', e => {
         if (!panel.hidden && !e.target.closest('.settings-wrap')) panel.hidden = true;
       });
+
+      // ── Print: black-on-white framed daf; the browser dialog picks the
+      //    paper size. The whole carved sheet is scaled down as one rigid
+      //    unit (transform: scale) so every column fits on one physical page
+      //    with no reflow of the carve geometry. ──
+      //
+      //  SAFE_W/SAFE_H = the common printable area of Letter (216×279mm) and
+      //  A4 (210×297mm) at the @page 10mm margins, in CSS px @96dpi:
+      //    width  = min(210,216) − 20mm = 190mm ≈ 718px
+      //    height = min(279,297) − 20mm = 259mm ≈ 979px
+      //  Using the *intersection* guarantees a single-page fit on either paper.
+      const PRINT_SAFE_W = 700, PRINT_SAFE_H = 960; // px, small safety inset
+      function beforePrint() {
+        const sheet = document.querySelector('.page-sheet');
+        const dc = document.getElementById('daf-content');
+        if (!sheet || !dc) return;
+        const W = sheet.offsetWidth, H = sheet.offsetHeight;
+        if (!W || !H) return;
+        // Smaller of the two fit ratios; never enlarge (cap at 1).
+        const k = Math.min(PRINT_SAFE_W / W, PRINT_SAFE_H / H, 1);
+        // Stash whatever inline values zoom/pan left so we can restore them.
+        sheet.dataset.ptf = sheet.style.transform || '';
+        sheet.dataset.por = sheet.style.transformOrigin || '';
+        sheet.dataset.pos = sheet.style.position || '';
+        // Reserve the *scaled* layout box so the page reflows to fit (no blank
+        // 2nd page) and the 800px sheet doesn't push page width out.
+        dc.style.position = 'relative';
+        dc.style.width = (W * k) + 'px';
+        dc.style.height = (H * k) + 'px';
+        dc.style.margin = '0 auto';
+        // Scale the sheet as one rigid unit from its top-right corner (RTL).
+        sheet.style.position = 'absolute';
+        sheet.style.top = '0';
+        sheet.style.right = '0';
+        sheet.style.transformOrigin = 'top right';
+        sheet.style.transform = 'scale(' + k + ')';
+      }
+      function afterPrint() {
+        const sheet = document.querySelector('.page-sheet');
+        const dc = document.getElementById('daf-content');
+        if (dc) { dc.style.position = ''; dc.style.width = ''; dc.style.height = ''; dc.style.margin = ''; }
+        if (sheet) {
+          sheet.style.transform = sheet.dataset.ptf || '';
+          sheet.style.transformOrigin = sheet.dataset.por || '';
+          sheet.style.position = sheet.dataset.pos || '';
+          sheet.style.top = ''; sheet.style.right = '';
+        }
+      }
+      window.addEventListener('beforeprint', beforePrint);
+      window.addEventListener('afterprint', afterPrint);
+      document.getElementById('btn-print').addEventListener('click', () => window.print());
 
       // ── Reset: clear all persisted state and return to defaults ──
       document.getElementById('btn-reset').addEventListener('click', () => {
