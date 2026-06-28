@@ -131,6 +131,14 @@ html, body { overflow-x: hidden; }
   justify-content: center;
 }
 
+/* Continuation note (an amud that is the overflow of the previous one) */
+.daf-continuation {
+  text-align: center;
+  font-size: calc(var(--fs-header) * 0.8);
+  color: #5c4a2e;
+  margin: -0.2rem 0 0.5rem;
+}
+
 /* ── Body: real grid columns (RTL: first column = right) ── */
 .sheet-body {
   display: grid;

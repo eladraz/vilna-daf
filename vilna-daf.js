@@ -456,6 +456,15 @@
     };
   }
 
+  /** Does a raw model carry any renderable text (Gemara / commentary / extras)? */
+  function modelHasContent(m) {
+    if (!m) return false;
+    const any = arr => (arr || []).some(x =>
+      Array.isArray(x) ? x.some(y => y && String(y).trim()) : (x && String(x).trim()));
+    return any(m.gemara) || any(m.rashi) || any(m.tosafot)
+      || (m.extras && Object.keys(m.extras).length > 0);
+  }
+
   async function loadModel(tractate, page, side, settings) {
     let base = null;
     try {
@@ -1166,10 +1175,15 @@
   async function renderDaf(container, rawModel, settings, reflowOnResize) {
     const s = settings || rawModel.settings || DEFAULT_SETTINGS;
     const model = normalizeModel(rawModel, s);
-    if (!model.gemara.some(x => x && x.trim())) {
-      // Render nothing rather than a blank sheet (e.g. Bavli-printed Shekalim
-      // is the Yerushalmi and is not addressable as a Bavli daf on Sefaria).
-      throw new Error('אין טקסט גמרא זמין לדף זה');
+    // Render whenever there's any content. A daf may legitimately have no
+    // Gemara — e.g. Nazir 33b is entirely the overflow of 33a's long
+    // Tosafot — and should still show its commentary. Only fail when there
+    // is nothing at all (e.g. Bavli-printed Shekalim is the Yerushalmi).
+    const hasGemara = model.gemara.some(x => x && x.trim());
+    const hasComm = model.rashi.some(c => c.length) || model.tosafot.some(c => c.length)
+      || Object.keys(model.extras).length > 0;
+    if (!hasGemara && !hasComm) {
+      throw new Error('אין טקסט זמין לדף זה');
     }
     container.innerHTML = '';
     container.dir = 'rtl';
@@ -1183,6 +1197,11 @@
     if (commFam) sheet.style.setProperty('--font-comm', commFam);
     if (gemFam) sheet.style.setProperty('--font-main', gemFam);
     sheet.appendChild(buildHeader(model));
+    if (model.continuationOf) {
+      const note = el('div', 'daf-continuation');
+      note.textContent = `המשך הפירוש מעמוד ${model.continuationOf}`;
+      sheet.appendChild(note);
+    }
 
     const body = el('div', 'sheet-body');
     const keyIdx = buildKeyIndex(model);
@@ -1417,7 +1436,22 @@
         `<div class="page-sheet"><div class="loading"><span class="spinner"></span>טוען ${tractate} ${heb(page)}${side}...</div></div>`;
       this._container.dir = 'rtl';
       try {
-        const model = await loadModel(tractate, page, side, this.settings);
+        let model = await loadModel(tractate, page, side, this.settings);
+        // Overflow amud (e.g. Nazir 33b) — no text of its own; it is the
+        // continuation of the previous amud's long commentary. Show that
+        // commentary, without a Gemara column.
+        if (!modelHasContent(model)) {
+          const prev = side === 'a' ? { page: page - 1, side: 'b' } : { page, side: 'a' };
+          if (prev.page >= 2) {
+            const pm = await loadModel(tractate, prev.page, prev.side, this.settings);
+            if (modelHasContent(pm)) {
+              model = Object.assign({}, pm, {
+                gemara: [], page, side,
+                continuationOf: `${heb(prev.page)} ${prev.side === 'a' ? 'ע״א' : 'ע״ב'}`,
+              });
+            }
+          }
+        }
         this._current = model;
         await renderDaf(this._container, model, this.settings, this.reflowOnResize);
         if (this._onLoad) this._onLoad(model);
