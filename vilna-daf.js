@@ -143,7 +143,7 @@
     inner: 'rashi',       // wrap column on the binding side
     outer: 'tosafot',     // wrap column on the page edge
     lang: 'he',           // commentary language preference: 'he' | 'en'
-    extras: ['hagahotHaBach', 'gilyonHaShas', 'rabbeinuChananel', 'ravNissimGaon'],
+    extras: [],           // ראשונים / אחרונים / בני ימינו all off by default (opt-in)
     // Typography. Fonts take 'rashi' | 'frank' | any CSS font-family string.
     commFont: 'rashi',    // commentary columns, margins, bottom strip
     gemaraFont: 'frank',  // the center text
