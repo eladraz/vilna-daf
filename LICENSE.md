@@ -106,7 +106,7 @@ removed: `grep -l '"special":true' data/offline/*/*.json`).
   Attribution to Sefaria and the version's contributors is required, and adaptations stay CC-BY-SA.
 - **CC-BY:** Tosafot translation by Jan Buckler (English).
 - **CC-BY-NC:** William Davidson Edition (Hebrew/Aramaic and English) of the Talmud — non-commercial use only.
-- **Russian, Yiddish, French, Spanish, Korean:** machine translations derived from the Hebrew
-  and, where used, the English above. They inherit the most restrictive source licence
-  (`derivedFrom`, `special`).
+- **Russian, Yiddish, French, Spanish, Korean:** translations made by Elad Raz using a variety
+  of paid AI models, from the Hebrew and, where used, the English above. They are licensed here
+  under the Vilna-Daf license agreement (this file).
 - Blocks whose version licence is unknown are not displayed.

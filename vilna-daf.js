@@ -3637,9 +3637,10 @@
     container.dir = 'rtl';
 
     const L = adaptiveConstants(env.edition, env.pol.fallback === 'best-effort');
-    // Latin/Cyrillic text has ascenders and descenders the Hebrew print leading (~0.87 of the size)
-    // does not allow for: translated streams get a readable minimum leading.
-    if (isLtrLang(effectiveLang(s))) {
+    // The Hebrew print leading (~0.87 of the size) leaves no room for Latin/Cyrillic ascenders and
+    // descenders, Hangul, or Yiddish vowel points (komets, pasekh, rafe): every translated stream
+    // gets a readable minimum leading. Without it lines overlap and the page falls back to stacking.
+    if (isLtrLang(effectiveLang(s)) || (s.textLang && s.textLang !== 'he')) {
       L.lhGem = Math.max(L.lhGem, 1.3);
       L.lhComm = Math.max(L.lhComm, 1.22);
     }
