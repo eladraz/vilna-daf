@@ -59,10 +59,36 @@
         suggestionsSeen: NS.ui.isOpen(),
       });
       NS.ui.setSuggestions(merged, (NS.sessions.get(state.sessionId) || {}).usedQuestions, true);
+      state.lastSuggestError = null;
       if (!NS.ui.isOpen()) NS.ui.setBadge(true); // generated while closed (§0 badge)
     } catch (e) {
-      if (e.name !== 'AbortError') NS.ui.setSuggestionsError();
+      if (e.name !== 'AbortError') {
+        NS.ui.setSuggestionsError();
+        // Also surface the real reason in the chat window — a failed
+        // suggestion request is usually the same key/quota/model problem the
+        // first chat message would hit, so show it up front.
+        // Once per distinct reason, so a bad key doesn't repeat it on every page.
+        const why = describeError(e);
+        if (why !== state.lastSuggestError) {
+          state.lastSuggestError = why;
+          NS.ui.showError('טעינת השאלות המוצעות נכשלה. ' + why, 'suggestions');
+        }
+      }
     }
+  }
+
+  // ── errors ─────────────────────────────────────────────────────
+  // One place that turns any provider error into a Hebrew message, always
+  // appending the provider's own reason (e.detail) when we have it. Used for
+  // both chat replies and background suggested-question generation.
+  function describeError(e) {
+    let msg;
+    if (e.status === 401 || e.status === 403) msg = 'המפתח נדחה על־ידי הספק (401/403).';
+    else if (e.status === 429) msg = 'יותר מדי בקשות או חריגה ממכסה — המתן ונסה שוב, או בדוק את המכסה/החיוב אצל הספק.';
+    else if (e instanceof TypeError || !e.status) msg = 'אין חיבור לספק — ייתכן שהדפדפן חסם את הקריאה (CORS) או שאין רשת. בדוק את המפתח/החיבור, או החלף ספק (⚙).';
+    else msg = `הספק החזיר שגיאה (${e.status}).`;
+    if (e.detail) msg += ' — ' + e.detail;
+    return msg;
   }
 
   // ── chat (§5, §8) ──────────────────────────────────────────────
@@ -106,17 +132,20 @@
       if (s && s.messages.length && s.messages[s.messages.length - 1].content === text) {
         s.messages.pop(); NS.sessions._save();
       }
-      if (e.needKey || e.status === 401) {
-        // Missing or rejected API key — prompt for it, then resend.
+      if (e.needKey) {
+        // No key yet — prompt for it, then resend.
         openKeyModal(NS.provider.current(), () => sendMessage(text));
         return;
       }
-      let msg = 'השיחה נכשלה.';
-      if (e.status === 429) msg = 'יותר מדי בקשות — המתן רגע ונסה שוב.';
-      else if (e instanceof TypeError || !e.status) {
-        msg = 'אין חיבור לספק — בדוק את המפתח/החיבור, או החלף ספק (⚙).';
+      if (e.status === 401 || e.status === 403) {
+        // Key present but rejected — reopen the key modal explaining why, so
+        // the failure isn't silent.
+        const why = e.detail || 'המפתח נדחה על־ידי הספק (401/403). ודא שהוא תקין ופעיל.';
+        openKeyModal(NS.provider.current(), () => sendMessage(text), why);
+        return;
       }
-      NS.ui.showError(msg, 'message');
+      // Everything else: show the provider's own reason inline.
+      NS.ui.showError(describeError(e), 'message');
     } finally {
       state.busy = false;
     }
@@ -153,6 +182,9 @@
       } else if (act === 'apikey') {
         const cur = NS.provider.current();
         if (NS.provider.needsKey(cur)) openKeyModal(cur, () => {});
+      } else if (act === 'model') {
+        const cur = NS.provider.current();
+        if (NS.provider.needsKey(cur)) openModelModal(cur, () => {});
       } else if (act === 'provider' && NS.provider.ENABLE_MULTI_PROVIDER) {
         openProviderModal();
       }
@@ -233,9 +265,11 @@
         if (card && !card.disabled && NS.provider.setCurrent(card.dataset.provider)) {
           const id = card.dataset.provider;
           providerModal.remove(); providerModal = null;
-          // BYO-key providers prompt for the key before opening the chat.
-          if (NS.provider.needsKey(id) && !NS.provider.hasKey(id)) openKeyModal(id, () => openPanel());
-          else openPanel();
+          // BYO-key providers prompt for the key, then let the user pick a
+          // model and tools, before opening the chat.
+          if (NS.provider.needsKey(id) && !NS.provider.hasKey(id)) {
+            openKeyModal(id, () => openModelModal(id, () => openPanel()));
+          } else openPanel();
         }
       });
     }
@@ -245,15 +279,19 @@
   // ── API-key modal: browser-only, no backend, never displayed ────
 
   let keyModal = null;
-  function openKeyModal(providerId, onDone) {
+  function openKeyModal(providerId, onDone, errorText) {
     const meta = NS.provider.keyMeta(providerId);
     const label = (NS.provider.PROVIDERS[providerId] || {}).label || providerId;
     if (keyModal) { keyModal.remove(); keyModal = null; }
     keyModal = document.createElement('div');
     keyModal.className = 'chv-provider-modal';
+    const errHtml = errorText
+      ? `<p class="chv-key-error" dir="rtl">⚠ ${String(errorText).replace(/</g, '&lt;')}</p>`
+      : '';
     keyModal.innerHTML =
       `<div class="chv-provider-box chv-key-box" dir="rtl">
          <h3>מפתח API — ${label}</h3>
+         ${errHtml}
          <p class="chv-provider-note">
            לאתר הזה <b>אין שרת</b>. המפתח נשמר רק בזיכרון הדפדפן שלך (במכשיר הזה),
            נשלח ישירות אל ${meta ? meta.vendor : 'הספק'} בלבד, ואינו מוצג בשום מקום —
@@ -284,15 +322,107 @@
     input.focus();
   }
 
+  // ── Model + tools modal: pick the model and switch tools on/off ──
+  // All choices live only in this browser's localStorage (no backend).
+  let modelModal = null;
+  const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  function openModelModal(providerId, onDone) {
+    const P = NS.provider;
+    const meta = P.keyMeta(providerId);
+    const label = (P.PROVIDERS[providerId] || {}).label || providerId;
+    if (modelModal) { modelModal.remove(); modelModal = null; }
+
+    const suggestions = P.modelList(providerId);
+    const curModel = P.modelFor(providerId);
+    const isCustom = !suggestions.includes(curModel);
+    const options = suggestions
+      .map(m => `<option value="${esc(m)}" ${m === curModel ? 'selected' : ''}>${esc(m)}</option>`)
+      .join('') + `<option value="__custom__" ${isCustom ? 'selected' : ''}>אחר (הקלד ידנית)…</option>`;
+    const tools = P.toolsAvailable(providerId);
+    const toolsHtml = tools.length
+      ? tools.map(t => {
+          const tm = P.toolMeta(t) || { he: t, hint: '' };
+          const on = P.toolOn(providerId, t) ? 'checked' : '';
+          return `<label class="chv-tool-row">
+                    <input type="checkbox" name="chv-tool" value="${t}" ${on}>
+                    <span><b>${tm.he}</b>${tm.hint ? `<small>${tm.hint}</small>` : ''}</span>
+                  </label>`;
+        }).join('')
+      : `<p class="chv-provider-note">אין כלים זמינים לספק זה.</p>`;
+    const note = (meta && meta.toolsNote) ? `<p class="chv-provider-note">${meta.toolsNote}</p>` : '';
+
+    modelModal = document.createElement('div');
+    modelModal.className = 'chv-provider-modal';
+    modelModal.innerHTML =
+      `<div class="chv-provider-box chv-model-box" dir="rtl">
+         <h3>מודל וכלים — ${label}</h3>
+         <label class="chv-model-label">מודל</label>
+         <select class="chv-model-select" dir="ltr">${options}</select>
+         <input type="text" class="chv-model-input" dir="ltr" autocomplete="off"
+                spellcheck="false" placeholder="מזהה מודל מותאם" value="${isCustom ? esc(curModel) : ''}" ${isCustom ? '' : 'hidden'}>
+         <p class="chv-provider-note">בחר דגם מהרשימה, או «אחר» כדי להקליד כל מזהה שהמפתח שלך תומך בו.</p>
+         <label class="chv-model-label">כלים</label>
+         <div class="chv-tools-list">${toolsHtml}</div>
+         <p class="chv-tool-warn" hidden></p>
+         ${note}
+         <div class="chv-key-actions">
+           <button class="chv-key-save">שמור</button>
+           <button class="chv-provider-close">ביטול</button>
+         </div>
+       </div>`;
+    const modelSelect = modelModal.querySelector('.chv-model-select');
+    const modelInput = modelModal.querySelector('.chv-model-input');
+    const warnEl = modelModal.querySelector('.chv-tool-warn');
+    const checks = () => [...modelModal.querySelectorAll('input[name="chv-tool"]:checked')].map(x => x.value);
+    // The chosen model is the dropdown value, unless "אחר" is picked — then
+    // it's whatever the user typed in the custom field.
+    const chosenModel = () =>
+      (modelSelect.value === '__custom__' ? modelInput.value.trim() : modelSelect.value);
+    modelSelect.addEventListener('change', () => {
+      const custom = modelSelect.value === '__custom__';
+      modelInput.hidden = !custom;
+      if (custom) modelInput.focus();
+      revalidate();
+    });
+    // Live check: flag any ticked tool the chosen model can't actually run, so
+    // the user isn't surprised by it being silently dropped (or a 400).
+    const revalidate = () => {
+      const model = chosenModel();
+      const bad = checks().filter(t => !P.toolSupported(providerId, t, model));
+      if (bad.length) {
+        const names = bad.map(t => (P.toolMeta(t) || {}).he || t).join(', ');
+        warnEl.textContent = `הכלי «${names}» אינו נתמך בדגם זה, ולכן לא יופעל. ${(meta && meta.toolsNote) || ''}`.trim();
+        warnEl.hidden = false;
+      } else {
+        warnEl.hidden = true;
+      }
+    };
+    modelInput.addEventListener('input', revalidate);
+    modelModal.querySelectorAll('input[name="chv-tool"]').forEach(c => c.addEventListener('change', revalidate));
+    revalidate();
+    const close = () => { if (modelModal) { modelModal.remove(); modelModal = null; } };
+    const save = () => {
+      P.setModel(providerId, chosenModel());
+      P.setTools(providerId, checks());
+      close();
+      if (onDone) onDone();
+    };
+    modelModal.querySelector('.chv-key-save').addEventListener('click', save);
+    modelModal.querySelector('.chv-provider-close').addEventListener('click', close);
+    modelModal.addEventListener('click', e => { if (e.target === modelModal) close(); });
+    document.body.appendChild(modelModal);
+    modelInput.focus();
+  }
+
   // ── open / setDaf ──────────────────────────────────────────────
 
   async function openPanel() {
     if (!state.model) return;
     if (NS.provider.needsConnection()) { openProviderModal(); return; }
     const cur = NS.provider.current();
-    // BYO-key provider with no key yet → prompt, then reopen.
+    // BYO-key provider with no key yet → prompt, pick model/tools, then reopen.
     if (NS.provider.needsKey(cur) && !NS.provider.hasKey(cur)) {
-      openKeyModal(cur, () => openPanel());
+      openKeyModal(cur, () => openModelModal(cur, () => openPanel()));
       return;
     }
     NS.ui.open();

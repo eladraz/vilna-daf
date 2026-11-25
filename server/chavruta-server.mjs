@@ -35,7 +35,7 @@
  *   OPENAI_CHATKIT_WORKFLOW_ID  the ChatKit workflow to run
  *   ANTHROPIC_API_KEY           Claude proxy (server-side only)
  *   GEMINI_API_KEY              Gemini proxy (server-side only)
- *   GEMINI_MODEL                default gemini-2.0-flash
+ *   GEMINI_MODEL                default gemini-4-hydrogen
  *   SESSION_SECRET              HMAC key for the demo session cookie
  *   USER_HASH_SALT              salt for pseudonymizing user ids
  *   ALLOWED_ORIGIN              e.g. https://eladraz.github.io
@@ -50,7 +50,7 @@ const {
   OPENAI_CHATKIT_WORKFLOW_ID,
   ANTHROPIC_API_KEY,
   GEMINI_API_KEY,
-  GEMINI_MODEL = 'gemini-2.0-flash',
+  GEMINI_MODEL = 'gemini-4-hydrogen',
   SESSION_SECRET = '',
   USER_HASH_SALT = '',
   ALLOWED_ORIGIN = 'http://localhost:8000',
@@ -216,7 +216,7 @@ async function proxyClaude(body, res, cors) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-opus-5-5',
       max_tokens: Math.min(body.max_tokens || 1500, MAX_TOKENS_CAP),
       system: body.system,
       messages: body.messages,

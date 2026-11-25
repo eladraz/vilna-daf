@@ -22,10 +22,22 @@ Reset button clears it along with everything else.
 
 | Provider | Endpoint (called from the browser) | Model | Key from |
 |----------|-----------------------------------|-------|----------|
-| Claude | `api.anthropic.com/v1/messages` (with `anthropic-dangerous-direct-browser-access`) | `claude-sonnet-4-6` | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
-| ChatGPT | `api.openai.com/v1/chat/completions` | `gpt-4o` | [platform.openai.com](https://platform.openai.com/api-keys) |
-| Gemini | `generativelanguage.googleapis.com` (`generateContent`) | `gemini-2.0-flash` | [aistudio.google.com](https://aistudio.google.com/apikey) |
-| DeepSeek | `api.deepseek.com/chat/completions` | `deepseek-chat` | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
+| Claude | `api.anthropic.com/v1/messages` (with `anthropic-dangerous-direct-browser-access`) | `claude-opus-5-5` (selectable) | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| ChatGPT | `api.openai.com/v1/responses` (Responses API) | `gpt-6.2-astra` (selectable) | [platform.openai.com](https://platform.openai.com/api-keys) |
+| Gemini | `generativelanguage.googleapis.com` (`generateContent`) | `gemini-4-hydrogen` (selectable) | [aistudio.google.com](https://aistudio.google.com/apikey) |
+| DeepSeek | `api.deepseek.com/chat/completions` | `deepseek-flash` (selectable) | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
+
+The gear menu's **מודל וכלים** window picks the model (a list, or any ID typed by hand) and
+turns on **web search**, which each vendor runs on its own servers (no client tool loop):
+
+| Provider | Web search | Models |
+|----------|-----------|--------|
+| Claude | `web_search_20260209` tool (`web_search_20250305` on Haiku) | all listed |
+| ChatGPT | Responses API `{"type": "web_search"}` tool | all listed |
+| Gemini | `{"google_search": {}}` tool | all listed |
+| DeepSeek | `{"type": "deepseek_web_search"}` tool, thinking disabled | `deepseek-flash` only |
+
+The choices are stored per provider in this browser's `localStorage`.
 
 Each provider's response (and SSE stream) is normalized to one shape so the
 chat UI has a single parser. A missing key throws `{ needKey: true }` and the

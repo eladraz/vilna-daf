@@ -82,6 +82,7 @@
           <div class="chv-gear-menu" hidden>
             <button data-act="export">העתק שיחה (Markdown)</button>
             <button data-act="clear">מחק שיחה זו</button>
+            <button data-act="model" hidden>מודל וכלים</button>
             <button data-act="apikey" hidden>מפתח API</button>
             <button data-act="provider" hidden>החלף ספק AI</button>
           </div>
@@ -136,9 +137,11 @@
     const gear = panel.querySelector('.chv-gear');
     gear.addEventListener('click', e => {
       e.stopPropagation();
-      // "מפתח API" only for BYO-key providers.
+      // "מפתח API" + "מודל וכלים" only for BYO-key providers.
       const cur = NS.provider && NS.provider.current && NS.provider.current();
-      els.gearMenu.querySelector('[data-act="apikey"]').hidden = !(cur && NS.provider.needsKey(cur));
+      const isKey = !!(cur && NS.provider.needsKey(cur));
+      els.gearMenu.querySelector('[data-act="apikey"]').hidden = !isKey;
+      els.gearMenu.querySelector('[data-act="model"]').hidden = !isKey;
       els.gearMenu.hidden = !els.gearMenu.hidden;
     });
     document.addEventListener('click', () => { els.gearMenu.hidden = true; });

@@ -23,15 +23,45 @@
   const ENABLE_MULTI_PROVIDER = true;
   const PROVIDER_KEY = 'vilnaChavruta.provider';
   const KEY_PREFIX = 'vilnaChavruta.key.';
-  const MODEL = 'claude-sonnet-4-6';
+  const MODEL_PREFIX = 'vilnaChavruta.model.';   // chosen model id, per provider
+  const TOOLS_PREFIX = 'vilnaChavruta.tools.';   // enabled tool ids (JSON array), per provider
+  const MODEL = 'claude-opus-5-5';
   const CONTEXT_LIMIT_TOKENS = 200000;
 
+  // Tool catalog — capabilities the user can switch on per provider. Each is a
+  // single server-side request parameter (no client tool-loop), so the answer
+  // still streams as normal text. `id` is stored; `he` labels the checkbox.
+  const TOOLS = {
+    webSearch: { he: 'חיפוש באינטרנט', hint: 'הספק מחפש ברשת בזמן המענה' },
+  };
+
   // Per-provider endpoint/model/key metadata for the BYO-key cloud providers.
+  //   model   — default model id (also the prefilled value in the model field)
+  //   models  — suggested model ids (datalist); the field stays editable, so
+  //             any model the user's key supports works without a code change.
+  //   tools   — tool ids from TOOLS this provider can run server-side.
   const KEY_PROVIDERS = {
-    claude:   { api: 'anthropic', model: MODEL, vendor: 'Anthropic',     keyUrl: 'https://console.anthropic.com/settings/keys', keyHint: 'מפתח Anthropic (מתחיל ב־sk-ant-)' },
-    chatgpt:  { api: 'openai',    model: 'gpt-4o', vendor: 'OpenAI',       endpoint: 'https://api.openai.com/v1/chat/completions', keyUrl: 'https://platform.openai.com/api-keys', keyHint: 'מפתח OpenAI (מתחיל ב־sk-)' },
-    deepseek: { api: 'openai',    model: 'deepseek-chat', vendor: 'DeepSeek', endpoint: 'https://api.deepseek.com/chat/completions', keyUrl: 'https://platform.deepseek.com/api_keys', keyHint: 'מפתח DeepSeek (מתחיל ב־sk-)' },
-    gemini:   { api: 'gemini',    model: 'gemini-2.0-flash', vendor: 'Google AI Studio', keyUrl: 'https://aistudio.google.com/apikey', keyHint: 'מפתח Google AI Studio (מתחיל ב־AIza)' },
+    claude:   { api: 'anthropic', model: MODEL, vendor: 'Anthropic',
+      models: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2',
+               'claude-opus-5', 'claude-sonnet-5', 'claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
+      tools: ['webSearch'],
+      keyUrl: 'https://console.anthropic.com/settings/keys', keyHint: 'מפתח Anthropic (מתחיל ב־sk-ant-)' },
+    // OpenAI goes through the Responses API: web search there works with the
+    // current GPT models (Chat Completions only searches with gpt-5-search-api).
+    chatgpt:  { api: 'openai-responses', model: 'gpt-6.2-astra', vendor: 'OpenAI', endpoint: 'https://api.openai.com/v1/responses',
+      models: ['gpt-6.2-astra', 'gpt-6.2-sol', 'gpt-6.1-terra', 'gpt-6.1-sol', 'gpt-6-luna', 'gpt-6-astra', 'gpt-6-sol',
+               'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini'],
+      tools: ['webSearch'],
+      keyUrl: 'https://platform.openai.com/api-keys', keyHint: 'מפתח OpenAI (מתחיל ב־sk-)' },
+    deepseek: { api: 'openai',    model: 'deepseek-flash', vendor: 'DeepSeek', endpoint: 'https://api.deepseek.com/chat/completions',
+      models: ['deepseek-flash', 'deepseek-v4-pro'],
+      tools: ['webSearch'], toolsNote: 'חיפוש ב־DeepSeek זמין בדגם ‎deepseek-flash בלבד',
+      keyUrl: 'https://platform.deepseek.com/api_keys', keyHint: 'מפתח DeepSeek (מתחיל ב־sk-)' },
+    gemini:   { api: 'gemini',    model: 'gemini-4-hydrogen', vendor: 'Google AI Studio',
+      models: ['gemini-4-hydrogen', 'gemini-4-neon', 'gemini-4-argon', 'gemini-4-carbon',
+               'gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'],
+      tools: ['webSearch'],
+      keyUrl: 'https://aistudio.google.com/apikey', keyHint: 'מפתח Google AI Studio (מתחיל ב־AIza)' },
   };
 
   /**
@@ -81,6 +111,68 @@
   function clearKey(id) { try { localStorage.removeItem(KEY_PREFIX + id); } catch (e) {} }
   function keyMeta(id) { return KEY_PROVIDERS[id] || null; }
 
+  // ── Model selection: chosen model id per provider (editable) ────
+  function modelDefault(id) { return (KEY_PROVIDERS[id] || {}).model || MODEL; }
+  function modelList(id) { return ((KEY_PROVIDERS[id] || {}).models || []).slice(); }
+  function modelFor(id) {
+    let v = '';
+    try { v = localStorage.getItem(MODEL_PREFIX + id) || ''; } catch (e) {}
+    return v.trim() || modelDefault(id);
+  }
+  function setModel(id, val) {
+    const v = String(val || '').trim();
+    try {
+      if (v && v !== modelDefault(id)) localStorage.setItem(MODEL_PREFIX + id, v);
+      else localStorage.removeItem(MODEL_PREFIX + id);
+    } catch (e) {}
+  }
+
+  // ── Tools: which capabilities are enabled per provider ──────────
+  function toolsAvailable(id) { return ((KEY_PROVIDERS[id] || {}).tools || []).slice(); }
+  function toolsEnabled(id) {
+    let raw = '';
+    try { raw = localStorage.getItem(TOOLS_PREFIX + id) || ''; } catch (e) {}
+    let arr = [];
+    try { arr = raw ? JSON.parse(raw) : []; } catch (e) { arr = []; }
+    const avail = toolsAvailable(id);
+    return Array.isArray(arr) ? arr.filter(t => avail.includes(t)) : [];
+  }
+  function setTools(id, list) {
+    const avail = toolsAvailable(id);
+    const clean = (Array.isArray(list) ? list : []).filter(t => avail.includes(t));
+    try {
+      if (clean.length) localStorage.setItem(TOOLS_PREFIX + id, JSON.stringify(clean));
+      else localStorage.removeItem(TOOLS_PREFIX + id);
+    } catch (e) {}
+  }
+  function toolOn(id, tool) { return toolsEnabled(id).includes(tool); }
+  function toolMeta(tool) { return TOOLS[tool] || null; }
+
+  /**
+   * Whether a tool actually works with a given model. DeepSeek's built-in
+   * search (deepseek_web_search) runs only on deepseek-flash. Claude, OpenAI
+   * (Responses API) and Gemini search with every model in their lists.
+   */
+  function toolSupported(id, tool, model) {
+    if (!toolsAvailable(id).includes(tool)) return false;
+    model = model || modelFor(id);
+    if (id === 'deepseek' && tool === 'webSearch') return /^deepseek-flash/.test(model);
+    return true;
+  }
+
+  /**
+   * Claude web search tool version: the dynamic-filtering variant on the models
+   * that have it, the basic one on Haiku and older models.
+   */
+  function claudeSearchTool(model) {
+    const basic = /haiku|claude-3|claude-(opus|sonnet)-4-[0-5]\b|claude-(opus|sonnet)-4-\d{8}/.test(model);
+    return { type: basic ? 'web_search_20250305' : 'web_search_20260209', name: 'web_search', max_uses: 5 };
+  }
+  /** Tools that are enabled AND usable with the chosen model. */
+  function effectiveTools(id, model) {
+    return toolsEnabled(id).filter(t => toolSupported(id, t, model));
+  }
+
   function sleep(ms, signal) {
     return new Promise((res, rej) => {
       const t = setTimeout(res, ms);
@@ -93,13 +185,30 @@
     return Math.ceil((text || '').length / 3.2);
   }
 
+  /**
+   * Build an Error from a failed response, pulling the provider's own message
+   * out of the body so the UI can show *why* it failed (bad key, unknown
+   * model, quota, …) instead of a bare status code.
+   */
+  async function errorFromResponse(resp) {
+    const err = new Error(`API ${resp.status}`);
+    err.status = resp.status;
+    let detail = '';
+    try {
+      const text = await resp.text();
+      try {
+        const j = JSON.parse(text);
+        // OpenAI/DeepSeek/Anthropic: {error:{message,type}}; Gemini: {error:{message,status}}.
+        detail = (j.error && (j.error.message || j.error.type || j.error.status)) || j.message || '';
+      } catch (e) { detail = text; }
+    } catch (e) { /* body already consumed or unreadable */ }
+    if (detail) err.detail = String(detail).trim().slice(0, 400);
+    return err;
+  }
+
   /** Read a response (JSON or normalized SSE) into the full text. */
   async function readResponse(resp, { stream, onDelta }) {
-    if (!resp.ok) {
-      const err = new Error(`API ${resp.status}`);
-      err.status = resp.status;
-      throw err;
-    }
+    if (!resp.ok) throw await errorFromResponse(resp);
     if (!stream) {
       const data = await resp.json();
       return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
@@ -131,15 +240,9 @@
     return text;
   }
 
-  function httpError(resp) {
-    const err = new Error(`API ${resp.status}`);
-    err.status = resp.status;
-    return err;
-  }
-
   /** Stream an OpenAI-style SSE (data: {choices:[{delta:{content}}]}). */
   async function readOpenAILike(resp, { stream, onDelta }) {
-    if (!resp.ok) throw httpError(resp);
+    if (!resp.ok) throw await errorFromResponse(resp);
     if (!stream) {
       const d = await resp.json();
       return ((d.choices || [])[0] || {}).message?.content || '';
@@ -167,7 +270,7 @@
 
   /** Stream a Gemini SSE (data: {candidates:[{content:{parts:[{text}]}}]}). */
   async function readGemini(resp, { stream, onDelta }) {
-    if (!resp.ok) throw httpError(resp);
+    if (!resp.ok) throw await errorFromResponse(resp);
     const partsText = d => (((d.candidates || [])[0] || {}).content || { parts: [] }).parts.map(x => x.text || '').join('');
     if (!stream) return partsText(await resp.json());
     const reader = resp.body.getReader();
@@ -191,7 +294,13 @@
 
   // ── Direct, browser-side calls with the user's own key ──────────
 
-  function callAnthropic(key, body, stream, signal) {
+  function callAnthropic(key, model, tools, body, stream, signal) {
+    const payload = { model, max_tokens: body.max_tokens, system: body.system, messages: body.messages, stream: !!stream };
+    // Server-side web search: Claude runs it and folds results into the answer;
+    // text still arrives as content_block_delta, so the SSE reader is unchanged.
+    if (tools.includes('webSearch')) {
+      payload.tools = [claudeSearchTool(model)];
+    }
     return fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -200,35 +309,100 @@
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true',
       },
-      body: JSON.stringify({ model: MODEL, max_tokens: body.max_tokens, system: body.system, messages: body.messages, stream: !!stream }),
+      body: JSON.stringify(payload),
       signal,
     });
   }
 
-  function callOpenAILike(endpoint, model, key, body, stream, signal) {
+  function callOpenAILike(endpoint, model, key, tools, body, stream, signal) {
+    const payload = {
+      model,
+      messages: [{ role: 'system', content: body.system }, ...body.messages],
+      max_tokens: body.max_tokens,
+      stream: !!stream,
+    };
+    // DeepSeek built-in search: the service runs it, so no client tool loop.
+    // Plain search (with citations) needs thinking disabled.
+    if (tools.includes('webSearch')) {
+      payload.tools = [{ type: 'deepseek_web_search' }];
+      payload.thinking = { type: 'disabled' };
+    }
     return fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'system', content: body.system }, ...body.messages],
-        max_tokens: body.max_tokens,
-        stream: !!stream,
-      }),
+      body: JSON.stringify(payload),
       signal,
     });
   }
 
-  function callGeminiDirect(model, key, body, stream, signal) {
+  /** OpenAI Responses API (system prompt as `instructions`, hosted web search). */
+  function callOpenAIResponses(endpoint, model, key, tools, body, stream, signal) {
+    const payload = {
+      model,
+      instructions: body.system,
+      input: body.messages.map(m => ({ role: m.role, content: m.content })),
+      max_output_tokens: body.max_tokens,
+      stream: !!stream,
+    };
+    if (tools.includes('webSearch')) payload.tools = [{ type: 'web_search' }];
+    return fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify(payload),
+      signal,
+    });
+  }
+
+  /** Read a Responses API reply: JSON `output[]` or SSE `response.output_text.delta`. */
+  async function readOpenAIResponses(resp, { stream, onDelta }) {
+    if (!resp.ok) throw await errorFromResponse(resp);
+    const fail = ev => {
+      const e = (ev.response && ev.response.error) || ev.error || ev;
+      return Object.assign(new Error('API error'), { status: 500, detail: String(e.message || e.code || 'response failed').slice(0, 400) });
+    };
+    if (!stream) {
+      const d = await resp.json();
+      if (d.error) throw fail(d);
+      return (d.output || []).filter(o => o.type === 'message')
+        .flatMap(o => o.content || []).filter(c => c.type === 'output_text')
+        .map(c => c.text).join('');
+    }
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '', text = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const p = line.slice(5).trim();
+        if (!p || p === '[DONE]') continue;
+        let ev;
+        try { ev = JSON.parse(p); } catch (e) { continue; /* partial frame */ }
+        if (ev.type === 'response.output_text.delta' && ev.delta) {
+          text += ev.delta; if (onDelta) onDelta(text);
+        } else if (ev.type === 'response.failed' || ev.type === 'error') {
+          throw fail(ev);
+        }
+      }
+    }
+    return text;
+  }
+
+  function callGeminiDirect(model, key, tools, body, stream, signal) {
     const verb = stream ? `streamGenerateContent?alt=sse&key=${key}` : `generateContent?key=${key}`;
+    const payload = {
+      systemInstruction: { parts: [{ text: body.system }] },
+      contents: body.messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+      generationConfig: { maxOutputTokens: body.max_tokens },
+    };
+    if (tools.includes('webSearch')) payload.tools = [{ google_search: {} }];
     return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:${verb}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: body.system }] },
-        contents: body.messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-        generationConfig: { maxOutputTokens: body.max_tokens },
-      }),
+      body: JSON.stringify(payload),
       signal,
     });
   }
@@ -351,19 +525,27 @@
     if (prov === 'puter') return callPuter(body, { stream, onDelta, signal });
     if (prov === 'browser') return callBrowser(body, { stream, onDelta, signal });
 
-    // BYO-key cloud providers — call the vendor API directly with the key.
+    // BYO-key cloud providers — call the vendor API directly with the key,
+    // using the user's chosen model and enabled tools.
     const meta = keyMeta(prov);
     const key = keyFor(prov);
     if (meta && !key) throw Object.assign(new Error('api key required'), { needKey: true, provider: prov });
+    const model = modelFor(prov);
+    // Only tools the chosen model can actually run (prevents e.g. OpenAI 400
+    // "Unknown parameter: web_search_options" on non-search models).
+    const tools = effectiveTools(prov, model);
 
     if (prov === 'claude') {
-      return readResponse(await callAnthropic(key, body, stream, signal), { stream, onDelta });
+      return readResponse(await callAnthropic(key, model, tools, body, stream, signal), { stream, onDelta });
     }
     if (prov === 'gemini') {
-      return readGemini(await callGeminiDirect(meta.model, key, body, stream, signal), { stream, onDelta });
+      return readGemini(await callGeminiDirect(model, key, tools, body, stream, signal), { stream, onDelta });
     }
-    // chatgpt + deepseek share the OpenAI chat-completions shape.
-    return readOpenAILike(await callOpenAILike(meta.endpoint, meta.model, key, body, stream, signal), { stream, onDelta });
+    if (meta.api === 'openai-responses') {
+      return readOpenAIResponses(await callOpenAIResponses(meta.endpoint, model, key, tools, body, stream, signal), { stream, onDelta });
+    }
+    // deepseek uses the OpenAI chat-completions shape.
+    return readOpenAILike(await callOpenAILike(meta.endpoint, model, key, tools, body, stream, signal), { stream, onDelta });
   }
 
   async function send({ system, messages, maxTokens = 1000, stream = false, onDelta, signal }) {
@@ -398,6 +580,10 @@
     browserAvailability,
     // BYO API keys (browser-only storage).
     needsKey, keyFor, hasKey, setKey, clearKey, keyMeta,
+    // Model selection + tools (browser-only storage).
+    TOOLS,
+    modelFor, setModel, modelList, modelDefault,
+    toolsAvailable, toolsEnabled, setTools, toolOn, toolMeta, toolSupported, effectiveTools,
     /** Interactive (popup) login the provider needs before first use. */
     interactiveLogin: {
       async needed() { return current() === 'puter' ? puterLoginNeeded() : false; },
