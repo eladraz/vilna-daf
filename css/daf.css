@@ -61,8 +61,25 @@
   --page-max-w: 800px;
   --page-pad: 18px;
 
+  /* Latin/Cyrillic/Hebrew all come from the committed faces, so the Hebrew
+     page keeps these two stacks exactly as they were before translations. */
   --font-gemara: 'FrankRuhl', 'Frank Ruhl Libre', serif;
   --font-rashi: 'RashiScript', 'Noto Rashi Hebrew', serif;
+}
+
+/* Translated pages add system fallbacks for scripts the committed subsets do
+   not cover — Yiddish ligatures (װ ױ ײ), Korean Hangul, and symbols such as
+   △/☒ that only a system CJK font may have. The Hebrew page (data-text-lang
+   "he", or no attribute on a strict sheet) deliberately keeps the plain stacks
+   above, so its rendering stays pixel-identical to the pre-translation app. */
+.page-sheet[data-text-lang="en"],
+.page-sheet[data-text-lang="ru"],
+.page-sheet[data-text-lang="yi"],
+.page-sheet[data-text-lang="fr"],
+.page-sheet[data-text-lang="es"],
+.page-sheet[data-text-lang="ko"] {
+  --font-gemara: 'FrankRuhl', 'Frank Ruhl Libre', 'Noto Sans Hebrew', 'Noto Sans KR', 'Malgun Gothic', serif;
+  --font-rashi: 'RashiScript', 'Noto Rashi Hebrew', 'Noto Sans Hebrew', 'Noto Sans KR', 'Malgun Gothic', serif;
 }
 
 /* The page sheet carries the global fill scale --s and the user font
@@ -381,6 +398,71 @@ sup.ref-key.key-to { color: #3d2e5c; }
 }
 .settings-panel .set-reset:hover { background: #4a3d2e; }
 
+/* ── Quick language selector (nav, left corner) ─────────── */
+.lang-wrap {
+  position: relative;
+  /* The picker names every language in its own script, so it keeps the
+     system fallbacks while the page chrome stays on the original stacks. */
+  --font-gemara: 'FrankRuhl', 'Frank Ruhl Libre', 'Noto Sans Hebrew', 'Noto Sans KR', 'Malgun Gothic', serif;
+  --font-rashi: 'RashiScript', 'Noto Rashi Hebrew', 'Noto Sans Hebrew', 'Noto Sans KR', 'Malgun Gothic', serif;
+}
+#btn-lang {
+  display: inline-flex; align-items: center; gap: 0.32rem;
+}
+#btn-lang .globe { width: 15px; height: 15px; opacity: 0.9; flex: none; }
+#btn-lang .caret { width: 9px; height: 6px; opacity: 0.55; flex: none; transition: transform 0.15s ease; }
+.lang-wrap.open #btn-lang .caret { transform: rotate(180deg); }
+#btn-lang.lang-on { border-color: #a89878; color: #e6d7b0; }
+#btn-lang .lang-full, #btn-lang .lang-short { line-height: 1; white-space: nowrap; }
+#btn-lang .lang-short { display: none; }
+
+.lang-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 1100;
+  min-width: 12.75rem; padding: 0.28rem;
+  max-height: 70vh; overflow-y: auto;
+  background: #221b10; color: #d4c5a0;
+  border: 1px solid #6b5f4a; border-radius: 6px;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.5);
+  transform-origin: top left;
+  animation: lang-pop 0.14s ease-out;
+  text-align: right;
+}
+.lang-menu[hidden] { display: none; }
+@keyframes lang-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.lang-menu-title {
+  font-size: 0.62rem; letter-spacing: 0.06em; color: #a89878;
+  padding: 0.15rem 0.45rem 0.3rem;
+  border-bottom: 1px solid #4a3d2e; margin-bottom: 0.25rem;
+  white-space: nowrap;
+}
+.lang-menu .lang-opt {
+  display: flex; align-items: center; gap: 0.5rem;
+  width: 100%; margin: 0; padding: 0.3rem 0.45rem;
+  background: transparent; color: #d4c5a0;
+  border: 0; border-radius: 4px;
+  font-family: var(--font-gemara); font-size: 0.82rem;
+  cursor: pointer; text-align: right;
+}
+.lang-menu .lang-opt:hover { background: #3a2f21; }
+.lang-menu .lang-opt[aria-selected="true"] { background: #4a3d2e; }
+.lang-menu .lang-opt:focus-visible { outline: 1px solid #c9b27a; outline-offset: -1px; }
+.lang-opt .lang-code {
+  flex: none; width: 1.8rem; padding: 0.05rem 0; text-align: center;
+  font-size: 0.58rem; font-weight: 700; letter-spacing: 0.03em;
+  color: #a89878; border: 1px solid #5a4f3c; border-radius: 3px;
+}
+.lang-opt[aria-selected="true"] .lang-code { color: #e6d7b0; border-color: #8a7a5a; }
+.lang-opt .lang-name { flex: 1; white-space: nowrap; }
+.lang-opt .lang-mt {
+  flex: none; font-size: 0.53rem; line-height: 1.5; color: #8a7c62;
+  border: 1px solid #5a4f3c; border-radius: 3px; padding: 0 0.2rem;
+}
+.lang-opt .lang-check { flex: none; width: 12px; height: 12px; opacity: 0; color: #e6d7b0; }
+.lang-opt[aria-selected="true"] .lang-check { opacity: 1; }
+
 /* ── Hover highlighting ─────────────────────────────────── */
 .comment { cursor: pointer; }
 .hl-seg { background-color: rgba(200,170,110,0.25); transition: background-color 0.1s; }
@@ -435,7 +517,30 @@ sup.ref-key.key-to { color: #3d2e5c; }
     padding: 0.45rem 0.6rem;
   }
   .nav-buttons { display: flex; gap: 0.35rem; }
+  /* The language picker stays compact on phones: its code, not the full name. */
+  #btn-lang .lang-full { display: none; }
+  #btn-lang .lang-short { display: inline; }
+  .lang-menu { min-width: 11rem; }
   .page-sheet { margin: 0.25rem auto; }
+}
+
+/* The picker must not push the one-row nav into wrapping at mid-size windows:
+   it drops to its code, then to the globe alone, before the bar runs out of
+   room. Above 860px there is space for the full language name. */
+@media (max-width: 860px) {
+  #btn-lang .lang-full { display: none; }
+  #btn-lang .lang-short { display: inline; }
+  #btn-lang .caret { display: none; }
+}
+@media (min-width: 701px) and (max-width: 860px) {
+  .nav-bar { gap: 0.35rem; padding-left: 0.75rem; padding-right: 0.75rem; }
+}
+@media (min-width: 701px) and (max-width: 800px) {
+  #btn-lang .lang-short { display: none; }
+}
+@media (max-width: 560px) {
+  #btn-lang .lang-short { display: none; }
+  #btn-lang { padding-left: 0.4rem; padding-right: 0.4rem; }
 }
 
 /* ── Site footer: Sefaria attribution (required text credit) ── */

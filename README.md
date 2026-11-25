@@ -60,7 +60,9 @@ current page around the new selection:
                                    //   | 'wikisource' | 'english'
       inner: 'rashi',              // binding-side wrap column (see catalog below)
       outer: 'steinsaltz',         // page-edge wrap column
-      lang: 'he',                  // commentary language: 'he' | 'en'
+      textLang: 'he',              // whole-page language: 'he' | 'en' | 'ru' | 'yi' | 'fr' | 'es' | 'ko'
+                                   //   ('he' keeps the classic page; the others use offline translations)
+      lang: 'he',                  // commentary language when textLang is 'he': 'he' | 'en'
       extras: ['gilyonHaShas', 'rabbeinuChananel', 'steinsaltz'],
                                    // extra commentaries below the core / in margins
       commFont: 'frank',           // commentary font: 'rashi' (default) | 'frank'
@@ -85,6 +87,11 @@ The valid ids come from the exposed catalogs:
 | `VilnaDaf.WRAP_COMMENTARIES` | Texts a wrap column can hold (Rashi, Tosafot, Rashbam, Ran, Rif, Rosh, Rabbeinu Chananel/Gershom, Ktav Yad Rashi, the Tosafot family, Steinsaltz, …) — each `{id, he, ref}` |
 | `VilnaDaf.EXTRA_COMMENTARIES` | The toggleable extra commentaries, grouped `rishonim` / `acharonim` / `modern` |
 | `VilnaDaf.DEFAULT_SETTINGS` | The shipped defaults (the classic Vilna page) |
+| `VilnaDaf.TEXT_LANGS` | The text languages the page can show, each `{id, label, dir, mt?}`; `mt` marks a machine translation |
+
+`textLang` replaces every stream (Gemara, Rashi, Tosafot and the extra commentaries) with that
+language when the offline pack has it, and falls back block by block to Hebrew where it does not;
+Yiddish is right-to-left. `VilnaDaf.isLtrLang(id)` reports a language's direction.
 
 Notes: a selected source that does not exist for the current daf is silently omitted
 (nothing is ever fabricated); `fontScale` enlarges the text at the expense of the fixed
@@ -309,7 +316,7 @@ The library itself (`vilna-daf.js`, `index.html`, `css/`, `js/`, `fonts/`) needs
 page is fetched live from Sefaria. Add the folder **`data/offline/`** next to it to serve every page
 offline instead. It has one file per amud, `data/offline/<Tractate>/<daf><a|b>.json` (schema
 `vilna-offline/1`). Each file holds the texts in every language (`langs.he`, `langs.en`, `langs.ru`,
-…), the page metadata (chapter and Masoret HaShas / Ein Mishpat / Torah Or links) and the source and
+`langs.yi`, `langs.fr`, `langs.es`, `langs.ko`, …), the page metadata (chapter and Masoret HaShas / Ein Mishpat / Torah Or links) and the source and
 licence of each block (`sources`). The loader tries the pack first and falls back to Sefaria per page.
 Set another location with `new VilnaDaf({offlineBase: 'path/to/offline'})`, or turn it off with
 `offlineBase: false`.
@@ -330,12 +337,14 @@ shown in the page footer and required by the text license) and must comply with 
 Publishers Jerusalem). Full terms in [LICENSE.md](LICENSE.md) and at
 [sefaria.org](https://www.sefaria.org/terms).
 
-Per-block licences (Public Domain, CC0, CC-BY, CC-BY-SA, CC-BY-NC) and the Russian machine translations are
-described in [LICENSE.md](LICENSE.md#additional-text-attributions-sefaria-sources-per-version-licences); text that is not
+Per-block licences (Public Domain, CC0, CC-BY, CC-BY-SA, CC-BY-NC) and the Russian, Yiddish, French,
+Spanish and Korean machine translations are described in
+[LICENSE.md](LICENSE.md#additional-text-attributions-sefaria-sources-per-version-licences); text that is not
 Public Domain is flagged `"special": true` in `data/offline/` so it can be removed.
 
 Fonts: Frank Ruhl Libre and Noto Rashi Hebrew, plus Noto Serif / Noto Sans (Cyrillic subset) for Russian
-(Google Fonts, SIL Open Font License 1.1).
+(Google Fonts, SIL Open Font License 1.1). Yiddish uses the Hebrew faces (with system Hebrew fallback
+for װ ױ ײ); Korean uses the system Hangul fallback.
 
 ## License
 

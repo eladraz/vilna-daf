@@ -160,6 +160,10 @@
     { id: 'he', label: 'עברית', dir: 'rtl' },
     { id: 'en', label: 'English', dir: 'ltr' },
     { id: 'ru', label: 'Русский', dir: 'ltr', mt: true },
+    { id: 'yi', label: 'ייִדיש', dir: 'rtl', mt: true },
+    { id: 'fr', label: 'Français', dir: 'ltr', mt: true },
+    { id: 'es', label: 'Español', dir: 'ltr', mt: true },
+    { id: 'ko', label: '한국어', dir: 'ltr', mt: true },
   ];
   const LICENSE_MODES = ['all', 'pd'];
 
@@ -170,8 +174,9 @@
   }
 
   /**
-   * Text language of the streams: textLang when it is not 'he' (en/ru replace the
-   * whole page text), otherwise the commentary language setting `lang` ('he' | 'en').
+   * Text language of the streams: textLang when it is not 'he' (any translation
+   * replaces the whole page text), otherwise the commentary language setting
+   * `lang` ('he' | 'en').
    */
   function effectiveLang(s) {
     return s.textLang && s.textLang !== 'he' ? s.textLang : s.lang;
@@ -1089,9 +1094,12 @@
   function normalizeModel(model, settings) {
     const s = settings || model.settings || DEFAULT_SETTINGS;
     const ed = EDITIONS[s.edition] || EDITIONS.aramaic;
-    // Hebrew strip rules never run on Cyrillic/Latin text (textLang en/ru keeps punctuation).
-    const cleanG = ed.strip && !isLtrLang(s.textLang) ? cleanGemara : softClean;
-    const cleanC = isLtrLang(effectiveLang(s)) ? softClean : cleanComment;
+    // Hebrew strip rules run only on the Hebrew source itself. Every translation
+    // (Cyrillic/Latin, and Yiddish in Hebrew script) keeps its punctuation and
+    // diacritics — stripping would eat Yiddish rafe/patah combinations.
+    const heSourceText = !s.textLang || s.textLang === 'he';
+    const cleanG = ed.strip && heSourceText ? cleanGemara : softClean;
+    const cleanC = (!heSourceText || isLtrLang(effectiveLang(s))) ? softClean : cleanComment;
     const gemara = (model.gemara || []).map(seg => normSeg(seg).map(cleanG).join(' '));
     const rashi = (model.rashi || []).map(seg => normSeg(seg).map(cleanC));
     const tosafot = (model.tosafot || []).map(seg => normSeg(seg).map(cleanC));
@@ -1377,7 +1385,7 @@
           title: r.src.title || null,
           license: r.src.license || null,
           special: !!r.src.special,
-          mt: r.lang === 'ru',
+          mt: !!(TEXT_LANGS.find(l => l.id === r.lang) || {}).mt || !!r.src.mt,
           derivedFrom: Array.isArray(r.src.derivedFrom) ? r.src.derivedFrom.slice() : null,
           fallbackFrom: r.fallbackFrom,
         };
@@ -1576,8 +1584,9 @@
       { key: 'torahOr', cls: 'key-to', title: 'תורה אור' },
     ];
     const idx = {};
-    // Translation pages cite the source in Latin (sourceRef); Hebrew pages keep sourceHeRef.
-    const latinRefs = !!(model.settings && model.settings.textLang && model.settings.textLang !== 'he');
+    // LTR translation pages cite the source in Latin (sourceRef); Hebrew and
+    // Yiddish pages (both RTL) keep sourceHeRef.
+    const latinRefs = !!(model.settings && isLtrLang(model.settings.textLang));
     for (const d of defs) {
       idx[d.key] = { cls: d.cls, title: d.title, entries: [] };
       (links[d.key] || []).forEach((lk, i) => {
@@ -1802,7 +1811,7 @@
         const mt = el('div', 'daf-src-line daf-src-mt');
         mt.dataset.noteBlock = block;
         const from = Array.isArray(src.derivedFrom) && src.derivedFrom.length ? src.derivedFrom.join(', ') : (ltr ? 'the Hebrew source' : 'המקור העברי');
-        mt.textContent = ltr ? `Machine translation (Claude Haiku), based on ${from}` : `תרגום מכונה (Claude Haiku) — מבוסס על ${from}`;
+        mt.textContent = ltr ? `Machine translation, based on ${from}` : `תרגום מכונה — מבוסס על ${from}`;
         note.appendChild(mt);
       }
     }
@@ -2308,6 +2317,9 @@
 
   function buildSheetSkeleton(model, s, cls) {
     const sheet = el('div', `page-sheet side-${model.side}${cls ? ` ${cls}` : ''}`);
+    // The stylesheet keys its translation-only font fallbacks off this; the
+    // Hebrew page must keep the exact pre-translation stacks.
+    sheet.dataset.textLang = s.textLang && s.textLang !== 'he' ? s.textLang : 'he';
     if (s.fontScale && s.fontScale !== 1) sheet.style.setProperty('--us', String(s.fontScale));
     const commFam = fontFamilyCSS(s.commFont, 'rashi');
     const gemFam = fontFamilyCSS(s.gemaraFont, 'frank');
@@ -2330,7 +2342,8 @@
   function buildStreams(core, model, s, htmls) {
     const containers = {};
     const ed = EDITIONS[s.edition] || EDITIONS.aramaic;
-    // textLang en/ru: every stream (Gemara included) carries that language, LTR.
+    // A non-Hebrew textLang puts every stream (Gemara included) in that language;
+    // LTR for en/ru/fr/es/ko, RTL for Yiddish.
     const textLang = s.textLang && s.textLang !== 'he' ? s.textLang : null;
     for (const name of ['gemara', 'rashi', 'tosafot']) {
       const c = el('div', `stream stream-${name}`);
@@ -3594,8 +3607,12 @@
       fams.add(getComputedStyle(e).fontFamily);
     }
     const jobs = [];
-    // Russian streams also need the Cyrillic face of each family loaded (unicode-range subsets).
-    const probe = sheet.querySelector('.stream[lang="ru"]') ? 'אבגדה abc Жж' : 'אבגדה abc';
+    // Non-Hebrew streams also need their unicode-range subsets loaded: Cyrillic
+    // for ru, accented Latin for fr/es, Hangul for ko, Yiddish ligatures for yi.
+    let probe = 'אבגדה abc éèàç ñáíóú';
+    if (sheet.querySelector('.stream[lang="ru"]')) probe += ' Жж';
+    if (sheet.querySelector('.stream[lang="ko"]')) probe += ' 한국어';
+    if (sheet.querySelector('.stream[lang="yi"]')) probe += ' ײַװױ';
     for (const f of fams) {
       jobs.push(document.fonts.load(`16px ${f}`, probe).catch(() => null));
       jobs.push(document.fonts.load(`700 16px ${f}`, probe).catch(() => null));

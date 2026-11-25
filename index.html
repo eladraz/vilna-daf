@@ -64,6 +64,20 @@
     </button>
 
     <button id="btn-reset" title="איפוס: מחיקת כל ההגדרות, הגופנים, הבחירות והעוגיות וחזרה לברירת המחדל">↺</button>
+
+    <div class="lang-wrap">
+      <button id="btn-lang" type="button" aria-haspopup="listbox" aria-expanded="false" title="שפת הטקסט — Language">
+        <svg class="globe" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M3 12h18"/>
+          <path d="M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/>
+        </svg>
+        <span class="lang-full" id="btn-lang-full">עברית</span>
+        <span class="lang-short" id="btn-lang-short">עב</span>
+        <svg class="caret" viewBox="0 0 10 6" width="9" height="6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div id="lang-menu" class="lang-menu" role="listbox" aria-label="שפת הטקסט" hidden></div>
+    </div>
   </nav>
 
   <!-- ═══════════════════════════════════════════════════════ -->
@@ -86,7 +100,7 @@
       <a href="https://www.sefaria.org" target="_blank" rel="noopener">Sefaria</a> —
       the William Davidson Talmud, licensed
       <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC&#8209;BY&#8209;NC 4.0</a>.
-      Commentary versions are Public Domain, CC0, CC&#8209;BY or CC&#8209;BY&#8209;SA as marked per text; the optional Russian text is a machine translation.
+      Commentary versions are Public Domain, CC0, CC&#8209;BY or CC&#8209;BY&#8209;SA as marked per text; the optional Russian, Yiddish, French, Spanish and Korean texts are machine translations.
       See <a href="LICENSE.md">license &amp; attribution</a>.
     </p>
   </footer>
@@ -204,7 +218,7 @@
         const textLang = s.textLang || 'he';
         const isHe = textLang === 'he';
         const langRadios = VilnaDaf.TEXT_LANGS.map(l =>
-          `<label><input type="radio" name="set-textlang" value="${l.id}" ${textLang === l.id ? 'checked' : ''}> ${l.label}${l.mt ? ' (תרגום מכונה / машинный перевод)' : ''}</label>`
+          `<label><input type="radio" name="set-textlang" value="${l.id}" ${textLang === l.id ? 'checked' : ''}> ${l.label}${l.mt ? ' (תרגום מכונה)' : ''}</label>`
         ).join('');
         const langSection = `<h3>שפה · Language · Язык</h3>${langRadios}`;
         // Printed blocks that have no text on this amud (model.hiddenBlocks) are not offered.
@@ -265,7 +279,7 @@
 
       panel.addEventListener('change', e => {
         const t = e.target;
-        if (t.name === 'set-textlang') applyPanel({ textLang: t.value });
+        if (t.name === 'set-textlang') { applyPanel({ textLang: t.value }); updateLangLabel(t.value); }
         else if (t.name === 'set-edition') applyPanel({ edition: t.value });
         else if (t.name === 'set-lang') applyPanel({ lang: t.value });
         else if (t.id === 'set-inner') applyPanel({ inner: t.value });
@@ -303,6 +317,7 @@
           renderer.settings = Object.assign({}, VilnaDaf.DEFAULT_SETTINGS);
           buildPanel();
           applyPanel({});
+          updateLangLabel();
         }
       });
       // Keep the open panel describing the amud on screen.
@@ -314,6 +329,63 @@
       document.addEventListener('click', e => {
         if (!panel.hidden && !e.target.closest('.settings-wrap')) panel.hidden = true;
       });
+
+      // ── Quick language selector (nav, left corner) ─────────
+      // A compact globe button that switches textLang on the spot. The "…"
+      // panel keeps the full language section; the two stay in sync.
+      const langWrap = document.querySelector('.lang-wrap');
+      const langBtn = document.getElementById('btn-lang');
+      const langMenu = document.getElementById('lang-menu');
+      const langFull = document.getElementById('btn-lang-full');
+      const langShort = document.getElementById('btn-lang-short');
+      const LANG_GLYPH = { he: 'עב', en: 'EN', ru: 'РУ', yi: 'יי', fr: 'FR', es: 'ES', ko: '한' };
+      const langMeta = id => VilnaDaf.TEXT_LANGS.find(l => l.id === id) || VilnaDaf.TEXT_LANGS[0];
+      function updateLangLabel(id) {
+        const meta = langMeta(id || renderer.settings.textLang);
+        langFull.textContent = meta.label;
+        langShort.textContent = LANG_GLYPH[meta.id] || meta.id.toUpperCase();
+        langBtn.classList.toggle('lang-on', meta.id !== 'he');
+        langBtn.title = `שפת הטקסט: ${meta.label}`;
+        langBtn.setAttribute('aria-label', `שפת הטקסט: ${meta.label}`);
+      }
+      function buildLangMenu() {
+        const cur = renderer.settings.textLang || 'he';
+        langMenu.innerHTML = '<div class="lang-menu-title">שפת הטקסט · Text language</div>' +
+          VilnaDaf.TEXT_LANGS.map(l => `
+            <button type="button" class="lang-opt" role="option" data-lang="${l.id}" aria-selected="${l.id === cur}">
+              <span class="lang-code">${LANG_GLYPH[l.id] || l.id.toUpperCase()}</span>
+              <span class="lang-name">${l.label}</span>
+              ${l.mt ? '<span class="lang-mt" title="תרגום מכונה">MT</span>' : ''}
+              <svg class="lang-check" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>`).join('');
+      }
+      function setLangMenu(open) {
+        if (open) buildLangMenu();
+        langMenu.hidden = !open;
+        langWrap.classList.toggle('open', open);
+        langBtn.setAttribute('aria-expanded', String(open));
+        if (open) {
+          const sel = langMenu.querySelector('.lang-opt[aria-selected="true"]');
+          if (sel) sel.focus();
+        }
+      }
+      langBtn.addEventListener('click', () => setLangMenu(langMenu.hidden));
+      langMenu.addEventListener('click', e => {
+        const opt = e.target.closest('.lang-opt');
+        if (!opt) return;
+        const id = opt.dataset.lang;
+        if (id && id !== renderer.settings.textLang) applyPanel({ textLang: id });
+        updateLangLabel(id);
+        setLangMenu(false);
+        langBtn.focus();
+      });
+      document.addEventListener('click', e => {
+        if (!langMenu.hidden && !e.target.closest('.lang-wrap')) setLangMenu(false);
+      });
+      document.addEventListener('keydown', e => {
+        if (!langMenu.hidden && e.key === 'Escape') { setLangMenu(false); langBtn.focus(); }
+      });
+      updateLangLabel();
 
       // ── Print: black-on-white daf, ONE printed page per sheet (strict
       //    page, adaptive page and every continuation sheet). Each sheet is
@@ -477,6 +549,7 @@
 
       // Keyboard: left=next, right=prev
       document.addEventListener('keydown', e => {
+        if (!langMenu.hidden) return; // the language menu owns the keyboard while open
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
         if (e.key === 'ArrowLeft') { e.preventDefault(); nextBtn.click(); }
         else if (e.key === 'ArrowRight') { e.preventDefault(); prevBtn.click(); }
