@@ -1,6 +1,11 @@
 /* ───────────────────────────────────────────────────────────
    daf.css — Vilna Tzurat HaDaf
 
+   Two layout policies share this sheet:
+   - strict-vilna (.page-sheet.policy-strict): the reference page itself;
+     every coordinate is calc(var(--pt) * N) in PDF points (see bottom).
+   - adaptive (everything below): the band/absorption solver.
+
    Macro frame: header / body / bottom strip.
    Body: real grid columns [margin 9%] [core] [margin 9%].
    CORE: three absolutely-positioned stream overlays; inside each,
@@ -16,6 +21,15 @@
   font-weight: 300 900; font-style: normal; font-display: block;
   unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
 }
+/* Cyrillic (T0.3): placed after the Hebrew face and before the unranged latin face.
+   Weight range matches the latin face (300-900); with a wider 100-900 range Chromium
+   kept picking the latin face for Cyrillic. The unicode-range never matches Hebrew or latin. */
+@font-face {
+  font-family: 'FrankRuhl';
+  src: url('../fonts/NotoSerif-cyrillic.woff2') format('woff2');
+  font-weight: 300 900; font-style: normal; font-display: block;
+  unicode-range: U+0400-04FF, U+0500-052F;
+}
 @font-face {
   font-family: 'FrankRuhl';
   src: url('../fonts/FrankRuhlLibre-latin.woff2') format('woff2');
@@ -26,6 +40,12 @@
   src: url('../fonts/NotoRashiHebrew-hebrew.woff2') format('woff2');
   font-weight: 100 900; font-style: normal; font-display: block;
   unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'RashiScript';
+  src: url('../fonts/NotoSans-cyrillic.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: block;
+  unicode-range: U+0400-04FF, U+0500-052F;
 }
 @font-face {
   font-family: 'RashiScript';
@@ -53,8 +73,12 @@
   --us: 1;
   --font-main: var(--font-gemara);
   --font-comm: var(--font-rashi);
-  --fs-gem: calc(16px * var(--s) * var(--us));
-  --fs-comm: calc(var(--fs-gem) * 0.80);
+  /* base size, comm ratio and leadings are set by JS from the active
+     layout constants (generic, or edition-seeded best-effort) */
+  --fs-gem-base: 16px;
+  --ratio-comm: 0.80;
+  --fs-gem: calc(var(--fs-gem-base) * var(--s) * var(--us));
+  --fs-comm: calc(var(--fs-gem) * var(--ratio-comm));
   --fs-margin: calc(var(--fs-gem) * 0.55);
   --fs-header: calc(var(--fs-gem) * 0.90);
   --lh-gem: 1.5;
@@ -222,16 +246,13 @@ sup.ref-key.key-em { color: #5c3d2e; }
 sup.ref-key.key-ms { color: #2e5c3d; }
 sup.ref-key.key-to { color: #3d2e5c; }
 
-/* ── Margin columns: in-flow tracks, content clipped to core ── */
+/* ── Margin columns: in-flow tracks (never clipped) ──
+   The apparatus is part of the measured page: its height enters the fill
+   budget and, when it cannot fit, continues on a continuation sheet. */
 .daf-margin { position: relative; min-width: 0; overflow: visible; }
-.daf-margin .marg-clip {
-  /* Top-anchored, no bottom constraint: the apparatus grows downward as
-     tall as its content (תורה אור / גליון הש״ס are no longer clipped).
-     Absolutely positioned so it doesn't grow the grid row — the sheet
-     keeps its fixed 0.707 aspect; long apparatus simply extends lower. */
-  position: absolute;
-  top: 0; left: 0; right: 0;
+.daf-margin .marg-col {
   overflow: visible;
+  overflow-wrap: anywhere;
   font-size: var(--fs-margin);
   line-height: var(--lh-margin);
   font-family: var(--font-comm);
@@ -273,6 +294,27 @@ sup.ref-key.key-to { color: #3d2e5c; }
   font-weight: 700;
 }
 .daf-bottom-strip .strip-block { margin-bottom: 2px; }
+
+/* ── Safe fallback: streams stacked in source order (no carves) ── */
+.core.stacked { height: auto !important; }
+.core.stacked .stream { position: static; }
+.core.stacked .carve { display: none !important; }
+.core.stacked .first-word { position: static; display: inline-block; margin-inline-end: 0.3em; }
+.core.stacked .stream + .stream { margin-top: calc(0.5 * var(--fs-gem)); }
+
+/* ── Continuation sheets (adaptive pagination) ──────────── */
+.page-sheet.sheet-cont { margin-top: 1rem; }
+.cont-label {
+  text-align: center;
+  font-family: var(--font-gemara);
+  font-weight: 700;
+  font-size: calc(var(--fs-header) * 0.8);
+  color: #5c4a2e;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 2px;
+  margin-bottom: calc(0.4 * var(--fs-gem));
+}
+.cont-label .cont-streams { font-weight: 400; }
 
 /* ── LTR sources (English edition / English commentaries) ─ */
 .stream-ltr {
@@ -427,6 +469,19 @@ sup.ref-key.key-to { color: #3d2e5c; }
      page, no horizontal overflow. Do NOT force margin/overflow here; the
      handler positions and centres the sheet itself. */
   #daf-content { overflow: hidden !important; }
+  /* One printed page per sheet (continuation sheets included). The
+     beforeprint handler wraps each sheet in a .print-box sized to its
+     scaled footprint. */
+  .print-box {
+    break-after: page; break-inside: avoid;
+    /* Size containment makes the box monolithic for fragmentation: the
+       sheet inside keeps its UNSCALED layout height (taller than a printed
+       page), which would otherwise be fragmented onto the next page even
+       though it is visually scaled to fit. No paint containment: nothing is
+       clipped. */
+    contain: size layout style;
+  }
+  .print-box:last-child { break-after: auto; }
 
   /* Black ink on white throughout (drop the parchment palette). */
   .page-sheet, .page-sheet * {
@@ -444,9 +499,11 @@ sup.ref-key.key-to { color: #3d2e5c; }
     background: #fff !important;
     border: 1.5px solid #000 !important;
     box-shadow: none !important;
-    overflow: hidden !important;
     break-inside: avoid;
   }
+  /* The strict sheet is the printed page itself: no frame. */
+  .page-sheet.policy-strict { border: 0 !important; }
+  .page-sheet.sheet-cont { margin-top: 0 !important; }
 
   /* Keep the structural ink marks crisp in black. */
   .first-word { border-color: #000 !important; }
@@ -454,4 +511,174 @@ sup.ref-key.key-to { color: #3d2e5c; }
   .marg-title, .commentary-sep, .daf-bottom-strip { border-color: #000 !important; }
   sup.ref-key { color: #000 !important; }
   .catchword { opacity: 1 !important; }
+}
+
+/* ═══════════════════ strict-vilna: the reference page ═══════════════════
+   Sheet = reference page rect; --pt (px per PDF point) and --pw/--ph are
+   set by JS. Lines are absolutely positioned at the printed baseline and
+   x-extent, never wrap, and are justified explicitly (word-spacing →
+   letter-spacing → scaleX) by measured fits. Kerning/ligatures pinned. */
+.page-sheet.policy-strict {
+  --pt: 1px;
+  padding: 0;
+  border: 0;
+  height: calc(var(--pt) * var(--ph, 992.575));
+  overflow: visible;
+  color: var(--ink);
+  font-synthesis: none;
+}
+.policy-strict .vcore {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+.policy-strict .vregion {
+  position: absolute; left: 0; top: 0; width: 0; height: 0;
+}
+.policy-strict .vl {
+  position: absolute;
+  white-space: nowrap;
+  direction: rtl;
+  unicode-bidi: isolate;
+  text-align: right;
+  line-height: normal;
+  transform-origin: right center;
+  font-kerning: none;
+  font-variant-ligatures: none;
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+}
+.policy-strict .vbl {
+  display: inline-block; width: 0; height: 0;
+  vertical-align: baseline;
+}
+/* --vsh: per-face web-font baseline correction (em); --dy: the run's
+   measured baseline offset from the profile (pt, y down) */
+.policy-strict .vr {
+  position: relative;
+  top: calc(var(--dy, 0px) + var(--vsh, 0em));
+  /* --hsh: per-face horizontal ink (sidebearing) correction, em (inline
+     boxes ignore transforms, so relative `left`; positioned-apart runs,
+     whose `left` is their explicit extent, use `translate`) */
+  left: var(--hsh, 0em);
+}
+.policy-strict .vr.vr-abs { translate: var(--hsh, 0em) 0; }
+/* anchored word: its letters carry their reference-advance corrections
+   (side margins set by JS); it never inherits a line-level letter-spacing */
+.policy-strict .vw { letter-spacing: 0; }
+.policy-strict .vr .vr { --dy: 0px; }
+.policy-strict .vr.vr-abs {
+  position: absolute; top: auto;
+  white-space: nowrap; text-align: right;
+  transform-origin: right center;
+}
+.policy-strict .vr.s-sup:not(.vr-dy) { vertical-align: super; }
+.policy-strict .vr.s-box {
+  outline: calc(var(--pt) * 0.6) solid currentColor;
+  outline-offset: calc(var(--pt) * 1);
+}
+.policy-strict .gseg, .policy-strict .comment { cursor: pointer; }
+.policy-strict .comment:focus { outline: none; }
+
+/* ornaments: CSS-drawn, live text (never a scan crop) */
+.policy-strict .vorn { position: absolute; pointer-events: none; }
+.policy-strict .vorn-glyph-rule::before {
+  /* The edition's glyph rule (one ornament glyph, ~26k on the 5375 amudim, always the
+     same shape scaled to its ink box): rule – half-filled lozenge – arrowhead – ringed
+     theta – mirrored. Own vector drawing (measured from the print, not a scan or font
+     outline), painted in currentColor through a mask, stretched to the ink box. */
+  content: ''; position: absolute; inset: 0;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 49 4.5' preserveAspectRatio='none'%3E%3Cg id='h'%3E%3Cpath d='M0 1.8h10.6v.7H0zM10.3 2.15L17.5 4.4L20.7 2.15zM21.3 1L21.3 3.25L22.9 2.15z'/%3E%3Cpath d='M10.4 2.05L17.45 .2L20.8 2.05' fill='none' stroke='%23000' stroke-width='.36'/%3E%3C/g%3E%3Cuse href='%23h' transform='rotate(180 24.45 2.1)'/%3E%3Ccircle cx='24.3' cy='2.13' r='1.68' fill='none' stroke='%23000' stroke-width='.32'/%3E%3Ccircle cx='24.3' cy='2.13' r='1.03' fill='none' stroke='%23000' stroke-width='.27'/%3E%3Cpath d='M23.4 2h1.8v.3h-1.8z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 49 4.5' preserveAspectRatio='none'%3E%3Cg id='h'%3E%3Cpath d='M0 1.8h10.6v.7H0zM10.3 2.15L17.5 4.4L20.7 2.15zM21.3 1L21.3 3.25L22.9 2.15z'/%3E%3Cpath d='M10.4 2.05L17.45 .2L20.8 2.05' fill='none' stroke='%23000' stroke-width='.36'/%3E%3C/g%3E%3Cuse href='%23h' transform='rotate(180 24.45 2.1)'/%3E%3Ccircle cx='24.3' cy='2.13' r='1.68' fill='none' stroke='%23000' stroke-width='.32'/%3E%3Ccircle cx='24.3' cy='2.13' r='1.03' fill='none' stroke='%23000' stroke-width='.27'/%3E%3Cpath d='M23.4 2h1.8v.3h-1.8z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+/* path rule (footnote rule, ~0.45-0.5 pt): a vector bar through a mask on a box padded 1 pt above and
+   below, so it is anti-aliased at its own weight. A 0.5 pt border, like any box edge, was snapped to a
+   whole CSS px, i.e. 2 device px at the compare scale: twice the print's weight (iteration 4). */
+.policy-strict .vorn-path-rule::before {
+  content: ''; position: absolute; left: 0; right: 0;
+  top: calc(var(--pt) * -1); bottom: calc(var(--pt) * -1);
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 2.48' preserveAspectRatio='none'%3E%3Cpath d='M0 1h10v.48H0z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 2.48' preserveAspectRatio='none'%3E%3Cpath d='M0 1h10v.48H0z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+}
+.policy-strict .vorn-box { border: calc(var(--pt) * 0.6) solid currentColor; }
+.policy-strict .vorn-image {
+  border: calc(var(--pt) * 1.2) double currentColor;
+  display: flex; align-items: center; justify-content: center;
+}
+.policy-strict .vorn-text {
+  display: inline-block;
+  font-family: var(--font-gemara);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transform-origin: center;
+  pointer-events: auto;
+}
+
+/* ═══════════════════ comparison frame (?compare=1) ═══════════════════
+   Colours/chrome only — never layout: white paper, black ink, no shadow,
+   no page margin; the adaptive sheet keeps its 1px border width (white). */
+html.vilna-compare, html.vilna-compare body { background: #fff !important; }
+html.vilna-compare { --paper: #fff; --ink: #000; --rule: #000; }
+html.vilna-compare .nav-bar, html.vilna-compare .site-footer,
+html.vilna-compare #chavruta-fab, html.vilna-compare #chavruta-panel,
+html.vilna-compare #context-sidebar, html.vilna-compare .chv-ctxmenu,
+html.vilna-compare .chv-provider-modal { display: none !important; }
+html.vilna-compare .page-sheet {
+  margin: 0 !important;
+  /* RTL page: with zero margins a block hugs the RIGHT edge, i.e. x = viewport -
+     sheet width (fractional, e.g. 0.875 device px off-grid). Pin the sheet to the
+     left edge so its origin is a whole device pixel (position only, not layout). */
+  margin-right: auto !important;
+  box-shadow: none !important;
+  background: #fff !important;
+  border-color: #fff !important;
+}
+html.vilna-compare .page-sheet,
+html.vilna-compare .page-sheet * { color: #000 !important; }
+html.vilna-compare .catchword { opacity: 1; }
+
+/* Settings panel: source tags under the commentary selects and the
+   "printed on this page" markers (design §2.3). */
+.settings-panel .src-tag {
+  display: inline-block; margin-top: 0.2rem; padding: 0 0.35rem;
+  font-size: 0.66rem; color: #b9a983; border: 1px solid #4a3d2e; border-radius: 3px;
+}
+.settings-panel .src-tag.src-print { color: #e6d7b0; border-color: #8a7a5a; }
+.settings-panel .src-tag.src-missing { color: #d9a48a; border-color: #8a5a4a; }
+
+/* ───────────────────────────────────────────────────────────
+   Anchored policy (docs/VILNA_ANCHORED_DESIGN.md §3.9)
+   The strict sheet with a non-default setting applied: kept lines stay
+   verbatim; restyled, hidden or magnified content is rendered by the same
+   strict engine (.page-sheet.policy-strict) and tagged .policy-anchored.
+   Flow slots (.aflow-core, .aflow, .aslot-note, .anchored-cont, .acont-*)
+   are added in implementation step 4.
+   ─────────────────────────────────────────────────────────── */
+
+/* ═══════════ anchored: strict page + flows in printed slots (docs/VILNA_ANCHORED_DESIGN.md) ═══════════ */
+.policy-anchored .aflow-core { position: absolute; pointer-events: none; }
+.policy-anchored .aflow { overflow: visible; }
+.policy-anchored .aflow b, .policy-anchored .aflow strong { font-family: var(--font-gemara); font-weight: 700; }
+.policy-anchored .aslot-note { display: block; text-align: center; opacity: .55; font-size: .9em; }
+.page-sheet.anchored-cont { height: auto; padding: calc(var(--pt, 1px) * 36) calc(var(--pt, 1px) * 58); }
+.anchored-cont .acont-block { text-align: justify; margin-bottom: calc(var(--pt, 1px) * 10); }
+.anchored-cont .acont-title { font-family: var(--font-gemara); font-weight: 700; margin-inline-end: .4em; }
+.anchored-cont .acont-block.stream-ltr { direction: ltr; text-align: justify; }
+
+/* ═══════════ Sources note: after the last sheet, outside .page-sheet ═══════════ */
+.daf-sources {
+  box-sizing: border-box; max-width: 718px; margin: 1rem auto 0; padding: 0.5rem 0.75rem;
+  border-top: 1px solid #b9a983; color: #3a3328; font-size: 0.72rem; line-height: 1.55; text-align: start;
+}
+.daf-sources-h { font-weight: 700; margin-bottom: 0.2rem; }
+.daf-src-line { margin: 0; }
+.daf-src-mt { padding-inline-start: 0.9rem; }
+.daf-src-key { margin-top: 0.25rem; opacity: .85; }
+@media print {
+  .daf-sources { display: block !important; color: #000; border-top-color: #000; margin-top: 0; page-break-before: auto; }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .daf-sources { color: #d9d2c3; border-top-color: #5a4d3a; }
 }

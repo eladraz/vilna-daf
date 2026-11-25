@@ -303,6 +303,17 @@ Hebrew-only header, < 2 s cached load, and relaxation convergence (≤ 8 rounds)
 - Server-side rendering
 - Vocalized/pointed text (uses plain Vilna edition where available)
 
+## Offline data pack (optional)
+
+The library itself (`vilna-daf.js`, `index.html`, `css/`, `js/`, `fonts/`) needs no data files: every
+page is fetched live from Sefaria. Add the folder **`data/offline/`** next to it to serve every page
+offline instead. It has one file per amud, `data/offline/<Tractate>/<daf><a|b>.json` (schema
+`vilna-offline/1`). Each file holds the texts in every language (`langs.he`, `langs.en`, `langs.ru`,
+…), the page metadata (chapter and Masoret HaShas / Ein Mishpat / Torah Or links) and the source and
+licence of each block (`sources`). The loader tries the pack first and falls back to Sefaria per page.
+Set another location with `new VilnaDaf({offlineBase: 'path/to/offline'})`, or turn it off with
+`offlineBase: false`.
+
 ## Credits — Powered by Sefaria
 
 This project would not exist without **[Sefaria](https://www.sefaria.org)**. Every word of
@@ -319,7 +330,12 @@ shown in the page footer and required by the text license) and must comply with 
 Publishers Jerusalem). Full terms in [LICENSE.md](LICENSE.md) and at
 [sefaria.org](https://www.sefaria.org/terms).
 
-Fonts: Frank Ruhl Libre and Noto Rashi Hebrew (Google Fonts, SIL Open Font License 1.1).
+Per-block licences (Public Domain, CC0, CC-BY, CC-BY-SA, CC-BY-NC) and the Russian machine translations are
+described in [LICENSE.md](LICENSE.md#additional-text-attributions-sefaria-sources-per-version-licences); text that is not
+Public Domain is flagged `"special": true` in `data/offline/` so it can be removed.
+
+Fonts: Frank Ruhl Libre and Noto Rashi Hebrew, plus Noto Serif / Noto Sans (Cyrillic subset) for Russian
+(Google Fonts, SIL Open Font License 1.1).
 
 ## License
 

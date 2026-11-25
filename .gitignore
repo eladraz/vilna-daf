@@ -22,3 +22,21 @@ analysis/*
 
 # Local tooling (downloaded node, etc.)
 .tools/
+
+# Local-only: agent debug copies, local settings (data/ is ignored except data/offline/)
+dbgroot/
+.claude/settings.local.json
+
+# Development-only (kept locally, not part of the library)
+harness/
+scripts/
+docs/
+CALIBRATION.md
+PROGRESS.md
+TESTS.md
+tzuras-hadaf-render-spec.md
+.py
+
+# Data: only the optional offline pack is versioned; everything else under data/ is local
+/data/*
+!/data/offline/

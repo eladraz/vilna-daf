@@ -15,6 +15,13 @@
   </script>
 
   <title>תלמוד בבלי — צורת הדף</title>
+  <script>
+    // Comparison frame (?compare=1): white paper / black ink / no chrome.
+    // Set before first paint; colours and chrome only, never layout.
+    if (new URLSearchParams(location.search).get('compare') === '1') {
+      document.documentElement.classList.add('vilna-compare');
+    }
+  </script>
   <link rel="stylesheet" href="css/daf.css">
   <link rel="stylesheet" href="css/context-sidebar.css">
   <link rel="stylesheet" href="css/chavruta.css">
@@ -79,6 +86,7 @@
       <a href="https://www.sefaria.org" target="_blank" rel="noopener">Sefaria</a> —
       the William Davidson Talmud, licensed
       <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC&#8209;BY&#8209;NC 4.0</a>.
+      Commentary versions are Public Domain, CC0, CC&#8209;BY or CC&#8209;BY&#8209;SA as marked per text; the optional Russian text is a machine translation.
       See <a href="LICENSE.md">license &amp; attribution</a>.
     </p>
   </footer>
@@ -100,8 +108,32 @@
     // ── Bootstrap ────────────────────────────────────────────
     (async () => {
       // ── Settings: persisted source selection ───────────────
+      // ── Test/comparison hooks (docs/VILNA_PIXEL_PLAN.md §7.5) ──
+      //   compare=1          white/black, no chrome, no zoom/pan (layout unchanged)
+      //   sheetw=<css px>    exact sheet width
+      //   policy=adaptive    force the adaptive layout policy
+      //   settings=<json>    constructor settings (bypasses localStorage)
+      //   profile=<id>       layout profile id (default: index.json default)
+      const hook = new URLSearchParams(location.search);
+      const compareMode = hook.get('compare') === '1';
+      const sheetW = parseFloat(hook.get('sheetw'));
+      let urlSettings = null;
+      if (hook.has('settings')) {
+        try {
+          const v = JSON.parse(hook.get('settings'));
+          if (v && typeof v === 'object') urlSettings = v;
+        } catch (e) { console.error('[vilna-daf] bad settings param', e); urlSettings = {}; }
+      }
+      // textlang=<id> and license=<all|pd> pin those two keys the same way (not persisted).
+      if (hook.has('textlang') || hook.has('license')) {
+        urlSettings = Object.assign({}, urlSettings || {});
+        if (hook.has('textlang')) urlSettings.textLang = hook.get('textlang');
+        if (hook.has('license')) urlSettings.licenseMode = hook.get('license');
+      }
+
       const SETTINGS_KEY = 'vilnaDafSettings';
       function loadSettings() {
+        if (urlSettings) return urlSettings;
         try {
           const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
           if (s && typeof s === 'object') return s;
@@ -109,10 +141,19 @@
         return {};
       }
       function saveSettings(s) {
+        if (urlSettings) return; // URL-pinned settings never touch localStorage
         try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) {}
       }
 
-      const renderer = new VilnaDaf({ container: '#daf-content', settings: loadSettings() });
+      const renderer = new VilnaDaf({
+        container: '#daf-content',
+        settings: loadSettings(),
+        layoutPolicy: hook.get('policy') === 'adaptive' ? 'adaptive' : 'auto',
+        profileId: hook.get('profile') || undefined,
+        sheetWidth: sheetW > 0 ? sheetW : undefined,
+        interactive: !compareMode,
+      });
+      window.__vilna = renderer;
       const tractates = await renderer.getTractates();
 
       // ── Settings panel ("…" menu) ──────────────────────────
@@ -120,43 +161,78 @@
       const panel = document.getElementById('settings-panel');
       const GROUP_TITLES = { rishonim: 'ראשונים', acharonim: 'אחרונים', modern: 'בני ימינו' };
 
+      const SRC_TAG = { print: 'מהדפוס', sefaria: 'מספריא', missing: 'אין טקסט לדף זה' };
+      const srcTag = src => `<span class="src-tag src-${src}">${SRC_TAG[src] || SRC_TAG.sefaria}</span>`;
+
+      // Mirrors what the page really shows (renderer.getPageSelection, design §2.2).
       function buildPanel() {
         const s = renderer.settings;
-        const editionRadios = Object.entries(VilnaDaf.EDITIONS).map(([id, ed]) =>
-          `<label><input type="radio" name="set-edition" value="${id}" ${s.edition === id ? 'checked' : ''}> ${ed.he}</label>`
-        ).join('');
+        const sel = renderer.getPageSelection();
+        const printedById = new Map(sel.printed.map(b => [b.id, b]));
+        const editionRadios = Object.entries(VilnaDaf.EDITIONS).map(([id, ed]) => {
+          const checked = s.edition === id;
+          const suffix = checked && sel.edition.printText ? ' — נוסח הדפוס (דף וילנא)' : '';
+          return `<label><input type="radio" name="set-edition" value="${id}" ${checked ? 'checked' : ''}> ${ed.he}${suffix}</label>`;
+        }).join('');
         const wrapOptions = sel => VilnaDaf.WRAP_COMMENTARIES.map(c =>
           `<option value="${c.id}" ${sel === c.id ? 'selected' : ''}>${c.he}</option>`
         ).join('');
         const groups = ['rishonim', 'acharonim', 'modern'].map(g => {
-          const boxes = VilnaDaf.EXTRA_COMMENTARIES.filter(c => c.group === g).map(c =>
-            `<label><input type="checkbox" name="set-extra" value="${c.id}" ${(s.extras || []).includes(c.id) ? 'checked' : ''}> ${c.he}</label>`
-          ).join('');
+          const boxes = VilnaDaf.EXTRA_COMMENTARIES.filter(c => c.group === g).map(c => {
+            const pb = printedById.get(c.id);
+            if (pb) {
+              return `<label><input type="checkbox" name="set-extra" value="${c.id}" data-printed="1" ${pb.shown ? 'checked' : ''}> ${c.he} <span class="src-tag">(מודפס בדף)</span></label>`;
+            }
+            return `<label><input type="checkbox" name="set-extra" value="${c.id}" ${(s.extras || []).includes(c.id) ? 'checked' : ''}> ${c.he}</label>`;
+          }).join('');
           return `<h4>${GROUP_TITLES[g]}</h4><div class="opt-grid">${boxes}</div>`;
         }).join('');
-        const fontRadios = (name, value, def) => {
+        // fit: {printFitted, family} of the print's own face (only for the default radio).
+        const fontRadios = (name, value, def, fit) => {
           const std = value === 'rashi' || value === 'frank' || !value;
           const cur = value || def;
-          return `<label><input type="radio" name="${name}" value="rashi" ${cur === 'rashi' ? 'checked' : ''}> כתב רש״י</label>
-            <label><input type="radio" name="${name}" value="frank" ${cur === 'frank' ? 'checked' : ''}> פרנק־ריהל (קריא יותר)</label>
+          const lab = (v, base, short) => (fit && fit.printFitted && v === def)
+            ? `${short} — גופן הדף (${fit.family}, מותאם לדפוס)` : base;
+          return `<label><input type="radio" name="${name}" value="rashi" ${cur === 'rashi' ? 'checked' : ''}> ${lab('rashi', 'כתב רש״י', 'כתב רש״י')}</label>
+            <label><input type="radio" name="${name}" value="frank" ${cur === 'frank' ? 'checked' : ''}> ${lab('frank', 'פרנק־ריהל (קריא יותר)', 'פרנק־ריהל')}</label>
             <label><input type="radio" name="${name}" value="custom" ${std ? '' : 'checked'}> מותאם אישית:
               <input type="text" class="set-customfont" data-for="${name}" placeholder="שם גופן (CSS)"
                      value="${std ? '' : String(cur).replace(/"/g, '&quot;')}"></label>`;
         };
+        // Language section (design §4): one radio per VilnaDaf.TEXT_LANGS entry. Non-Hebrew text
+        // hides the Hebrew-only sections below.
+        const textLang = s.textLang || 'he';
+        const isHe = textLang === 'he';
+        const langRadios = VilnaDaf.TEXT_LANGS.map(l =>
+          `<label><input type="radio" name="set-textlang" value="${l.id}" ${textLang === l.id ? 'checked' : ''}> ${l.label}${l.mt ? ' (תרגום מכונה / машинный перевод)' : ''}</label>`
+        ).join('');
+        const langSection = `<h3>שפה · Language · Язык</h3>${langRadios}`;
+        // Printed blocks that have no text on this amud (model.hiddenBlocks) are not offered.
+        const hiddenIds = new Set((sel.hiddenBlocks || []).map(h => h.block));
+        const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const printedShown = sel.printed.filter(b => !hiddenIds.has(b.id));
+        const printedSection = printedShown.length
+          ? `<h3>על הדף (דפוס וילנא)</h3><div class="opt-grid">${printedShown.map(b => {
+              const t = sel.texts && sel.texts[b.id];
+              const tag = t ? ` <span class="src-tag">${esc(t.tag)}</span>` : '';
+              return `<label><input type="checkbox" name="set-printed" value="${b.id}" ${b.shown ? 'checked' : ''}> ${b.he}${tag}</label>`;
+            }).join('')}</div>`
+          : '';
         const pct = Math.round((s.fontScale || 1) * 100);
-        panel.innerHTML =
-          `<h3>נוסח הגמרא</h3>${editionRadios}` +
+        panel.innerHTML = langSection +
+          (isHe ? `<h3>נוסח הגמרא</h3>${editionRadios}` : '') +
           `<h3>עמודות הפירוש</h3>
            <div class="set-row">
-             <div><h4>פנימית (צד הכריכה)</h4><select id="set-inner">${wrapOptions(s.inner)}</select></div>
-             <div><h4>חיצונית</h4><select id="set-outer">${wrapOptions(s.outer)}</select></div>
+             <div><h4>פנימית (צד הכריכה)</h4><select id="set-inner">${wrapOptions(s.inner)}</select>${srcTag(sel.wrap.inner.source)}</div>
+             <div><h4>חיצונית</h4><select id="set-outer">${wrapOptions(s.outer)}</select>${srcTag(sel.wrap.outer.source)}</div>
            </div>` +
-          `<h3>שפת המפרשים</h3>
+          (isHe ? `<h3>שפת המפרשים</h3>
            <label><input type="radio" name="set-lang" value="he" ${s.lang !== 'en' ? 'checked' : ''}> עברית</label>
-           <label><input type="radio" name="set-lang" value="en" ${s.lang === 'en' ? 'checked' : ''}> English</label>` +
+           <label><input type="radio" name="set-lang" value="en" ${s.lang === 'en' ? 'checked' : ''}> English</label>` : '') +
+          (isHe ? printedSection : '') +
           `<h3>גופן וגודל</h3>
-           <h4>גופן המפרשים</h4>${fontRadios('set-commfont', s.commFont, 'rashi')}
-           <h4>גופן הגמרא</h4>${fontRadios('set-gemfont', s.gemaraFont, 'frank')}
+           <h4>גופן המפרשים</h4>${fontRadios('set-commfont', s.commFont, 'rashi', sel.fonts.comm)}
+           <h4>גופן הגמרא</h4>${fontRadios('set-gemfont', s.gemaraFont, 'frank', sel.fonts.gemara)}
            <h4>גודל הגופן</h4>
            <label><input type="range" id="set-fontscale" min="0.7" max="1.5" step="0.05" value="${s.fontScale || 1}">
              <span id="set-fontscale-val">${pct}%</span></label>` +
@@ -178,9 +254,19 @@
         try { await renderer.updateSettings(patch); } catch (e) { console.error(e); }
       }
 
+      // A printed apparatus block switched on/off (design §2.3). Hiding a
+      // printed block also drops it from extras; showing it un-hides it.
+      function togglePrinted(id, on) {
+        const hidden = new Set(renderer.settings.hidden || []);
+        const extras = new Set(renderer.settings.extras || []);
+        if (on) hidden.delete(id); else { hidden.add(id); extras.delete(id); }
+        applyPanel({ hidden: [...hidden], extras: [...extras] });
+      }
+
       panel.addEventListener('change', e => {
         const t = e.target;
-        if (t.name === 'set-edition') applyPanel({ edition: t.value });
+        if (t.name === 'set-textlang') applyPanel({ textLang: t.value });
+        else if (t.name === 'set-edition') applyPanel({ edition: t.value });
         else if (t.name === 'set-lang') applyPanel({ lang: t.value });
         else if (t.id === 'set-inner') applyPanel({ inner: t.value });
         else if (t.id === 'set-outer') applyPanel({ outer: t.value });
@@ -192,9 +278,18 @@
           fontPatch(name);
         }
         else if (t.id === 'set-fontscale') applyPanel({ fontScale: parseFloat(t.value) });
+        else if (t.name === 'set-printed') togglePrinted(t.value, t.checked);
+        else if (t.name === 'set-extra' && t.dataset.printed === '1') togglePrinted(t.value, t.checked);
         else if (t.name === 'set-extra') {
-          const extras = [...panel.querySelectorAll('input[name="set-extra"]:checked')].map(x => x.value);
-          applyPanel({ extras });
+          // Printed extras of this amud are not in the collected list; keep them.
+          const kept = (renderer.settings.extras || []).filter(id =>
+            panel.querySelector(`input[name="set-extra"][value="${id}"][data-printed="1"]`));
+          const extras = [...new Set([
+            ...[...panel.querySelectorAll('input[name="set-extra"]:not([data-printed]):checked')].map(x => x.value),
+            ...kept,
+          ])];
+          const hidden = (renderer.settings.hidden || []).filter(id => !(t.checked && id === t.value));
+          applyPanel({ extras, hidden });
         }
       });
       // Live percentage label while dragging; the re-render fires on release.
@@ -210,6 +305,8 @@
           applyPanel({});
         }
       });
+      // Keep the open panel describing the amud on screen.
+      renderer.onLoad(() => { if (!panel.hidden) buildPanel(); });
       settingsBtn.addEventListener('click', () => {
         if (panel.hidden) buildPanel();
         panel.hidden = !panel.hidden;
@@ -218,10 +315,11 @@
         if (!panel.hidden && !e.target.closest('.settings-wrap')) panel.hidden = true;
       });
 
-      // ── Print: black-on-white framed daf; the browser dialog picks the
-      //    paper size. The whole carved sheet is scaled down as one rigid
-      //    unit (transform: scale) so every column fits on one physical page
-      //    with no reflow of the carve geometry. ──
+      // ── Print: black-on-white daf, ONE printed page per sheet (strict
+      //    page, adaptive page and every continuation sheet). Each sheet is
+      //    scaled down as one rigid unit (transform: scale) inside a
+      //    .print-box that reserves its scaled footprint, so no geometry
+      //    reflows and nothing is split across pages. ──
       //
       //  SAFE_W/SAFE_H = the common printable area of Letter (216×279mm) and
       //  A4 (210×297mm) at the @page 10mm margins, in CSS px @96dpi:
@@ -229,41 +327,40 @@
       //    height = min(279,297) − 20mm = 259mm ≈ 979px
       //  Using the *intersection* guarantees a single-page fit on either paper.
       const PRINT_SAFE_W = 700, PRINT_SAFE_H = 960; // px, small safety inset
+      let printBoxes = [];
       function beforePrint() {
-        const sheet = document.querySelector('.page-sheet');
-        const dc = document.getElementById('daf-content');
-        if (!sheet || !dc) return;
-        const W = sheet.offsetWidth, H = sheet.offsetHeight;
-        if (!W || !H) return;
-        // Smaller of the two fit ratios; never enlarge (cap at 1).
-        const k = Math.min(PRINT_SAFE_W / W, PRINT_SAFE_H / H, 1);
-        // Stash whatever inline values zoom/pan left so we can restore them.
-        sheet.dataset.ptf = sheet.style.transform || '';
-        sheet.dataset.por = sheet.style.transformOrigin || '';
-        sheet.dataset.pos = sheet.style.position || '';
-        // Reserve the *scaled* layout box so the page reflows to fit (no blank
-        // 2nd page) and the 800px sheet doesn't push page width out.
-        dc.style.position = 'relative';
-        dc.style.width = (W * k) + 'px';
-        dc.style.height = (H * k) + 'px';
-        dc.style.margin = '0 auto';
-        // Scale the sheet as one rigid unit from its top-right corner (RTL).
-        sheet.style.position = 'absolute';
-        sheet.style.top = '0';
-        sheet.style.right = '0';
-        sheet.style.transformOrigin = 'top right';
-        sheet.style.transform = 'scale(' + k + ')';
+        if (printBoxes.length) return;
+        const sheets = [...document.querySelectorAll('#daf-content > .page-sheet')];
+        for (const sheet of sheets) {
+          const W = sheet.offsetWidth, H = sheet.offsetHeight;
+          if (!W || !H) continue;
+          // Smaller of the two fit ratios; never enlarge (cap at 1).
+          const k = Math.min(PRINT_SAFE_W / W, PRINT_SAFE_H / H, 1);
+          const box = document.createElement('div');
+          box.className = 'print-box';
+          box.style.cssText = `position:relative;width:${W * k}px;height:${H * k}px;margin:0 auto;`;
+          // Stash whatever inline values zoom/pan left so we can restore them.
+          const saved = {
+            transform: sheet.style.transform, transformOrigin: sheet.style.transformOrigin,
+            position: sheet.style.position, top: sheet.style.top, right: sheet.style.right,
+          };
+          sheet.parentNode.insertBefore(box, sheet);
+          box.appendChild(sheet);
+          // Scale the sheet as one rigid unit from its top-right corner (RTL).
+          sheet.style.position = 'absolute';
+          sheet.style.top = '0';
+          sheet.style.right = '0';
+          sheet.style.transformOrigin = 'top right';
+          sheet.style.transform = 'scale(' + k + ')';
+          printBoxes.push({ box, sheet, saved });
+        }
       }
       function afterPrint() {
-        const sheet = document.querySelector('.page-sheet');
-        const dc = document.getElementById('daf-content');
-        if (dc) { dc.style.position = ''; dc.style.width = ''; dc.style.height = ''; dc.style.margin = ''; }
-        if (sheet) {
-          sheet.style.transform = sheet.dataset.ptf || '';
-          sheet.style.transformOrigin = sheet.dataset.por || '';
-          sheet.style.position = sheet.dataset.pos || '';
-          sheet.style.top = ''; sheet.style.right = '';
+        for (const { box, sheet, saved } of printBoxes) {
+          Object.assign(sheet.style, saved);
+          if (box.parentNode) { box.parentNode.insertBefore(sheet, box); box.remove(); }
         }
+        printBoxes = [];
       }
       window.addEventListener('beforeprint', beforePrint);
       window.addEventListener('afterprint', afterPrint);

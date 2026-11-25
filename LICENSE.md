@@ -91,3 +91,21 @@ link back to Sefaria. The required credit:
 > vocalization by Dicta.
 
 Removing or obscuring the Sefaria attribution is not permitted.
+
+
+## Additional text attributions (Sefaria sources, per-version licences)
+
+Texts under `data/offline/` come from [Sefaria](https://www.sefaria.org) and keep the licence of the
+Sefaria version they were taken from. Each block records it in `sources` (`title`, `license`,
+`pd`, and `special: true` for anything that is not Public Domain / CC0, so it can be found and
+removed: `grep -l '"special":true' data/offline/*/*.json`).
+
+- **Public Domain / CC0:** "Vilna Edition" Hebrew (Rashi, Tosafot, Gilyon HaShas, Rav Nissim
+  Gaon, Rabbeinu Chananel, most pages); Sefaria Community Translation (CC0).
+- **CC-BY-SA:** part of the Hebrew Rashi/Tosafot and other versions as listed per page.
+  Attribution to Sefaria and the version's contributors is required, and adaptations stay CC-BY-SA.
+- **CC-BY:** Tosafot translation by Jan Buckler (English).
+- **CC-BY-NC:** William Davidson Edition (Hebrew/Aramaic and English) of the Talmud — non-commercial use only.
+- **Russian:** machine translations (Claude Haiku) derived from the Hebrew and, where used, the
+  English above. They inherit the most restrictive source licence (`derivedFrom`, `special`).
+- Blocks whose version licence is unknown are not displayed.
