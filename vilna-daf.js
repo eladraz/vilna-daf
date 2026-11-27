@@ -153,6 +153,9 @@
     textLang: 'he',
     // Licence filter for special (non-free) sources: 'all' | 'pd' (URL-only for now).
     licenseMode: 'all',
+    // Commentary layout of a translated page with a tsplit/2 layer (docs/TRANSLATION_LAYOUT_RULES_V2.md 7.3): 'auto' | 'classic' | 'combined'.
+    // Not a 'non-default setting' for the layout policy; the Hebrew page ignores it.
+    commLayout: 'auto',
   };
 
   /** Text languages offered by the UI. `dir` is the stream direction; `mt` tags machine translation. */
@@ -166,6 +169,7 @@
     { id: 'ko', label: '한국어', dir: 'ltr', mt: true },
   ];
   const LICENSE_MODES = ['all', 'pd'];
+  const COMM_LAYOUTS = ['auto', 'classic', 'combined'];
 
   /** True when the language id is a known left-to-right text language (unknown ids are not). */
   function isLtrLang(code) {
@@ -388,7 +392,7 @@
         const suffix = at < 0 ? null : name.slice(at + 1);
         if (at >= 0 && !allowed.includes(suffix)) bad();
         const st = at < 0 ? store : (opts && opts.stores && Object.prototype.hasOwnProperty.call(opts.stores, suffix) ? opts.stores[suffix] : null);
-        const got = layoutStreamEntry(st, at < 0 ? name : name.slice(0, at), lang);
+        const got = layoutStreamEntry(st, at < 0 ? name : name.slice(0, at), at < 0 && want.lang === 'he' ? 'he' : lang);
         if (!got) bad();
         // Licence mode 'pd': a non-PD or special source is never used (spec §8.2).
         if (pdOnly && (got.entry.special || got.entry.pd !== true)) bad();
@@ -491,7 +495,7 @@
               const sg = toks[t].seg;
               const last = notes[notes.length - 1];
               if (last && last.seg === sg) { last.text += ' ' + toks[t].text; last.n++; }
-              else notes.push({ seg: sg, text: toks[t].text, n: 1 });
+              else notes.push({ seg: sg, text: toks[t].text, n: 1, lang: (L.streams[id] || {}).lang === 'he' ? 'he' : null });
             }
             if (i1 > i0 && !usedOrder.includes(id)) usedOrder.push(id);
           }
@@ -520,12 +524,12 @@
   const LAYOUT_LAYER2_SCHEMA = 'vilna-layout-layer/2';
   /** Labels the engine draws on a translated sheet (spec §10.6: no label is stored in a layer). */
   const TSHEET_I18N = {
-    en: { cont: '(cont.)', rashi: 'Rashi', tosafot: 'Tosafot', mesoretHaShas: 'Masoret HaShas', einMishpat: 'Ein Mishpat', torahOr: 'Torah Or', gilyonHaShas: 'Gilyon HaShas', ravNissimGaon: 'Rav Nissim Gaon' },
-    ru: { cont: '(продолж.)', rashi: 'Раши', tosafot: 'Тосафот', mesoretHaShas: 'Масорет ха-Шас', einMishpat: 'Эйн Мишпат', torahOr: 'Тора Ор', gilyonHaShas: 'Гилйон ха-Шас', ravNissimGaon: 'Рав Ниссим Гаон' },
-    fr: { cont: '(suite)', rashi: 'Rachi', tosafot: 'Tossafot', mesoretHaShas: 'Massorète HaShas', einMishpat: 'Ein Mishpat', torahOr: 'Torah Or', gilyonHaShas: 'Guilyon HaShas', ravNissimGaon: 'Rav Nissim Gaon' },
-    es: { cont: '(cont.)', rashi: 'Rashi', tosafot: 'Tosafot', mesoretHaShas: 'Masoret HaShas', einMishpat: 'Ein Mishpat', torahOr: 'Torá Or', gilyonHaShas: 'Guilyón HaShás', ravNissimGaon: 'Rav Nisim Gaón' },
-    yi: { cont: '(המשך)', rashi: 'רש״י', tosafot: 'תוספות', mesoretHaShas: 'מסורת הש״ס', einMishpat: 'עין משפט נר מצוה', torahOr: 'תורה אור', gilyonHaShas: 'גליון הש״ס', ravNissimGaon: 'רבינו נסים גאון' },
-    ko: { cont: '(계속)', rashi: '라시', tosafot: '토사포트', mesoretHaShas: '마소라 하-샤스', einMishpat: '에인 미슈파트', torahOr: '토라 오르', gilyonHaShas: '길욘 하-샤스', ravNissimGaon: '라브 니심 가온' },
+    en: { cont: '(cont.)', rashi: 'Rashi', tosafot: 'Tosafot', steinsaltz: 'Steinsaltz', rabbeinuChananel: 'Rabbeinu Chananel', 'print.rashbam': 'Rashbam', 'print.ran': 'Ran', 'print.ktavYadRashi': 'Rashi (manuscript)', mesoretHaShas: 'Masoret HaShas', einMishpat: 'Ein Mishpat', torahOr: 'Torah Or', gilyonHaShas: 'Gilyon HaShas', ravNissimGaon: 'Rav Nissim Gaon' },
+    ru: { cont: '(продолж.)', rashi: 'Раши', tosafot: 'Тосафот', steinsaltz: 'Штейнзальц', rabbeinuChananel: 'Рабейну Хананэль', 'print.rashbam': 'Рашбам', 'print.ran': 'Ран', 'print.ktavYadRashi': 'Раши (рукопись)', mesoretHaShas: 'Масорет ха-Шас', einMishpat: 'Эйн Мишпат', torahOr: 'Тора Ор', gilyonHaShas: 'Гилйон ха-Шас', ravNissimGaon: 'Рав Ниссим Гаон' },
+    fr: { cont: '(suite)', rashi: 'Rachi', tosafot: 'Tossafot', steinsaltz: 'Steinsaltz', rabbeinuChananel: 'Rabbénou Hananel', 'print.rashbam': 'Rashbam', 'print.ran': 'Ran', 'print.ktavYadRashi': 'Rachi (manuscrit)', mesoretHaShas: 'Massorète HaShas', einMishpat: 'Ein Mishpat', torahOr: 'Torah Or', gilyonHaShas: 'Guilyon HaShas', ravNissimGaon: 'Rav Nissim Gaon' },
+    es: { cont: '(cont.)', rashi: 'Rashi', tosafot: 'Tosafot', steinsaltz: 'Steinsaltz', rabbeinuChananel: 'Rabenu Jananel', 'print.rashbam': 'Rashbam', 'print.ran': 'Ran', 'print.ktavYadRashi': 'Rashi (manuscrito)', mesoretHaShas: 'Masoret HaShas', einMishpat: 'Ein Mishpat', torahOr: 'Torá Or', gilyonHaShas: 'Guilyón HaShás', ravNissimGaon: 'Rav Nisim Gaón' },
+    yi: { cont: '(המשך)', rashi: 'רש״י', tosafot: 'תוספות', steinsaltz: 'שטיינזלץ', rabbeinuChananel: 'רבינו חננאל', 'print.rashbam': 'רשב״ם', 'print.ran': 'ר״ן', 'print.ktavYadRashi': 'רש״י כתב יד', mesoretHaShas: 'מסורת הש״ס', einMishpat: 'עין משפט נר מצוה', torahOr: 'תורה אור', gilyonHaShas: 'גליון הש״ס', ravNissimGaon: 'רבינו נסים גאון' },
+    ko: { cont: '(계속)', rashi: '라시', tosafot: '토사포트', steinsaltz: '슈타인잘츠', rabbeinuChananel: '라베이누 하나넬', 'print.rashbam': '라쉬밤', 'print.ran': '란', 'print.ktavYadRashi': '라시 (사본)', mesoretHaShas: '마소라 하-샤스', einMishpat: '에인 미슈파트', torahOr: '토라 오르', gilyonHaShas: '길욘 하-샤스', ravNissimGaon: '라브 니심 가온' },
   };
 
   /**
@@ -663,9 +667,26 @@
       }, opts);
       if (!page) return bad('hydrate');
       page.carryIn = sh.carryIn || null;
+      // tsplit/2: headings, dividers and column titles (block ids from the engine's closed list, never text)
+      if (sh.marks != null) {
+        if (!Array.isArray(sh.marks)) return bad('marks');
+        const closed = TSHEET_I18N[lang] || TSHEET_I18N.en;
+        for (const m of sh.marks) {
+          if (!m || typeof m !== 'object' || !['title', 'head', 'rule'].includes(m.t)) return bad('marks');
+          if (m.t !== 'rule' && (typeof m.block !== 'string' || !Object.prototype.hasOwnProperty.call(closed, m.block))) return bad('marks');
+          if (m.t !== 'title' && (!Number.isFinite(m.y) || !Array.isArray(m.x) || m.x.length !== 2)) return bad('marks');
+        }
+        page.marks = sh.marks;
+      }
+      page.layerBuild = layer.build ? { rule: layer.build.rule || null, mode: layer.build.mode || 'classic', N: layer.build.N, k: layer.build.k } : null;
       // Hebrew ornaments sit at Hebrew positions: a translated sheet draws none (spec §10.6); the margin stack
       // draws its own dividers (spec §9.12).
       page.ornaments = [];
+      // Chapter-opening box (sheet 1 of a chapter start): geometry only; loadLayoutPage adds the chapter name as its text.
+      if (sh.box != null) {
+        if (si !== 0 || !Array.isArray(sh.box) || sh.box.length !== 4 || !sh.box.every(v => Number.isFinite(v))) return bad('schema');
+        page.chapterBoxGeom = sh.box.slice();
+      }
       page.marginPlan = plan;
       pages.push(page);
     }
@@ -819,6 +840,45 @@
     return best ? [best.x0, best.x1] : tsModal(lines);
   }
 
+
+  // Chapter-opening box of a translated sheet 1 (owner rule 2026-11-27): the Hebrew page prints the chapter's first word
+  // large inside a frame; a translated sheet shows the chapter's NAME in its language in the same decorative style.
+  // The box is reserved at the reading start of the Gemara (physical left; right for yi), its height a whole number of
+  // Gemara lines from the top of the Gemara, so the Gemara flow starts at token 0 beside it. cb = {text, heH} (heH = the
+  // Hebrew box height in pt). Returns {bands, box:[x0,y0,x1,y1]} (layout pt) or {bands} when there is no room.
+  function tsChapterBox(bands, cb, gemTop, lhG, sG, famG, k, rtl, su) {
+    if (!cb || !cb.text || !bands.length) return { bands };
+    const b0 = bands[0];
+    const n = Math.max(3, Math.round((Number(cb.heH) || 68) * k / lhG));
+    const y0 = b0.y0, y1 = y0 + n * lhG;
+    const H = n * lhG - 1.6;
+    const fs = 0.56 * H;
+    const adv = tsAdvance(famG, fs, cb.text) * 1.08 + 5;
+    const bandW = b0.x1 - b0.x0;
+    const gap = 0.7 * sG;
+    // the beside-the-box part of the Gemara band must still take the widest of the first Gemara words (else a line cannot be placed)
+    let tokW = 0;
+    const gt = su && su.streams && su.streams.gemara;
+    if (gt && su.gem) for (let t = su.gem[0]; t < Math.min(su.gem[1], su.gem[0] + 80); t++) tokW = Math.max(tokW, tsAdvance(famG, sG, gt[t].text));
+    if (su && su.keySegs) tokW += Math.max(0, ...Object.values(su.keySegs).map(Number)) * sG * TSHEET.KEY_EM;   // key letters stand in front of a segment's first word
+    const wBeside = Math.min(Math.max(adv, 0.9 * H), 0.46 * bandW, bandW - gap - 1.25 * tokW - 2 * sG);
+    // a Gemara band too narrow to hold a word beside a box of at least 0.6 H: the box stands alone, centred, above the flow
+    const alone = wBeside < 0.6 * H;
+    const w = alone ? Math.min(Math.max(adv, 0.9 * H), bandW) : wBeside;
+    const bx0 = alone ? (b0.x0 + b0.x1 - w) / 2 : (rtl ? b0.x1 - w : b0.x0), bx1 = bx0 + w;
+    const out = [];
+    for (const b of bands) {
+      const o0 = Math.max(b.y0, y0), o1 = Math.min(b.y1, y1);
+      if (!(o1 > o0 + 1e-9)) { out.push(b); continue; }
+      if (b.y0 < o0 - 1e-9) out.push({ y0: b.y0, y1: o0, x0: b.x0, x1: b.x1 });
+      if (alone) { if (b.y1 > o1 + 1e-9) out.push({ y0: o1, y1: b.y1, x0: b.x0, x1: b.x1 }); continue; }
+      const nb = rtl ? { y0: o0, y1: o1, x0: b.x0, x1: Math.min(b.x1, bx0 - gap) } : { y0: o0, y1: o1, x0: Math.max(b.x0, bx1 + gap), x1: b.x1 };
+      if (nb.x1 - nb.x0 > 1e-9) out.push(nb);
+      if (b.y1 > o1 + 1e-9) out.push({ y0: o1, y1: b.y1, x0: b.x0, x1: b.x1 });
+    }
+    return { bands: out, box: [bx0, y0 + 0.8, bx1, y0 + 0.8 + H] };
+  }
+
   // First slot at or after y where a line of height lh fits inside one band and above the bottom.
   function tsNextSlot(bands, y, lh, bottom) {
     for (let bi = 0; bi < bands.length; bi++) {
@@ -858,7 +918,7 @@
     const sp = tsAdvance(c.fam, c.size, ' ');
     const lh = c.lh;
     const boff = tsBaseOffset(c.fam, c.size, lh);
-    let i = c.start, y = null, tooWide = 0, prevInk = null;
+    let i = c.start, y = c.y0 != null ? c.y0 : null, tooWide = 0, prevInk = null;
     while (i < c.end) {
       let pos = tsNextSlot(c.bands, y, lh, c.bottom);
       if (!pos) break;
@@ -934,6 +994,7 @@
    *  lang       'en' | 'ru' | 'fr' | 'es' | 'ko' | 'yi'
    */
   function layoutTranslationSheet(frame, heGeom, sheetUnits, carryIn, k, lang) {
+    if (frame && frame.rule === 'tsplit/2') return layoutTranslationSheet2(frame, heGeom, sheetUnits, carryIn, k, lang);
     if (typeof document === 'undefined') throw new Error('layoutTranslationSheet needs a DOM');
     if (!_tsFontsOk) throw new Error('layoutTranslationSheet: await VilnaDaf.tsFontsReady() before the first measurement');
     const unstable0 = _tsUnstable;
@@ -1094,10 +1155,12 @@
     const endOf = (res, range) => (res.next < range[1] ? coreBottomX : (res.lines.length ? Math.max(...res.lines.map(l => l.bottom)) : coreTop));
     let ends = { gem: coreBottomX, in: inP ? coreBottomX : coreTop, out: outP ? coreBottomX : coreTop };
     let G, R, T, bandsG, bandsR, bandsT, it = 0, crossInk = 0;
+    let chapterBox = null;
     for (it = 0; it < 12; it++) {
       const present = (c, y) => y < ends[c] - 1e-9;
       bandsG = bandsFrom(y => [present(cLeft, y) ? gemN[0] : cL, present(cRight, y) ? gemN[1] : cR],
         [ends.in, ends.out]).map(b => ({ y0: Math.max(b.y0, gemTop), y1: b.y1, x0: b.x0, x1: b.x1 })).filter(b => b.y1 > b.y0 + 1e-9);
+      if (first && su.chapterBox) { const cbr = tsChapterBox(bandsG, su.chapterBox, gemTop, lhG, sG, famG, k, rtl, su); bandsG = cbr.bands; chapterBox = cbr.box || null; }
       G = run('gemara', 'gemara', 0, famG, sG, lhG, bandsG, gemRange, R && T ? [...R.lines, ...T.lines] : null);
       const gemEnd = G.next < gemRange[1] ? coreBottomX : (G.lines.length ? Math.max(...G.lines.map(l => l.bottom)) : gemTop);
       const gPresent = y => y < gemEnd - 1e-9;
@@ -1263,7 +1326,7 @@
     const commW = R.lines.concat(T.lines).reduce((s, l) => s + l.natW, 0);
     const allW = lines.reduce((s, l) => s + l.natW, 0);
     const sheet = {
-      lang: L, k, rtl, rho,
+      lang: L, k, rtl, rho, chapterBox,
       faces: [[famG, sG], [famC, sC]],
       flows: slots, catch: catchLine, margins: marginOut, marginCarry, facesExtra, faceBaseN,
       lines: lines.map(l => ({ region: l.id, stream: l.stream, face: l.face, baseline: l.baseline,
@@ -1298,6 +1361,449 @@
     return sheet;
   }
 
+  // ═════════════════ tsplit/2 sheets (docs/TRANSLATION_LAYOUT_RULES_V2.md §6.4, §7; task T2/T5) ═════════════════
+  // Entered only with frame.rule === 'tsplit/2' (layoutTranslationSheet dispatches here); the tsplit/1 path is untouched.
+  const TS2 = {
+    HEAD_SCALE: 1.15,            // K39 heading size = 1.15 x the commentary size
+    HEAD_PITCH: 1.3,             // K39 heading height = 1.3 x the commentary pitch
+    DIV_W: 49, DIV_H: 4.5, DIV_NARROW: 62, GAP: 2.5,   // K39 divider (spec §9.12 ornament and gap)
+    MIN_EM: { latin: 10, he: 7.5 },                    // K35
+    BAL_LINES: 2,                // K40 columns end within 2 lines
+    TOP_LINES_MAX: 4,            // K36
+    HE_RASHI: "'RashiScript', 'FrankRuhl'", HE_SQ: "'FrankRuhl', 'RashiScript'",   // Hebrew fallback / print streams (K45)
+    FACE_HE_RASHI: 2, FACE_HE_SQ: 3,
+  };
+
+  function layoutTranslationSheet2(frame, heGeom, sheetUnits, carryIn, k, lang) {
+    if (typeof document === 'undefined') throw new Error('layoutTranslationSheet needs a DOM');
+    if (!_tsFontsOk) throw new Error('layoutTranslationSheet: await VilnaDaf.tsFontsReady() before the first measurement');
+    const unstable0 = _tsUnstable;
+    const fr = frame || {};
+    const su = sheetUnits || {};
+    const L = String(lang || 'en');
+    const sig = Number(fr.stretch) || TSHEET.SIGMA;
+    const x0f = fr.x0f != null ? Number(fr.x0f) : TSHEET.X0F;
+    const coreTop = fr.coreTop != null ? Number(fr.coreTop) : TSHEET.CORE_TOP;
+    const coreBottom = fr.coreBottom != null ? Number(fr.coreBottom) : TSHEET.CORE_BOTTOM;
+    const rho = fr.rho != null ? Number(fr.rho) : 1;
+    if (!(rho >= TSHEET.RHO[0] - 1e-9 && rho <= TSHEET.RHO[1] + 1e-9) || Math.abs(rho * 20 - Math.round(rho * 20)) > 1e-6) {
+      throw new Error(`translation sheet: rho ${fr.rho} is outside K23 (0.75–1.50, 0.05 grid)`);
+    }
+    const mapX = x => x0f + (x - TSHEET.X0F) * sig;
+    const reg = id => (heGeom.regions || []).find(r => r && r.id === id) || null;
+    const gemR = reg('gemara'), innR = reg('inner'), outR = reg('outer');
+    if (!gemR) throw new Error('translation sheet: he geometry needs the gemara region');
+    const faceSize = r => Number(heGeom.faces[r.face][1]);
+    const gemFirst = Math.min(...gemR.lines.map(l => l[0]));
+    const heCoreTop = heGeom.coreTop != null ? Number(heGeom.coreTop) : TSHEET.CORE_TOP;
+    const belowGem = lines => (lines || []).filter(l => l[0] >= gemFirst);
+    const inP = !!innR && belowGem(innR.lines).length > 0;
+    const outP = !!outR && belowGem(outR.lines).length > 0;
+    if (!inP && !outP) throw new Error('translation sheet: he geometry has no commentary column');
+    const colLines = { in: inP ? innR.lines : [], out: outP ? outR.lines : [] };
+    const present0 = { in: inP, out: outP };
+    const Fg = faceSize(gemR), Fc = faceSize(inP ? innR : outR);
+    const first = !!su.first;
+    const sG = k * Fg, sC = k * Fc;
+    const lhG = TSHEET.LEAD.gem * sG, lhC = TSHEET.LEAD.comm * sC;
+    const catchOn = !!(su.last && su.catch && Array.isArray(su.catch.tokens) && su.catch.tokens.length);
+    const coreBottomX = catchOn ? coreBottom - lhG : coreBottom;
+    const gut = TSHEET.GUTTER * sig;
+    // ---- §10.4a rule 1 columns (as tsplit/1)
+    const allX = [...gemR.lines, ...colLines.in, ...colLines.out].flatMap(l => [mapX(l[1]), mapX(l[2])]);
+    const cL = Math.min(...allX), cR = Math.max(...allX), Wc = cR - cL, cmid = (cL + cR) / 2;
+    const cen = ls => ls.reduce((s, l) => s + (l[1] + l[2]) / 2, 0) / ls.length;
+    let cLeft;
+    if (inP && outP) cLeft = cen(innR.lines) <= cen(outR.lines) ? 'in' : 'out';
+    else {
+      const pc = tsModal(belowGem(inP ? innR.lines : outR.lines));
+      const gm = tsNarrowModal(gemR.lines);
+      const presentLeft = !(pc[0] > (gm[0] + gm[1]) / 2);
+      cLeft = (presentLeft === inP) ? 'in' : 'out';
+    }
+    const cRight = cLeft === 'in' ? 'out' : 'in';
+    const ccol = lines => {
+      const nl = belowGem(lines).filter(l => (l[2] - l[1]) * sig <= TSHEET.COMM_W.max * Wc);
+      const m = nl.length >= 3 ? tsModal(nl) : null;
+      const w = m ? (m[1] - m[0]) * sig : null;
+      return (w != null && w >= TSHEET.COMM_W.min * Wc && w <= TSHEET.COMM_W.max * Wc) ? w : TSHEET.COMM_W.def * Wc;
+    };
+    const wcol = { in: inP ? ccol(innR.lines) : 0, out: outP ? ccol(outR.lines) : 0 };
+    const wl = wcol[cLeft], wr = wcol[cRight];
+    const gemC = [cL + wl + (wl ? gut : 0), cR - wr - (wr ? gut : 0)];
+    // K37: in combined mode both side columns take the mean of the two canonical widths
+    const stackMode = su.layout === 'stack';
+    let wl2 = wl, wr2 = wr, gemC2 = gemC;
+    if (stackMode && wl && wr) {
+      const m = (wl + wr) / 2;
+      wl2 = m; wr2 = m;
+      gemC2 = [cL + m + gut, cR - m - gut];
+    }
+    const d = (rho - 1) * (gemC2[1] - gemC2[0]);
+    const fl = wl2 + wr2 > 0 ? wl2 / (wl2 + wr2) : 0.5;
+    const nl = wl2 ? [cL, cL + wl2 - d * fl] : [cL, cL];
+    const nr = wr2 ? [cR - (wr2 - d * (1 - fl)), cR] : [cR, cR];
+    if ((wl2 && !(nl[1] > nl[0])) || (wr2 && !(nr[1] > nr[0]))) throw new Error(`translation sheet: rho ${rho} leaves a commentary column with no width`);
+    // K35: a commentary column is at least 10 em (Latin, Cyrillic, Hangul) / 7.5 em (Hebrew script) wide
+    const sdef = su.sdef || {};
+    const colStreams = c => stackMode ? Object.keys(sdef).filter(n => (su.stack || []).some(p => p.stream === n && p.range[1] > p.range[0]))
+      : ((su.cols && su.cols[c]) || []).filter(p => p.range[1] > p.range[0]).map(p => p.stream);
+    const minW = c => {
+      const ss = colStreams(c);
+      if (!ss.length) return 0;
+      const he = ss.every(n => sdef[n] && sdef[n].face >= 2);
+      return (he ? TS2.MIN_EM.he : TS2.MIN_EM.latin) * sC;
+    };
+    const lcol = cLeft === 'in' ? 'in' : 'out';
+    if (wl2 && nl[1] - nl[0] < minW(lcol) - 1e-6) throw new Error(`translation sheet: rho ${rho} leaves a commentary column narrower than K35`);
+    if (wr2 && nr[1] - nr[0] < minW(cRight) - 1e-6) throw new Error(`translation sheet: rho ${rho} leaves a commentary column narrower than K35`);
+    const narrow = { [cLeft]: nl, [cRight]: nr };
+    const gemN = [wl2 ? nl[1] + gut : cL, wr2 ? nr[0] - gut : cR];
+    const half = { [cLeft]: [cL, cmid - gut / 2], [cRight]: [cmid + gut / 2, cR] };
+
+    const toks = arr => (arr || []).map(t => (t && typeof t === 'object' ? String(t.text) : String(t)));
+    const streams = su.streams || {};
+    const texts = {};
+    for (const n of Object.keys(streams)) texts[n] = toks(streams[n]);
+    const paras = name => new Set((su.paras && su.paras[name]) || []);
+    const rtl = L === 'yi';
+    const famG = tsFamily(L, 'gem'), famC = tsFamily(L, 'comm');
+    const famOf = f => (f === TS2.FACE_HE_SQ ? TS2.HE_SQ : (f === TS2.FACE_HE_RASHI ? TS2.HE_RASHI : famC));
+    const gemRange = su.gem || [0, 0];
+    const keyCountAt = {};
+    const gemStreamTok = streams.gemara || [];
+    if (su.keySegs && gemStreamTok.length) {
+      gemStreamTok.forEach((tok, t) => {
+        if (t > 0 && tok.seg === gemStreamTok[t - 1].seg) return;
+        const cnt = su.keySegs[(Number(tok.seg) || 0) + 1] || 0;
+        if (cnt > 0) keyCountAt[t] = cnt;
+      });
+    }
+    const keyAdv = sG * TSHEET.KEY_EM;
+    const extraG = gemStreamTok.map((_, t) => (keyCountAt[t] ? keyCountAt[t] * keyAdv : 0));
+    // pieces of the sheet: classic columns or the combined stack
+    const pieceList = stackMode ? (su.stack || []) : [...((su.cols && su.cols.in) || []), ...((su.cols && su.cols.out) || [])];
+    const hasComm = pieceList.some(p => p.range[1] > p.range[0]);
+    // K36: later sheets: commentary lines above the Gemara = min(4, lines the commentary needs in the two half bands); 0 without commentary
+    let topLines = TSHEET.TOP_LINES;
+    if (!first) {
+      if (!hasComm) topLines = 0;
+      else {
+        let wsum = 0;
+        for (const p of pieceList) {
+          const sd = sdef[p.stream] || { face: 1 };
+          const fam = famOf(sd.face), sp = tsAdvance(fam, sC, ' ');
+          for (let t = p.range[0]; t < p.range[1]; t++) wsum += tsAdvance(fam, sC, texts[p.stream][t]) + sp;
+        }
+        const halfW = ((half.in[1] - half.in[0]) + (half.out[1] - half.out[0])) / 2;
+        topLines = Math.max(1, Math.min(TS2.TOP_LINES_MAX, Math.ceil(wsum / (2 * halfW * 0.92))));
+      }
+    }
+    const gemTop = first ? coreTop + (gemFirst - heCoreTop) * k : coreTop + topLines * lhC;
+
+    const run = (id, stream, face, fam, size, lh, bands, range, obstacles) => tsBreakColumn({
+      id, stream, face, fam, size, lh, bands, bottom: coreBottomX, rtl, texts: texts[stream],
+      start: range[0], end: range[1], paras: paras(stream),
+      extra: stream === 'gemara' ? extraG : null, obstacles: obstacles && obstacles.length ? obstacles : null,
+    });
+    const inkMeet = (A, B) => A.x0 < B.x1 - 1e-6 && B.x0 < A.x1 - 1e-6
+      && A.baseline - A.inkA < B.baseline + B.inkD + TS_INK_GAP - 1e-6 && B.baseline - B.inkA < A.baseline + A.inkD + TS_INK_GAP - 1e-6;
+    const crossInkOf = groups => {
+      let n = 0;
+      for (let p = 0; p < groups.length; p++) for (let q = p + 1; q < groups.length; q++)
+        for (const A of groups[p]) for (const B of groups[q]) if (inkMeet(A, B)) n++;
+      return n;
+    };
+    const pageW = Number(heGeom.pageW) || 643.575;
+    const slots = (heGeom.flows || []).map(f => ({ id: f.id, face: f.face, titleFace: f.titleFace,
+      box: [Math.max(3, mapX(f.box[0])), f.box[1], Math.min(mapX(f.box[2]), pageW - 3), f.box[3]], maxBottom: f.maxBottom }))
+      .filter(sl => sl.box[2] - sl.box[0] > 10);
+    const flowYs = slots.flatMap(sl => [sl.box[1], sl.box[3]]);
+    const flowCut = (a, b, xr) => {
+      let x0 = xr[0], x1 = xr[1];
+      for (const sl of slots) {
+        if (!(sl.box[1] < b - 1e-9 && sl.box[3] > a + 1e-9)) continue;
+        if ((sl.box[0] + sl.box[2]) / 2 > cmid) x1 = Math.min(x1, sl.box[0] - gut);
+        else x0 = Math.max(x0, sl.box[2] + gut);
+      }
+      return [x0, x1];
+    };
+    const bandsFrom = (fn, cutsY) => {
+      const cuts = [...new Set([coreTop, gemTop, ...cutsY, ...flowYs, coreBottomX].filter(v => v >= coreTop && v <= coreBottomX))].sort((x, y) => x - y);
+      const out = [];
+      for (let q = 0; q + 1 < cuts.length; q++) {
+        const a = cuts[q], b = cuts[q + 1];
+        if (b - a <= 1e-9) continue;
+        const xr = flowCut(a, b, fn((a + b) / 2));
+        if (!(xr[1] > xr[0])) continue;
+        const last = out[out.length - 1];
+        if (last && last.y1 === a && Math.abs(last.x0 - xr[0]) < 1e-9 && Math.abs(last.x1 - xr[1]) < 1e-9) last.y1 = b;
+        else out.push({ y0: a, y1: b, x0: xr[0], x1: xr[1] });
+      }
+      return out;
+    };
+    const hh = TS2.HEAD_PITCH * lhC;
+    // One column: its pieces one after the other (programs, §4.2; the stack's share, §7.2). Returns lines, marks, next tokens.
+    const layPieces = (id, bands, pieces, bottom, obstacles) => {
+      const lines = [], marks = [], next = {};
+      let y = null, tooWide = 0, stop = false, why = null;
+      for (const p of pieces) next[p.stream] = p.range[0];
+      for (const p of pieces) {
+        if (p.range[1] <= p.range[0]) continue;
+        if (stop) break;
+        const sd = sdef[p.stream] || { face: 1, rtl: rtl };
+        const fam = famOf(sd.face);
+        let yBody = y, pm = [];
+        if (p.head) {
+          const withRule = y !== null;
+          const bh = (withRule ? TS2.GAP + TS2.DIV_H + TS2.GAP : 0) + hh;
+          const pos = tsNextSlot(bands, y, bh, bottom);
+          if (!pos) { stop = true; why = 'noSlot:' + p.stream; break; }
+          const b = bands[pos.bi];
+          let hy = pos.y;
+          if (withRule) {
+            const bw = b.x1 - b.x0, w = bw < TS2.DIV_NARROW ? 0.8 * bw : TS2.DIV_W, cx = (b.x0 + b.x1) / 2;
+            pm.push({ t: 'rule', region: id, y: pos.y + TS2.GAP, x: [cx - w / 2, cx + w / 2], h: TS2.DIV_H });
+            hy = pos.y + TS2.GAP + TS2.DIV_H + TS2.GAP;
+          }
+          pm.push({ t: 'head', block: p.stream, cont: !!p.cont, region: id, y: hy, h: hh, x: [b.x0, b.x1], size: TS2.HEAD_SCALE * sC });
+          yBody = hy + hh;
+        }
+        const res = tsBreakColumn({ id, stream: p.stream, face: sd.face, fam, size: sC, lh: lhC, bands, bottom, rtl: !!sd.rtl,
+          texts: texts[p.stream], start: p.range[0], end: p.range[1], paras: paras(p.stream), extra: null,
+          obstacles: obstacles && obstacles.length ? obstacles : null, y0: yBody });
+        if (p.head && res.lines.length < 2 && res.next < p.range[1]) { stop = true; why = 'orphan:' + p.stream; break; }   // K41 orphan heading
+        if (!res.lines.length) { stop = true; tooWide += res.tooWide; why = 'noLine:' + p.stream; break; }
+        lines.push(...res.lines); marks.push(...pm);
+        next[p.stream] = res.next; tooWide += res.tooWide;
+        y = res.lines[res.lines.length - 1].bottom;
+        if (res.next < p.range[1]) { stop = true; why = 'full:' + p.stream; }
+      }
+      const done = pieces.every(p => next[p.stream] >= p.range[1]);
+      const endY = Math.max(coreTop, ...lines.map(l => l.bottom), ...marks.map(m => m.y + (m.h || 0)));
+      return { lines, marks, next, tooWide, done, endY, id, why };
+    };
+    const endOfCol = (res, pieces) => (res.done ? res.endY : coreBottomX);
+    const idOf = c => (c === 'in' ? 'inner' : 'outer');
+    // reading-start side column A (left for ltr, right for yi), column B the other one
+    const colA = (rtl ? cRight : cLeft), colB = colA === 'in' ? 'out' : 'in';
+    const stackA = present0[colA] ? colA : colB, stackB = present0[colA] && present0[colB] ? colB : null;
+    const piecesAll = (su.stack || []).filter(p => p.range[1] > p.range[0]);
+    const titleMarks = (res, pieces) => {
+      // classic title above a column: the first piece shown (engine i18n title or "(cont.)")
+      const p = pieces.find(q => q.range[1] > q.range[0] && res.next[q.stream] > q.range[0]);
+      const l0 = res.lines.slice().sort((a, b) => a.top - b.top || a.x0 - b.x0)[0];
+      return p && l0 ? [{ t: 'title', block: p.stream, cont: !!p.cont, region: res.id, x0: l0.x0 }] : [];
+    };
+
+    let ends = { gem: coreBottomX, in: inP ? coreBottomX : coreTop, out: outP ? coreBottomX : coreTop };
+    const iterLog = [], balScan = [];
+    let G, RI = null, RO = null, bandsG, bandsI, bandsO, it = 0, crossInk = 0, balance = null;
+    let chapterBox = null;
+    for (it = 0; it < 12; it++) {
+      const present = (c, y) => y < ends[c] - 1e-9;
+      bandsG = bandsFrom(y => [present(cLeft, y) ? gemN[0] : cL, present(cRight, y) ? gemN[1] : cR],
+        [ends.in, ends.out]).map(b => ({ y0: Math.max(b.y0, gemTop), y1: b.y1, x0: b.x0, x1: b.x1 })).filter(b => b.y1 > b.y0 + 1e-9);
+      if (first && su.chapterBox) { const cbr = tsChapterBox(bandsG, su.chapterBox, gemTop, lhG, sG, famG, k, rtl, su); bandsG = cbr.bands; chapterBox = cbr.box || null; }
+      G = run('gemara', 'gemara', 0, famG, sG, lhG, bandsG, gemRange, RI && RO ? [...RI.lines, ...RO.lines] : null);
+      const gemEnd = G.next < gemRange[1] ? coreBottomX : (G.lines.length ? Math.max(...G.lines.map(l => l.bottom)) : gemTop);
+      const gPresent = y => y < gemEnd - 1e-9;
+      const colBand = (c, y) => {
+        const other = c === 'in' ? 'out' : 'in';
+        if (y < gemTop) return present(other, y) ? half[c] : [cL, cR];
+        if (gPresent(y)) return narrow[c];
+        return present(other, y) ? half[c] : [cL, cR];
+      };
+      bandsI = bandsFrom(y => colBand('in', y), [gemEnd, ends.out]);
+      bandsO = bandsFrom(y => colBand('out', y), [gemEnd, ends.in]);
+      const gObs = G.lines.filter(l => l.x0 >= gemN[0] - 1e-6 && l.x1 <= gemN[1] + 1e-6);
+      if (!stackMode) {
+        RI = layPieces('inner', bandsI, (su.cols && su.cols.in) || [], coreBottomX, [...gObs, ...(RO ? RO.lines : [])]);
+        RO = layPieces('outer', bandsO, (su.cols && su.cols.out) || [], coreBottomX, [...gObs, ...RI.lines]);
+        RI.marks.push(...titleMarks(RI, (su.cols && su.cols.in) || []));
+        RO.marks.push(...titleMarks(RO, (su.cols && su.cols.out) || []));
+      } else {
+        const bandsOf = c => (c === 'in' ? bandsI : bandsO);
+        const prevOther = c => (c === 'in' ? RO : RI);
+        const layAB = cut => {
+          const A = layPieces(idOf(stackA), bandsOf(stackA), piecesAll, cut, [...gObs, ...(prevOther(stackA) ? prevOther(stackA).lines : [])]);
+          if (!stackB) return { A, B: null };
+          const rest = [];
+          for (const p of piecesAll) {
+            const nx = A.next[p.stream];
+            if (nx >= p.range[1]) continue;
+            rest.push({ stream: p.stream, range: [nx, p.range[1]], head: p.head, cont: nx > p.range[0] || !!p.cont });
+          }
+          const B = layPieces(idOf(stackB), bandsOf(stackB), rest, coreBottomX, [...gObs, ...A.lines]);
+          for (const p of rest) A.next[p.stream] = B.next[p.stream];
+          return { A, B, rest };
+        };
+        let cur = layAB(coreBottomX);
+        if (stackB) {
+          // K40: the stack is cut between A and B so that the two columns end level. B's end falls as A's share grows,
+          // so the cut is found by bisection on y (at most 9 steps, in the page: no extra layout call of the builder).
+          const full = cur;
+          if (full.B && full.B.done) {
+            let lo = coreTop, hi = coreBottomX, bestR = full, bestS = Infinity;
+            for (let r = 0; r < 9; r++) {
+              const mid = (lo + hi) / 2;
+              const t = layAB(mid);
+              if (fr.debug) balScan.push([Math.round(mid), Math.round(t.A.endY), Math.round(t.B ? t.B.endY : 0), t.B ? t.B.done : t.A.done, t.A.lines.length, t.B ? t.B.lines.length : 0]);
+              const bDone = t.B ? t.B.done : t.A.done;
+              const diff = (t.B ? t.B.endY : coreTop) - t.A.endY;      // > 0: B longer than A
+              if (!bDone) { lo = mid; continue; }
+              const score = Math.abs(diff) + (diff > lhC ? 1e5 : 0);
+              if (score < bestS) { bestS = score; bestR = t; }
+              if (Math.abs(diff) <= 0.5 * lhC) break;
+              if (diff > 0) lo = mid; else hi = mid;
+            }
+            // whole-line refinement around the bisection result (K40: the first column is never the shorter by > 1 line)
+            if (bestR.B && bestS > 1 * lhC) {
+              const c0 = bestR.A.endY;
+              for (let dl = -8; dl <= 8; dl += 0.5) {
+                if (dl === 0) continue;
+                const t = layAB(Math.max(coreTop, Math.min(coreBottomX, c0 + dl * lhC)));
+                if (fr.debug) balScan.push([Math.round(c0 + dl * lhC), Math.round(t.A.endY), Math.round(t.B ? t.B.endY : 0), t.B ? t.B.done : t.A.done, t.A.lines.length, t.B ? t.B.lines.length : 0, 'r']);
+                if (!(t.B ? t.B.done : t.A.done)) continue;
+                const diff = (t.B ? t.B.endY : coreTop) - t.A.endY;
+                const score = Math.abs(diff) + (diff > lhC ? 1e5 : 0);
+                if (score < bestS) { bestS = score; bestR = t; }
+              }
+            }
+            cur = bestR;
+          }
+        }
+        const resA = cur.A, resB = cur.B;
+        balance = resB ? { endA: resA.endY, endB: resB.endY } : null;
+        const done = resA.done || (resB && resB.done);
+        const mk = (res, c) => Object.assign(res, { done: done });
+        if (stackA === 'in') { RI = resA; RO = resB || { lines: [], marks: [], next: {}, tooWide: 0, done: true, endY: coreTop, id: 'outer' }; }
+        else { RO = resA; RI = resB || { lines: [], marks: [], next: {}, tooWide: 0, done: true, endY: coreTop, id: 'inner' }; }
+        // titles above the columns when the blocks carry no headings (single block over both columns)
+        for (const res of [RI, RO]) {
+          const pieces = res === resA ? piecesAll : (cur.rest || []);
+          if (pieces.length && !pieces.some(p => p.head)) res.marks.push(...titleMarks(res, pieces));
+        }
+        // when the stack did not finish, both columns are full; otherwise each ends where its last line is
+        if (!done) { RI.full = true; RO.full = true; }
+      }
+      const colEnd = res => (res.full ? coreBottomX : (res.lines.length ? res.endY : coreTop));
+      const nextEnds = { gem: gemEnd, in: stackMode ? colEnd(RI) : endOfCol(RI), out: stackMode ? colEnd(RO) : endOfCol(RO) };
+      crossInk = crossInkOf([G.lines, RI.lines, RO.lines]);
+      const same = nextEnds.gem === ends.gem && nextEnds.in === ends.in && nextEnds.out === ends.out && crossInk === 0;
+      iterLog.push({ from: [ends.gem, ends.in, ends.out].map(v => Math.round(v)), to: [nextEnds.gem, nextEnds.in, nextEnds.out].map(v => Math.round(v)), gN: G.next, why: [RI.why, RO.why], ci: crossInk, nl: [RI.lines.length, RO.lines.length] });
+      ends = nextEnds;
+      if (same) break;
+    }
+    const lines = [...G.lines, ...RI.lines, ...RO.lines];
+    const marks = [...RI.marks, ...RO.marks];
+    // catchword (last sheet only), as tsplit/1
+    let catchLine = null;
+    const cs = su.catch;
+    if (su.last && cs && Array.isArray(cs.tokens) && cs.tokens.length) {
+      const cw = cs.tokens.map(t => (t && typeof t === 'object' ? String(t.text) : String(t)));
+      const bw = tsBaseOffset(famG, sG, lhG);
+      const cx0 = gemN[0], cx1 = gemN[1];
+      let m = 0, wsum = 0;
+      while (m < cw.length) {
+        const nw = m === 0 ? tsAdvance(famG, sG, cw[0]) : wsum + tsAdvance(famG, sG, ' ') + tsAdvance(famG, sG, cw[m]);
+        if (nw > (cx1 - cx0) + 1e-6) break;
+        wsum = nw; m++;
+      }
+      if (m > 0) {
+        const w = wsum;
+        const x0 = rtl ? cx1 - w : cx0;
+        const cInk = tsInk(famG, sG, cw.slice(0, m).join(' '));
+        const top0 = G.lines.length ? Math.max(...G.lines.map(l => l.bottom)) : gemTop;
+        const cand = [top0, coreBottom - lhG, ...lines.map(l => l.bottom), ...slots.map(sl => sl.box[3]),
+          ...lines.map(l => l.baseline + l.inkD + TS_INK_GAP + cInk.asc - bw + 1e-6)]
+          .filter(t => t >= top0 - 1e-9 && t + lhG <= coreBottom + 1e-9).sort((p, q) => p - q);
+        for (const top of cand) {
+          const bx0 = x0, bx1 = x0 + w, by0 = top, by1 = top + lhG;
+          const probe = { x0: bx0, x1: bx1, baseline: by0 + bw, inkA: cInk.asc, inkD: cInk.desc };
+          const hit = lines.some(l => (l.x0 < bx1 - 1e-6 && bx0 < l.x1 - 1e-6 && l.top < by1 - 1e-6 && by0 < l.bottom - 1e-6) || inkMeet(probe, l))
+            || marks.some(mk => mk.y !== undefined && mk.x && mk.x[0] < bx1 && bx0 < mk.x[1] && mk.y < by1 && by0 < mk.y + (mk.h || 0))
+            || slots.some(sl => sl.box[0] < bx1 && bx0 < sl.box[2] && sl.box[1] < by1 && by0 < sl.box[3]);
+          if (!hit) {
+            catchLine = { region: 'catchword', stream: cs.stream, face: 0, size: sG, top: by0, bottom: by1,
+              baseline: by0 + bw, x0: bx0, x1: bx1, a: 0, b: m, natW: w, last: true, inkA: cInk.asc, inkD: cInk.desc };
+            break;
+          }
+        }
+      }
+    }
+    let inkContacts = 0;
+    for (const colId of ['gemara', 'inner', 'outer']) {
+      const cl = lines.filter(l => l.id === colId).sort((p, q) => p.baseline - q.baseline);
+      for (let p = 0; p + 1 < cl.length; p++) {
+        const A = cl[p], B = cl[p + 1];
+        if (B.baseline - B.inkA < A.baseline + A.inkD + TS_INK_GAP - 1e-6) inkContacts++;
+      }
+    }
+    let flowOverlaps = 0;
+    for (const sl of slots) for (const l of lines) {
+      if (l.x0 < sl.box[2] - 1e-6 && sl.box[0] < l.x1 - 1e-6 && l.top < sl.box[3] - 1e-6 && sl.box[1] < l.bottom - 1e-6) flowOverlaps++;
+    }
+    let overlaps = 0;
+    for (let p = 0; p < lines.length; p++) for (let q = p + 1; q < lines.length; q++) {
+      const a = lines[p], b = lines[q];
+      if (a.x0 < b.x1 - 1e-6 && b.x0 < a.x1 - 1e-6 && a.top < b.bottom - 1e-6 && b.top < a.bottom - 1e-6) overlaps++;
+    }
+    // marks (headings, dividers) are obstacles: 0 overlaps with text lines or with each other
+    let markOverlaps = 0;
+    const mrect = m => ({ x0: m.x[0], x1: m.x[1], top: m.y, bottom: m.y + (m.h || 0) });
+    const mr = marks.filter(m => m.t !== 'title').map(mrect);
+    for (const m of mr) {
+      for (const l of lines) if (m.x0 < l.x1 - 1e-6 && l.x0 < m.x1 - 1e-6 && m.top < l.bottom - 1e-6 && l.top < m.bottom - 1e-6) markOverlaps++;
+    }
+    for (let p = 0; p < mr.length; p++) for (let q = p + 1; q < mr.length; q++) {
+      const a = mr[p], b = mr[q];
+      if (a.x0 < b.x1 - 1e-6 && b.x0 < a.x1 - 1e-6 && a.top < b.bottom - 1e-6 && b.top < a.bottom - 1e-6) markOverlaps++;
+    }
+    const placed = { gemara: [gemRange[0], G.next] }, carryOut = {}, carryN = {};
+    for (const p of pieceList) {
+      const nx = RI.next[p.stream] != null && stackMode ? Math.max(RI.next[p.stream], RO.next[p.stream] != null ? RO.next[p.stream] : 0)
+        : (RI.next[p.stream] != null ? RI.next[p.stream] : RO.next[p.stream]);
+      placed[p.stream] = [p.range[0], nx];
+      carryOut[p.stream] = nx < p.range[1] ? nx : null;
+      carryN[p.stream] = Math.max(0, p.range[1] - nx);
+    }
+    const area = (Wc * (coreBottom - coreTop));
+    let afill = 0;
+    for (const l of lines) afill += (l.x1 - l.x0) * (l.id === 'gemara' ? lhG : lhC);
+    afill /= (Wc * TSHEET_CORE_H(coreTop, coreBottom));
+    const maxBottom = lines.length ? Math.max(...lines.map(l => l.bottom)) : coreTop;
+    const sheet = {
+      rule: 'tsplit/2', mode: stackMode ? 'combined' : 'classic', lang: L, k, rtl, rho, chapterBox,
+      faces: [[famG, sG], [famC, sC], [TS2.HE_RASHI, sC], [TS2.HE_SQ, sC]],
+      flows: slots, catch: catchLine, marks,
+      lines: lines.map(l => ({ region: l.id, stream: l.stream, face: l.face, baseline: l.baseline,
+        x0: l.x0, x1: l.x1, top: l.top, bottom: l.bottom, a: l.a, b: l.b, size: l.size, last: l.last })),
+      placed, carryOut,
+      geometry: {
+        coreTop, coreBottom, gemTop, first, rho, topLines,
+        core: [cL, cR], gemCanon: gemC2, gemNarrow: gemN,
+        columns: { leftC: cLeft, rightC: cRight, absent: ['in', 'out'].filter(c => !present0[c]),
+          width: { in: wcol.in, out: wcol.out }, narrow, half, stackA: stackMode ? stackA : null },
+        bands: { gem: bandsG, inner: bandsI, outer: bandsO }, ends, iterations: it + 1, balance, why: [RI.why || null, RO.why || null], iterLog: fr.debug ? iterLog : undefined, balScan: fr.debug ? balScan : undefined,
+      },
+      measures: {
+        overflowGem: gemRange[1] - G.next,
+        carry: carryN,
+        carryTotal: Object.values(carryN).reduce((s, v) => s + v, 0),
+        tooWide: G.tooWide + RI.tooWide + RO.tooWide,
+        overlaps, markOverlaps, inkContacts, flowOverlaps, catchword: !!catchLine,
+        crossInk: crossInk + (catchLine ? lines.filter(l => inkMeet(catchLine, l)).length : 0),
+        fontsUnstable: _tsUnstable - unstable0,
+        lines: lines.length, afill, vfill: (maxBottom - coreTop) / (coreBottom - coreTop),
+        nGem: G.lines.length, nComm: RI.lines.length + RO.lines.length,
+        minPrintPt: { gemara: G.lines.length ? sG * TSHEET.PRINT : null, comm: (RI.lines.length + RO.lines.length) ? sC * TSHEET.PRINT : null },
+      },
+    };
+    return sheet;
+  }
+  function TSHEET_CORE_H(top, bottom) { return bottom - top; }
+
   /**
    * Serialisable layer/2 sheet shape for the builder (renderer-1 T2). Input: array of sheets from
    * layoutTranslationSheet, in order. Output per sheet: regions (ids gemara|inner|outer, each line
@@ -1306,6 +1812,19 @@
    */
   function exportSheetLines(sheets) {
     return (sheets || []).map((s, j) => {
+      if (s.rule === 'tsplit/2') {
+        const r3 = v => Math.round(v * 1000) / 1000;
+        const byId = { gemara: [], inner: [], outer: [] };
+        const sorted = s.lines.slice().sort((p, q) => (p.region === q.region ? p.top - q.top : (p.region < q.region ? -1 : 1)));
+        for (const ln of sorted) byId[ln.region].push([r3(ln.baseline), r3(ln.x0), r3(ln.x1), [[ln.face, { r: [[ln.stream, ln.a, ln.b]] }]]]);
+        return { j, rule: 'tsplit/2', mode: s.mode, lang: s.lang, k: s.k, rho: s.rho, faces: s.faces,
+          regions: ['gemara', 'inner', 'outer'].map(id => ({ id, lines: byId[id] })),
+          box: s.chapterBox ? s.chapterBox.map(r3) : null,
+          marks: (s.marks || []).map(m => Object.assign({}, m, m.x ? { x: m.x.map(r3) } : {}, m.x0 != null ? { x0: r3(m.x0) } : {}, m.y != null ? { y: r3(m.y) } : {}, m.h != null ? { h: r3(m.h) } : {}, m.size != null ? { size: r3(m.size) } : {})),
+          flows: (s.flows || []).map(f => ({ id: f.id, box: f.box.map(r3), maxBottom: r3(f.maxBottom), face: f.face, titleFace: f.titleFace })),
+          catchword: s.catch ? [[r3(s.catch.baseline), r3(s.catch.x0), r3(s.catch.x1), [[0, { r: [[s.catch.stream, 0, s.catch.b]] }]]]] : null,
+          placed: s.placed, carryOut: s.carryOut, measures: s.measures, geometry: s.geometry, minPrintPt: s.measures.minPrintPt };
+      }
       const byId = { gemara: [], inner: [], outer: [] };
       const sorted = s.lines.slice().sort((p, q) => (p.region === q.region ? p.top - q.top : (p.region < q.region ? -1 : 1)));
       const r3 = v => Math.round(v * 1000) / 1000;
@@ -1317,6 +1836,7 @@
       return {
         j, lang: s.lang, k: s.k, rho: s.rho, faces: s.faces,
         regions: ['gemara', 'inner', 'outer'].map(id => ({ id, stream: streamOf[id], lines: byId[id] })),
+        box: s.chapterBox ? s.chapterBox.map(r3) : null,   // chapter-opening box [x0,y0,x1,y1] (sheet 1 of a chapter start), else null
         // Apparatus/margin slots of the sheet (he layer flow regions, σ-mapped; face = he face index).
         flows: (s.flows || []).map(f => ({ id: f.id, box: f.box.map(r3), maxBottom: r3(f.maxBottom), face: f.face, titleFace: f.titleFace })),
         // Catchword line (last sheet): [baseline, x0, x1, [[0, {r:[[stream, 0, n]]}]]] (face 0 = gemara face), else null.
@@ -1352,12 +1872,13 @@
     // Unknown ids fall back to the default instead of reaching the renderer.
     if (!TEXT_LANGS.some(l => l.id === e.textLang)) e.textLang = DEFAULT_SETTINGS.textLang;
     if (!LICENSE_MODES.includes(e.licenseMode)) e.licenseMode = DEFAULT_SETTINGS.licenseMode;
+    if (!COMM_LAYOUTS.includes(e.commLayout)) e.commLayout = DEFAULT_SETTINGS.commLayout;
     return e;
   }
 
   function isDefaultSettings(s) {
     const a = canonicalSettings(s), d = canonicalSettings(DEFAULT_SETTINGS);
-    return Object.keys(d).every(k => (Array.isArray(d[k])
+    return Object.keys(d).every(k => k === 'commLayout' || (Array.isArray(d[k])
       ? a[k].length === d[k].length && a[k].every((x, i) => x === d[k][i])
       : a[k] === d[k]));
   }
@@ -2027,7 +2548,7 @@
    * Resolves {id, page, edition, gemaraSrc}; null when there is no layout for this amud (no index,
    * no page file, no sibling layer); LAYOUT_UNUSABLE when a layout exists but cannot be used.
    */
-  async function loadLayoutPage(base, tractate, page, side, storeP, lang = 'he', licenseMode = 'all') {
+  async function loadLayoutPage(base, tractate, page, side, storeP, lang = 'he', licenseMode = 'all', commLayout = 'auto') {
     const idx = await layoutIndex(base);   // memoised; needed to locate the layout folder
     if (!idx) return null;
     const id = String(idx.default);
@@ -2038,7 +2559,16 @@
     // Translation layers never apply under ?license=pd (T7, spec §10.4): no request, adaptive as before.
     if (lang !== 'he' && licenseMode === 'pd') return null;
     if (lang !== 'he') {
-      layer = await fetchJSONQuiet(`${dir}/${daf}.${lang}.json`);
+      // Commentary layout (v2 7.3): classic file <daf>.<lang>.json, combined file <daf>.<lang>.cm.json; 'auto' reads the
+      // classic file and follows its build.auto. A forced mode without a layer is adaptive.
+      if (commLayout === 'combined') layer = await fetchJSONQuiet(`${dir}/${daf}.${lang}.cm.json`);
+      else {
+        layer = await fetchJSONQuiet(`${dir}/${daf}.${lang}.json`);
+        if (layer && commLayout !== 'classic' && layer.build && layer.build.auto === 'combined') {
+          const cm = await fetchJSONQuiet(`${dir}/${daf}.${lang}.cm.json`);
+          layer = cm || (Array.isArray(layer.sheets) && layer.sheets.length ? layer : null);
+        } else if (layer && Array.isArray(layer.sheets) && !layer.sheets.length) layer = null;   // stub without a combined file
+      }
       if (!layer) return null;
       if (layer.schema !== LAYOUT_LAYER_SCHEMA && layer.schema !== LAYOUT_LAYER2_SCHEMA) return layoutUnusable('schema');
     }
@@ -2065,6 +2595,14 @@
     if (layer && layer.schema === LAYOUT_LAYER2_SCHEMA) {
       const got = hydrateLayer2(lp, store, lang, layer, { licenseMode, stores });
       if (got.layoutUnusable) return layoutUnusable(got.reason);
+      const p0 = got.sheets[0];
+      if (p0.chapterBoxGeom) {
+        // The box shows the chapter's name in the target language (data/offline/chapter-names.json); the Hebrew chapter word if the
+        // table has no entry. The Gemara flow itself starts at its first token.
+        const names = await loadChapterNames();
+        const text = chapterNameIn(names, tractate, lang, { at: `${page}${side}` }) || hebrewChapterWord(lp);
+        if (text) p0.ornaments = [{ k: 'image', b: p0.chapterBoxGeom, text, fam: tsFamily(lang, 'gem') }];
+      }
       const gemaraSrc = store && store.printSources && store.printSources.gemara;
       return { id, page: got.sheets[0], sheets: got.sheets, edition, gemaraSrc: gemaraSrc && gemaraSrc.show === true ? gemaraSrc : null,
         apparatusSources: store && store.apparatusSources && typeof store.apparatusSources === 'object' ? store.apparatusSources : null };
@@ -2145,6 +2683,32 @@
   // absent (404, network error, foreign schema) the loader resolves to null and the page is fetched
   // live from Sefaria. Base path is set with `new VilnaDaf({offlineBase})`; offlineBase:false disables it.
   let OFFLINE_BASE = 'data/offline';
+
+  // Chapter names per language (data/offline/chapter-names.json: {tractate: [{he,en,ru,fr,es,ko,yi,at}, ...]}).
+  let _chapterNamesP = null;
+  function loadChapterNames() {
+    if (!OFFLINE_BASE) return Promise.resolve(null);
+    if (!_chapterNamesP) {
+      _chapterNamesP = fetchJSONQuiet(`${OFFLINE_BASE}/chapter-names.json`).then(v => { if (!v || typeof v !== 'object') _chapterNamesP = null; return v || null; });
+    }
+    return _chapterNamesP;
+  }
+  /** Name of a chapter in `lang` (Hebrew when the language has none); key = {num} (1-based) or {at:'2a'} (the chapter's first amud). */
+  function chapterNameIn(all, tractate, lang, key) {
+    const rows = all && all[tractate];
+    if (!Array.isArray(rows)) return '';
+    const r = key.at ? rows.find(x => x.at === key.at) : rows[(key.num || 0) - 1];
+    return r ? (r[lang] || r.he || '') : '';
+  }
+  /** The Hebrew chapter word a layout page prints (region chapterWord), '' if none. */
+  function hebrewChapterWord(lp) {
+    try {
+      const i = lp.regions.findIndex(r => r.id === 'chapterWord');
+      const ln = i >= 0 && lp.layers.he.regions[i].lines[0];
+      const run = ln && ln[3] && ln[3][0];
+      return run && typeof run[1] === 'string' ? run[1] : '';
+    } catch (e) { return ''; }
+  }
   const OFFLINE_SCHEMAS = ['vilna-offline/1', 'vilna-text/1'];
   const _textStoreMemo = new Map();
   const TEXT_STORE_MEMO_MAX = 4;
@@ -2505,7 +3069,14 @@
     }
     const s = settings || DEFAULT_SETTINGS;
     const model = await applySettings(base, s);
-    return applyTextStore(model, store, s);
+    const out = applyTextStore(model, store, s);
+    // Translated page at a chapter start: the opening box shows the chapter's name in the text language (not the text's first word).
+    if (out && s.textLang && s.textLang !== 'he' && out.chapter && out.chapter.startsHere && out.chapter.num) {
+      const names = await loadChapterNames();
+      const nm = chapterNameIn(names, out.tractate, s.textLang, { num: out.chapter.num });
+      if (nm) out.chapterBoxName = nm;
+    }
+    return out;
   }
 
   /**
@@ -2910,8 +3481,11 @@
         .map(e => `<sup class="ref-key ${e.cls}" data-target="${e.id}" data-seg="${sn}">${e.letter}</sup>`)
         .join('');
       if (i === 0 && model.chapter && model.chapter.startsHere && model.chapter.startSeg === 1) {
-        const ext = extractFirstWord(segHtml);
-        if (ext) { boxWord = ext.word; segHtml = ext.rest; }
+        if (model.chapterBoxName) boxWord = model.chapterBoxName;   // translated page: the box shows the chapter's name, the text keeps its first word
+        else {
+          const ext = extractFirstWord(segHtml);
+          if (ext) { boxWord = ext.word; segHtml = ext.rest; }
+        }
       }
       html += `${keys}<span class="gseg" data-seg="${sn}">${segHtml}</span> `;
     }
@@ -4166,6 +4740,7 @@
       // Chapter-word box: CSS frame + LIVE text sized to the box (never a scan crop).
       const t = el('span', 'vorn-text');
       t.textContent = String(o.text);
+      if (o.fam) t.style.fontFamily = o.fam;
       t.style.fontSize = `calc(var(--pt) * ${Math.max(1, (y1 - y0) * 0.56).toFixed(3)})`;
       d.appendChild(t);
     } else d.setAttribute('aria-hidden', 'true');
@@ -4680,6 +5255,22 @@
       const f = faces[rg.face != null ? rg.face : 0];
       lowestPt = Math.max(lowestPt, Math.max(...bls) + 0.25 * (f ? f.size : 0));
     }
+    if (ms) {
+      // Hebrew-script streams of a translated sheet (fallback commentary, print streams): right-to-left lines
+      const heFace = faces.map(f => /^['"]?(RashiScript|FrankRuhl)['"]?\s*(,|$)/.test(String(f.wf.css)));
+      for (const vl of sheet.querySelectorAll('.vl')) {
+        const vr = vl.querySelector(':scope > .vr');
+        const m = vr && /(?:^|\s)f(\d+)(?:\s|$)/.exec(vr.className);
+        if (m && heFace[+m[1]]) { vl.classList.add('vl-he'); vl.setAttribute('lang', 'he'); }
+      }
+    }
+    // K39 headings: a heading wider than its column is set smaller (down to 0.6 of its size) instead of being clipped
+    if (ms) for (const h of sheet.querySelectorAll('.tsheet-block')) {
+      let fs = parseFloat(getComputedStyle(h).fontSize), n = 0;
+      const f0 = fs;
+      while (h.scrollWidth > h.clientWidth + 0.5 && fs > 0.6 * f0 && n++ < 12) { fs *= 0.94; h.style.fontSize = `${fs}px`; }
+      if (h.scrollWidth > h.clientWidth + 0.5) h.style.textOverflow = 'clip';
+    }
     const anchored = anchorWords(sheet, faces, edition, pxPerPt);
     // Lines made of anchored words are fitted by word gap alone (fitStrictLines);
     // the advance model (k) only serves lines that could not be anchored.
@@ -4743,6 +5334,52 @@
    * Engine labels of a translated sheet (spec §10.6): the sheet marker "<Tractate> <daf> · j/N" and, on
    * each commentary column that starts here, its title, or "(cont.)" when the column continues.
    */
+  function addTranslatedMarks2(sheet, pp, ms) {
+    const regionOf = id => (pp.regions || []).find(r => r && r.id === id && Array.isArray(r.lines) && r.lines.some(Array.isArray));
+    const label = m => {
+      const t = ms.titles[m.block] || m.block;
+      return m.cont ? `${t} ${ms.titles.cont}` : t;
+    };
+    for (const m of pp.marks) {
+      if (m.t === 'title') {
+        const rg = regionOf(m.region);
+        if (!rg) continue;
+        const x0 = m.x0 != null ? +m.x0 : Math.min(...rg.lines.filter(Array.isArray).map(l => +l[1]));
+        const t = el('div', `tsheet-title f${rg.face != null ? rg.face : 1}`);
+        t.dataset.mark = 'title';
+        t.dataset.block = m.block;
+        t.textContent = m.cont ? ms.titles.cont : ms.titles[m.block];
+        t.style.left = `calc(var(--pt) * ${x0.toFixed(3)})`;
+        t.style.top = 'calc(var(--pt) * 30)';
+        t.style.fontSize = 'calc(var(--pt) * 6.5)';
+        sheet.appendChild(t);
+      } else if (m.t === 'head') {
+        const rg = regionOf(m.region);
+        const t = el('div', `tsheet-title tsheet-block f${rg && rg.face != null ? rg.face : 1}`);
+        t.dataset.mark = 'head';
+        t.dataset.block = m.block;
+        t.textContent = label(m);
+        t.style.left = `calc(var(--pt) * ${(+m.x[0]).toFixed(3)})`;
+        t.style.width = `calc(var(--pt) * ${(+m.x[1] - +m.x[0]).toFixed(3)})`;
+        t.style.top = `calc(var(--pt) * ${(+m.y).toFixed(3)})`;
+        t.style.height = `calc(var(--pt) * ${(+m.h || 8).toFixed(3)})`;
+        t.style.lineHeight = `calc(var(--pt) * ${(+m.h || 8).toFixed(3)})`;
+        t.style.fontSize = `calc(var(--pt) * ${(+m.size || 8).toFixed(3)})`;
+        sheet.appendChild(t);
+      } else {
+        const dv = el('div', 'vorn vorn-glyph-rule vorn-stack');
+        dv.dataset.k = 'glyph-rule';
+        dv.dataset.mark = 'rule';
+        dv.setAttribute('aria-hidden', 'true');
+        dv.style.left = `calc(var(--pt) * ${(+m.x[0]).toFixed(3)})`;
+        dv.style.top = `calc(var(--pt) * ${(+m.y).toFixed(3)})`;
+        dv.style.width = `calc(var(--pt) * ${(+m.x[1] - +m.x[0]).toFixed(3)})`;
+        dv.style.height = `calc(var(--pt) * ${(+m.h || STACK.DIV_H).toFixed(3)})`;
+        sheet.appendChild(dv);
+      }
+    }
+  }
+
   function addTranslatedSheetMarks(sheet, pp, ms) {
     const head = el('div', 'tsheet-head f0');
     head.textContent = `${pp.tractateKey} ${pp.daf}${pp.side} · ${ms.j + 1}/${ms.N}`;
@@ -4750,6 +5387,7 @@
     head.style.top = 'calc(var(--pt) * 14)';
     head.style.fontSize = 'calc(var(--pt) * 7)';
     sheet.appendChild(head);
+    if (pp.marks) { addTranslatedMarks2(sheet, pp, ms); return; }
     for (const id of ['inner', 'outer']) {
       const rg = (pp.regions || []).find(r => r && r.id === id && Array.isArray(r.lines) && r.lines.some(Array.isArray));
       if (!rg) continue;
@@ -4879,6 +5517,7 @@
         const sp = el('span', 'marg-tnote');
         sp.dataset.block = id;
         sp.dataset.seg = String(n.seg + 1);
+        if (n.lang === 'he') { sp.setAttribute('lang', 'he'); sp.dir = 'rtl'; }
         sp.textContent = n.text;
         textTokens += n.n;
         return sp;
@@ -6570,7 +7209,7 @@
             // Licence 'pd' never uses a layout (its text is not PD-clean): HEAD's path, no requests.
             const lang = settings && settings.textLang ? settings.textLang : 'he';
             const lay = await loadLayoutPage(o.layoutBase, tractate, page, side, this._textStoreP, lang,
-              settings && settings.licenseMode ? settings.licenseMode : 'all');
+              settings && settings.licenseMode ? settings.licenseMode : 'all', settings && settings.commLayout ? settings.commLayout : 'auto');
             if (lay && lay.layoutUnusable) { layoutFailed = true; layoutWhy = lay.reason; }
             else if (lay) {
               profileId = lay.id;
@@ -6634,6 +7273,7 @@
       this._state = {
         policy: pol.policy, fallback: pol.fallback, reason: pol.reason, profileId,
         profilePage, edition, modelHash: mh, sefariaHashMatch, linking,
+        layerBuild: this._layoutSheets && this._layoutSheets[0] ? this._layoutSheets[0].layerBuild || null : null,
         sheets: out.sheets, pxPerPt: out.pxPerPt, adaptive: null, apparatusFit: out.apparatusFit || [],
         apparatusUnplaced: out.apparatusUnplaced,
         apparatusChecks: apparatusChecksOf(out),
@@ -7005,6 +7645,7 @@
         pxPerPt: strict ? st.pxPerPt : null,
         anchored: st.anchored || null,
         apparatusFit: st.apparatusFit || [],
+        layerBuild: st.layerBuild || null,
         apparatusUnplaced: st.apparatusUnplaced === undefined ? null : st.apparatusUnplaced,
         apparatusChecks: st.apparatusChecks || null,
         sheets: sheets.map((s, i) => ({ index: +(s.dataset.sheet || i), rect: relRect(s.getBoundingClientRect(), o) })),

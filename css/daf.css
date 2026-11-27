@@ -819,7 +819,8 @@ html.vilna-compare .catchword { opacity: 1; }
 .daf-src-mt { padding-inline-start: 0.9rem; }
 .daf-src-key { margin-top: 0.25rem; opacity: .85; }
 @media print {
-  .daf-sources { display: block !important; color: #000; border-top-color: #000; margin-top: 0; page-break-before: auto; }
+  /* a printed page is the amud only: no sources note, licence line or attribution footer (they stay on screen) */
+  .daf-sources { display: none !important; }
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .daf-sources { color: #d9d2c3; border-top-color: #5a4d3a; }
@@ -829,18 +830,28 @@ html.vilna-compare .catchword { opacity: 1; }
 .page-sheet.tsheet .tsheet-head,
 .page-sheet.tsheet .tsheet-title { position: absolute; margin: 0; white-space: nowrap; line-height: 1; color: #444; }
 .page-sheet.tsheet-ltr .vl, .page-sheet.tsheet-ltr .vl .vr { direction: ltr; text-align: left; }
+.page-sheet.tsheet-ltr .vl.vl-he, .page-sheet.tsheet-ltr .vl.vl-he .vr { direction: rtl; text-align: right; }
+.page-sheet.tsheet .tsheet-block { text-align: center; font-weight: 700; color: #333; }
+.page-sheet.tsheet .marg-tnote[lang="he"] { direction: rtl; text-align: right; }
 
 /* ═══════════ Viewer zoom + side-by-side sheets (screen only) ═══════════
    index.html scales every sheet together (transform + compensating margins) and
    #daf-content wraps them as a flex row: RTL (default) puts sheet 1 on the right,
    .vz-ltr (translated LTR languages) puts it on the left. Too narrow -> they stack. */
 @media screen {
+  /* the viewer's own pinch zoom (index.html pinchZoom) replaces the browser's page pinch over the amud; one-finger pan still scrolls */
+  #daf-content { touch-action: pan-x pan-y; }
   #daf-content.vz {
     display: flex; flex-wrap: wrap; align-items: flex-start;
     justify-content: center; column-gap: 1rem;
     overflow-x: auto;
   }
-  #daf-content.vz.vz-ltr { flex-direction: row-reverse; }
+  /* LTR text: the row is laid out and scrolled left-to-right (an rtl scroller cannot scroll to its right overflow);
+     the children keep the rtl direction the engine gave the container. */
+  #daf-content.vz.vz-ltr { direction: ltr; flex-direction: row; }
+  #daf-content.vz.vz-ltr > * { direction: rtl; }
+  /* a zoomed sheet wider than the window starts at its reading-start edge and scrolls (centred, its start is cut off) */
+  #daf-content.vz.vz-start { justify-content: flex-start; }
   #daf-content.vz > .page-sheet { margin: 0.5rem 0; flex: 0 0 auto; }
   /* sources note: its own full-width row below the sheets, text column kept at 718px */
   #daf-content.vz > .daf-sources { flex: 0 0 100%; max-width: none; margin: 1rem 0 0; padding-inline: max(0.75rem, calc((100% - 718px) / 2)); }

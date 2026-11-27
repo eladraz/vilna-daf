@@ -145,10 +145,11 @@
         } catch (e) { console.error('[vilna-daf] bad settings param', e); urlSettings = {}; }
       }
       // textlang=<id> and license=<all|pd> pin those two keys the same way (not persisted).
-      if (hook.has('textlang') || hook.has('license')) {
+      if (hook.has('textlang') || hook.has('license') || hook.has('comm')) {
         urlSettings = Object.assign({}, urlSettings || {});
         if (hook.has('textlang')) urlSettings.textLang = hook.get('textlang');
         if (hook.has('license')) urlSettings.licenseMode = hook.get('license');
+        if (hook.has('comm')) urlSettings.commLayout = hook.get('comm');   // auto | classic | combined (translated pages)
       }
 
       const SETTINGS_KEY = 'vilnaDafSettings';
@@ -229,6 +230,11 @@
           `<label><input type="radio" name="set-textlang" value="${l.id}" ${textLang === l.id ? 'checked' : ''}> ${l.label}${l.mt ? ' (תרגום מכונה)' : ''}</label>`
         ).join('');
         const langSection = `<h3>שפה · Language · Язык</h3>${langRadios}`;
+        // Commentary layout of a translated page (docs/TRANSLATION_LAYOUT_RULES_V2.md 7.3).
+        const commLayout = s.commLayout || 'auto';
+        const commOpts = [['auto', 'Automatic'], ['classic', 'Classic (Rashi inner, Tosafot outer)'], ['combined', 'Combined margin (Rashi, Tosafot, Steinsaltz together)']];
+        const commSection = isHe ? '' : `<h3>Commentary layout</h3>` + commOpts.map(([v, t]) =>
+          `<label><input type="radio" name="set-comm" value="${v}" ${commLayout === v ? 'checked' : ''}> ${t}</label>`).join('');
         // Printed blocks that have no text on this amud (model.hiddenBlocks) are not offered.
         const hiddenIds = new Set((sel.hiddenBlocks || []).map(h => h.block));
         const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -241,7 +247,7 @@
             }).join('')}</div>`
           : '';
         const pct = Math.round((s.fontScale || 1) * 100);
-        panel.innerHTML = langSection +
+        panel.innerHTML = langSection + commSection +
           (isHe ? `<h3>נוסח הגמרא</h3>${editionRadios}` : '') +
           `<h3>עמודות הפירוש</h3>
            <div class="set-row">
@@ -288,6 +294,7 @@
       panel.addEventListener('change', e => {
         const t = e.target;
         if (t.name === 'set-textlang') { applyPanel({ textLang: t.value }); updateLangLabel(t.value); }
+        else if (t.name === 'set-comm') applyPanel({ commLayout: t.value });
         else if (t.name === 'set-edition') applyPanel({ edition: t.value });
         else if (t.name === 'set-lang') applyPanel({ lang: t.value });
         else if (t.id === 'set-inner') applyPanel({ inner: t.value });
@@ -397,8 +404,9 @@
 
       // ── Print: black-on-white daf, ONE printed A4 page per sheet (strict page,
       //    adaptive page, apparatus continuation and translated sheets). Each
-      //    sheet, with its sources note when one follows it, is scaled as one
-      //    rigid unit (uniform k) into a page-sized .print-box. The box size is
+      //    sheet alone (the sources note, licence line and attribution footer are
+      //    screen-only: css/daf.css hides them in print) is scaled as one rigid
+      //    unit (uniform k) to fill a page-sized .print-box. The box size is
       //    measured from the real printable area of A4 at the @page margin
       //    (PRINT_MARGIN_MM, which must equal css/daf.css `@page margin`). ──
       const PRINT_MARGIN_MM = 6;
@@ -412,6 +420,33 @@
         probe.remove();
         return r;
       }
+      // Ink box of a sheet in its own unscaled coordinates: every text node and every ornament (rule, frame), clipped to the
+      // sheet. A sheet has inner margins (the print's page margin, the empty bottom of a short last sheet); the printed page
+      // scales and places this box, not the sheet rectangle, so the amud fills the A4 page. A sheet with a visible border
+      // keeps its whole rectangle.
+      function inkBounds(sheet) {
+        const sr = sheet.getBoundingClientRect();
+        const sx = sr.width / (sheet.offsetWidth || 1) || 1, sy = sr.height / (sheet.offsetHeight || 1) || 1;
+        const full = { x0: 0, y0: 0, x1: sheet.offsetWidth, y1: sheet.offsetHeight };
+        if (parseFloat(getComputedStyle(sheet).borderTopWidth) > 0) return full;
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        const add = r => {
+          if (!(r.width > 0 && r.height > 0)) return;
+          x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom);
+        };
+        const rg = document.createRange();
+        const tw = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT);
+        for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+          if (!n.nodeValue.trim()) continue;
+          rg.selectNodeContents(n);
+          for (const r of rg.getClientRects()) add(r);
+        }
+        for (const o of sheet.querySelectorAll('.vorn')) add(o.getBoundingClientRect());
+        if (!(x1 > x0 && y1 > y0)) return full;
+        const L = Math.max(0, (x0 - sr.left) / sx), T = Math.max(0, (y0 - sr.top) / sy);
+        const R = Math.min(full.x1, (x1 - sr.left) / sx), B = Math.min(full.y1, (y1 - sr.top) / sy);
+        return R > L && B > T ? { x0: L, y0: T, x1: R, y1: B } : full;
+      }
       function beforePrint() {
         if (printBoxes.length) return;
         const content = document.getElementById('daf-content');
@@ -422,12 +457,12 @@
         const groups = [];
         for (const node of [...content.children]) {
           if (node.classList.contains('page-sheet')) groups.push({ sheet: node, note: null });
-          else if (node.classList.contains('daf-sources') && groups.length && !groups[groups.length - 1].note) {
-            groups[groups.length - 1].note = node;
-          }
         }
         for (const g of groups) {
           const { sheet, note } = g;
+          // the viewer zoom (transform + compensating margins) must not scale the printed sheet again
+          sheet.dataset.printZoom = JSON.stringify([sheet.style.transform, sheet.style.marginLeft, sheet.style.marginRight, sheet.style.marginBottom]);
+          sheet.style.transform = ''; sheet.style.marginLeft = sheet.style.marginRight = sheet.style.marginBottom = '';
           const sw = sheet.offsetWidth, sh = sheet.offsetHeight;
           if (!sw || !sh) continue;
           const box = document.createElement('div');
@@ -435,8 +470,8 @@
           box.style.cssText = `position:relative;overflow:hidden;width:${P.w}px;height:${P.h}px;`;
           const fit = document.createElement('div');
           fit.className = 'print-fit';
-          // Unscaled footprint = the sheet's width; the sources note is laid out at THAT width (on screen it is
-          // a full-width flex row as wide as the window, which must not set the scale).
+          // Unscaled footprint = the sheet itself.
+          const ink = inkBounds(sheet);
           const W = sw;
           fit.style.cssText = `position:absolute;left:0;top:0;width:${W}px;transform-origin:0 0;`;
           content.insertBefore(box, sheet);
@@ -449,10 +484,11 @@
           box.appendChild(fit);
           const H = sh + (note ? note.offsetHeight : 0);
           fit.style.height = H + 'px';
-          // Uniform scale that fills the printable box along its limiting dimension.
-          const k = Math.min(W0 / W, H0 / H);
-          fit.style.left = ((P.w - W * k) / 2).toFixed(2) + 'px';
-          fit.style.top = ((P.h - H * k) / 2).toFixed(2) + 'px';
+          // Uniform scale that makes the INK box fill the printable box along its limiting dimension, centred.
+          const iw = ink.x1 - ink.x0, ih = ink.y1 - ink.y0;
+          const k = Math.min(W0 / iw, H0 / ih);
+          fit.style.left = ((P.w - iw * k) / 2 - ink.x0 * k).toFixed(2) + 'px';
+          fit.style.top = ((P.h - ih * k) / 2 - ink.y0 * k).toFixed(2) + 'px';
           fit.style.transform = `scale(${k.toFixed(5)})`;
           printBoxes.push({ box, sheet, note, k });
         }
@@ -462,6 +498,11 @@
         for (const { box, sheet, note } of printBoxes) {
           if (content && box.parentNode === content) {
             content.insertBefore(sheet, box);
+            try {
+              const z = JSON.parse(sheet.dataset.printZoom || 'null');
+              if (z) [sheet.style.transform, sheet.style.marginLeft, sheet.style.marginRight, sheet.style.marginBottom] = z;
+              delete sheet.dataset.printZoom;
+            } catch (e) {}
             if (note) {
               note.setAttribute('style', note.dataset.printSaved || '');
               if (!note.getAttribute('style')) note.removeAttribute('style');
@@ -503,12 +544,14 @@
           sh.style[ltr ? 'marginRight' : 'marginLeft'] = zoom === 1 ? '' : `${(zoom - 1) * sh.offsetWidth}px`;
           sh.style.marginBottom = zoom === 1 ? '' : `calc(0.5rem + ${(zoom - 1) * sh.offsetHeight}px)`;
         }
+        // A sheet wider than the window must start at the reading-start edge and scroll; centred, its start is cut off and unreachable.
+        content.classList.toggle('vz-start', sheets.some(sh => sh.offsetWidth * zoom > content.clientWidth + 0.5));
         zoomVal.textContent = `${Math.round(zoom * 100)}%`;
         zoomApplying = false;
       }
-      function setZoom(z) {
+      function setZoom(z, noPersist) {
         zoom = Math.max(ZMIN, Math.min(ZMAX, Math.round(z * 100) / 100));
-        try { localStorage.setItem('vilnaDafZoom', String(zoom)); } catch (e) {}
+        if (!noPersist) { try { localStorage.setItem('vilnaDafZoom', String(zoom)); } catch (e) {} }
         applyZoom();
       }
       document.getElementById('btn-zoom-in').addEventListener('click', () => setZoom(zoom * 1.25));
@@ -519,6 +562,56 @@
         e.preventDefault();
         setZoom(zoom * (e.deltaY > 0 ? 0.92 : 1.08));
       }, { passive: false });
+      // Two-finger pinch on the amud = the same viewer zoom (setZoom): zoom = zoom at touch start x (finger distance now / at
+      // start), the point between the fingers stays under them (the scroll offsets follow the scale change). One finger is never
+      // handled, so it scrolls as usual. `touch-action: pan-x pan-y` on #daf-content (css/daf.css) turns the browser's own page
+      // pinch off over the amud, which is what lets all four listeners stay passive (nothing calls preventDefault). The
+      // viewport meta does not set user-scalable=no / maximum-scale, so pinch elsewhere on the page is not blocked either.
+      (function pinchZoom() {
+        const content = document.getElementById('daf-content');
+        let pin = null, raf = 0;
+        const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+        const mid = t => ({ x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 });
+        function apply() {
+          raf = 0;
+          if (!pin || !pin.d) return;
+          const before = zoom;
+          setZoom(pin.z0 * pin.d / pin.d0, true);
+          const r = zoom / before;
+          if (r !== 1) {
+            // content point under the fingers, measured from the content's origin at the OLD scale, moves to r x that offset
+            const rect = content.getBoundingClientRect();
+            const cy = pin.m.y - rect.top;
+            if (getComputedStyle(content).direction === 'rtl') {   // scroll origin at the right edge, scrollLeft <= 0
+              const off = (rect.right - pin.m.x) - content.scrollLeft;
+              content.scrollLeft = (rect.right - pin.m.x) - r * off;
+            } else {
+              content.scrollLeft = r * (pin.m.x - rect.left + content.scrollLeft) - (pin.m.x - rect.left);
+            }
+            window.scrollBy(0, (r - 1) * cy);
+          }
+        }
+        content.addEventListener('touchstart', e => {
+          if (e.touches.length === 2) pin = { d0: dist(e.touches) || 1, d: dist(e.touches), z0: zoom, m: mid(e.touches) };
+          else if (e.touches.length > 2) pin = null;
+        }, { passive: true });
+        content.addEventListener('touchmove', e => {
+          if (e.touches.length !== 2) return;
+          if (!pin) pin = { d0: dist(e.touches) || 1, d: 0, z0: zoom, m: mid(e.touches) };   // second finger's touchstart was not delivered
+          pin.d = dist(e.touches); pin.m = mid(e.touches);
+          if (!raf) raf = requestAnimationFrame(apply);
+        }, { passive: true });
+        const end = e => {
+          if (!pin) return;
+          if (e.touches.length < 2) {
+            if (raf) { cancelAnimationFrame(raf); apply(); }
+            pin = null;
+            try { localStorage.setItem('vilnaDafZoom', String(zoom)); } catch (err) {}
+          }
+        };
+        content.addEventListener('touchend', end, { passive: true });
+        content.addEventListener('touchcancel', end, { passive: true });
+      })();
       if (typeof MutationObserver !== 'undefined') {
         // Re-apply whenever the engine (re)renders sheets; sheet sizes may also change with the window.
         new MutationObserver(() => { if (!zoomApplying) applyZoom(); })

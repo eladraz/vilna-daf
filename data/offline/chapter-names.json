@@ -1,0 +1,3134 @@
+{
+"Berachot": [
+{
+"he": "מאימתי",
+"en": "MeEimatai",
+"ru": "Меэйматай",
+"fr": "Meeimataï",
+"es": "Meeimatai",
+"ko": "메에이마타이",
+"yi": "מאימתי",
+"at": "2a"
+},
+{
+"he": "היה קורא",
+"en": "Hayah Korei",
+"ru": "Хая Корей",
+"fr": "Haya Korei",
+"es": "Haya Korei",
+"ko": "하야 코레이",
+"yi": "היה קורא",
+"at": "13a"
+},
+{
+"he": "מי שמתו",
+"en": "Mi SheMeto",
+"ru": "Ми Шемето",
+"fr": "Mi Chemeto",
+"es": "Mi Shemeto",
+"ko": "미 셰메토",
+"yi": "מי שמתו",
+"at": "17b"
+},
+{
+"he": "תפלת השחר",
+"en": "Tefillat HaShachar",
+"ru": "Тефилат Хашахар",
+"fr": "Tefillat Hachahar",
+"es": "Tefilat Hashajar",
+"ko": "테필라트 하샤하르",
+"yi": "תפלת השחר",
+"at": "26a"
+},
+{
+"he": "אין עומדין",
+"en": "Ein Omdin",
+"ru": "Эйн Омдин",
+"fr": "Ein Omdin",
+"es": "Ein Omdin",
+"ko": "에인 오므딘",
+"yi": "אין עומדין",
+"at": "30b"
+},
+{
+"he": "כיצד מברכין",
+"en": "Keitzad Mevarchin",
+"ru": "Кейцад Мевархин",
+"fr": "Keitsad Mevarhin",
+"es": "Keitzad Mevarjin",
+"ko": "케이차드 메바르힌",
+"yi": "כיצד מברכין",
+"at": "35a"
+},
+{
+"he": "שלשה שאכלו",
+"en": "Sheloshah SheAchlu",
+"ru": "Шелоша Шеахлу",
+"fr": "Chelocha Cheahlou",
+"es": "Shelosha Sheajlu",
+"ko": "셰로샤 셰아흐루",
+"yi": "שלשה שאכלו",
+"at": "45a"
+},
+{
+"he": "אלו דברים",
+"en": "Ellu Devarim",
+"ru": "Элу Деварим",
+"fr": "Ellou Devarim",
+"es": "Elu Devarim",
+"ko": "엘루 데바림",
+"yi": "אלו דברים",
+"at": "51b"
+},
+{
+"he": "הרואה",
+"en": "HaRoeh",
+"ru": "Хароэ",
+"fr": "Haroe",
+"es": "Haroe",
+"ko": "하로에",
+"yi": "הרואה",
+"at": "54a"
+}
+],
+"Shabbat": [
+{
+"he": "יציאות השבת",
+"en": "Yetziot HaShabbat",
+"ru": "Йециот Хашабат",
+"fr": "Yetsiot Hachabbat",
+"es": "Yetziot Hashabat",
+"ko": "예치오트 하샤바트",
+"yi": "יציאות השבת",
+"at": "2a"
+},
+{
+"he": "במה מדליקין",
+"en": "BaMeh Madlikin",
+"ru": "Баме Мадликин",
+"fr": "Bame Madlikin",
+"es": "Bame Madlikin",
+"ko": "바메 마드리킨",
+"yi": "במה מדליקין",
+"at": "20b"
+},
+{
+"he": "כירה",
+"en": "Kirah",
+"ru": "Кира",
+"fr": "Kira",
+"es": "Kira",
+"ko": "키라",
+"yi": "כירה",
+"at": "36b"
+},
+{
+"he": "במה טומנין",
+"en": "BaMeh Tomnin",
+"ru": "Баме Томнин",
+"fr": "Bame Tomnin",
+"es": "Bame Tomnin",
+"ko": "바메 토므닌",
+"yi": "במה טומנין",
+"at": "47b"
+},
+{
+"he": "במה בהמה",
+"en": "BaMeh Behemah",
+"ru": "Баме Бехема",
+"fr": "Bame Behema",
+"es": "Bame Behema",
+"ko": "바메 베헤마",
+"yi": "במה בהמה",
+"at": "51b"
+},
+{
+"he": "במה אשה",
+"en": "BaMeh Ishah",
+"ru": "Баме Иша",
+"fr": "Bame Icha",
+"es": "Bame Isha",
+"ko": "바메 이샤",
+"yi": "במה אשה",
+"at": "57a"
+},
+{
+"he": "כלל גדול",
+"en": "Kelal Gadol",
+"ru": "Келал Гадол",
+"fr": "Kelal Gadol",
+"es": "Kelal Gadol",
+"ko": "케랄 가돌",
+"yi": "כלל גדול",
+"at": "67b"
+},
+{
+"he": "המוציא יין",
+"en": "HaMotzi Yayin",
+"ru": "Хамоци Яйин",
+"fr": "Hamotsi Yayin",
+"es": "Hamotzi Yayin",
+"ko": "하모치 야인",
+"yi": "המוציא יין",
+"at": "76b"
+},
+{
+"he": "אמר רבי עקיבא",
+"en": "Amar Rabbi Akiva",
+"ru": "Амар Раби Акива",
+"fr": "Amar Rabbi Akiva",
+"es": "Amar Rabi Akiva",
+"ko": "아마르 라비 아키바",
+"yi": "אמר רבי עקיבא",
+"at": "82a"
+},
+{
+"he": "המצניע",
+"en": "HaMatznia",
+"ru": "Хамацниа",
+"fr": "Hamatsnia",
+"es": "Hamatznia",
+"ko": "하마츠니아",
+"yi": "המצניע",
+"at": "90b"
+},
+{
+"he": "הזורק",
+"en": "HaZorek",
+"ru": "Хазорек",
+"fr": "Hazorek",
+"es": "Hazorek",
+"ko": "하조레크",
+"yi": "הזורק",
+"at": "96a"
+},
+{
+"he": "הבונה",
+"en": "HaBoneh",
+"ru": "Хабоне",
+"fr": "Habone",
+"es": "Habone",
+"ko": "하보네",
+"yi": "הבונה",
+"at": "102b"
+},
+{
+"he": "האורג",
+"en": "HaOreg",
+"ru": "Хаорег",
+"fr": "Haoreg",
+"es": "Haoreg",
+"ko": "하오레그",
+"yi": "האורג",
+"at": "105a"
+},
+{
+"he": "שמנה שרצים",
+"en": "Shemoneh Sheratzim",
+"ru": "Шемоне Шерацим",
+"fr": "Chemone Cheratsim",
+"es": "Shemone Sheratzim",
+"ko": "셰모네 셰라침",
+"yi": "שמנה שרצים",
+"at": "107a"
+},
+{
+"he": "ואלו קשרים",
+"en": "VeEllu Kesharim",
+"ru": "Веэлу Кешарим",
+"fr": "Veellou Kecharim",
+"es": "Veelu Kesharim",
+"ko": "베엘루 케샤림",
+"yi": "ואלו קשרים",
+"at": "111b"
+},
+{
+"he": "כל כתבי",
+"en": "Kol Kitvei",
+"ru": "Кол Китвей",
+"fr": "Kol Kitvei",
+"es": "Kol Kitvei",
+"ko": "콜 키트베이",
+"yi": "כל כתבי",
+"at": "115a"
+},
+{
+"he": "כל הכלים",
+"en": "Kol HaKelim",
+"ru": "Кол Хакелим",
+"fr": "Kol Hakelim",
+"es": "Kol Hakelim",
+"ko": "콜 하케림",
+"yi": "כל הכלים",
+"at": "122b"
+},
+{
+"he": "מפנין",
+"en": "Mefannin",
+"ru": "Мефанин",
+"fr": "Mefannin",
+"es": "Mefanin",
+"ko": "메판닌",
+"yi": "מפנין",
+"at": "126b"
+},
+{
+"he": "רבי אליעזר דמילה",
+"en": "Rabbi Eliezer DeMilah",
+"ru": "Раби Элиэзер Демила",
+"fr": "Rabbi Eliezer Demila",
+"es": "Rabi Eliezer Demila",
+"ko": "라비 에리에제르 데미라",
+"yi": "רבי אליעזר דמילה",
+"at": "130a"
+},
+{
+"he": "תולין",
+"en": "Tolin",
+"ru": "Толин",
+"fr": "Tolin",
+"es": "Tolin",
+"ko": "토린",
+"yi": "תולין",
+"at": "137b"
+},
+{
+"he": "נוטל אדם את בנו",
+"en": "Notel Adam et Beno",
+"ru": "Нотел Адам Эт Бено",
+"fr": "Notel Adam Et Beno",
+"es": "Notel Adam Et Beno",
+"ko": "노텔 아담 에트 베노",
+"yi": "נוטל אדם את בנו",
+"at": "141b"
+},
+{
+"he": "חבית",
+"en": "Chavit",
+"ru": "Хавит",
+"fr": "Havit",
+"es": "Javit",
+"ko": "하비트",
+"yi": "חבית",
+"at": "143b"
+},
+{
+"he": "שואל",
+"en": "Shoel",
+"ru": "Шоэл",
+"fr": "Choel",
+"es": "Shoel",
+"ko": "쇼엘",
+"yi": "שואל",
+"at": "148a"
+},
+{
+"he": "מי שהחשיך",
+"en": "Mi SheHechshikh",
+"ru": "Ми Шехехших",
+"fr": "Mi Chehehchikh",
+"es": "Mi Shehejshij",
+"ko": "미 셰헤흐시흐",
+"yi": "מי שהחשיך",
+"at": "153a"
+}
+],
+"Eiruvin": [
+{
+"he": "מבוי",
+"en": "Mavoi",
+"ru": "Мавой",
+"fr": "Mavoï",
+"es": "Mavoi",
+"ko": "마보이",
+"yi": "מבוי",
+"at": "2a"
+},
+{
+"he": "עושין פסין",
+"en": "Osin Passin",
+"ru": "Осин Пасин",
+"fr": "Ossin Passin",
+"es": "Osin Pasin",
+"ko": "오신 파신",
+"yi": "עושין פסין",
+"at": "17b"
+},
+{
+"he": "בכל מערבין",
+"en": "BaKol Mearvin",
+"ru": "Бакол Меарвин",
+"fr": "Bakol Mearvin",
+"es": "Bakol Mearvin",
+"ko": "바콜 메아르빈",
+"yi": "בכל מערבין",
+"at": "26b"
+},
+{
+"he": "מי שהוציאוהו",
+"en": "Mi SheHotziuhu",
+"ru": "Ми Шехоциуху",
+"fr": "Mi Chehotsiouhou",
+"es": "Mi Shehotziuhu",
+"ko": "미 셰호치우후",
+"yi": "מי שהוציאוהו",
+"at": "41b"
+},
+{
+"he": "כיצד מעברין",
+"en": "Keitzad",
+"ru": "Кейцад",
+"fr": "Keitsad",
+"es": "Keitzad",
+"ko": "케이차드",
+"yi": "כיצד מעברין",
+"at": "52b"
+},
+{
+"he": "הדר",
+"en": "HaDar",
+"ru": "Хадар",
+"fr": "Hadar",
+"es": "Hadar",
+"ko": "하다르",
+"yi": "הדר",
+"at": "61b"
+},
+{
+"he": "חלון",
+"en": "Challon",
+"ru": "Халон",
+"fr": "Hallon",
+"es": "Jalon",
+"ko": "할론",
+"yi": "חלון",
+"at": "76a"
+},
+{
+"he": "כיצד משתתפין",
+"en": "Keitzad Mishtattfin",
+"ru": "Кейцад Миштатфин",
+"fr": "Keitsad Michtattfin",
+"es": "Keitzad Mishtatfin",
+"ko": "케이차드 미스타트핀",
+"yi": "כיצד משתתפין",
+"at": "82a"
+},
+{
+"he": "כל גגות",
+"en": "Kol Gaggot",
+"ru": "Кол Гагот",
+"fr": "Kol Gaggot",
+"es": "Kol Gagot",
+"ko": "콜 가고트",
+"yi": "כל גגות",
+"at": "89a"
+},
+{
+"he": "המוצא תפילין",
+"en": "HaMotzei Tefillin",
+"ru": "Хамоцей Тефилин",
+"fr": "Hamotsei Tefillin",
+"es": "Hamotzei Tefilin",
+"ko": "하모체이 테필린",
+"yi": "המוצא תפילין",
+"at": "95a"
+}
+],
+"Pesachim": [
+{
+"he": "אור לארבעה עשר",
+"en": "Or LeArba'ah Asar",
+"ru": "Ор Леарбаа Асар",
+"fr": "Or Learba'a Assar",
+"es": "Or Learba'a Asar",
+"ko": "오르 레아르바아 아사르",
+"yi": "אור לארבעה עשר",
+"at": "2a"
+},
+{
+"he": "כל שעה",
+"en": "Kol Sha'ah",
+"ru": "Кол Шаа",
+"fr": "Kol Cha'a",
+"es": "Kol Sha'a",
+"ko": "콜 샤아",
+"yi": "כל שעה",
+"at": "21a"
+},
+{
+"he": "אלו עוברין",
+"en": "Ellu Ovrim",
+"ru": "Элу Оврим",
+"fr": "Ellou Ovrim",
+"es": "Elu Ovrim",
+"ko": "엘루 오브림",
+"yi": "אלו עוברין",
+"at": "42a"
+},
+{
+"he": "מקום שנהגו",
+"en": "Makom SheNahagu",
+"ru": "Маком Шенахагу",
+"fr": "Makom Chenahagou",
+"es": "Makom Shenahagu",
+"ko": "마콤 셰나하구",
+"yi": "מקום שנהגו",
+"at": "50a"
+},
+{
+"he": "תמיד נשחט",
+"en": "Tamid Nishchat",
+"ru": "Тамид Нишхат",
+"fr": "Tamid Nichhat",
+"es": "Tamid Nishjat",
+"ko": "타미드 니스하트",
+"yi": "תמיד נשחט",
+"at": "58a"
+},
+{
+"he": "אלו דברים",
+"en": "Ellu Devarim",
+"ru": "Элу Деварим",
+"fr": "Ellou Devarim",
+"es": "Elu Devarim",
+"ko": "엘루 데바림",
+"yi": "אלו דברים",
+"at": "65b"
+},
+{
+"he": "כיצד צולין",
+"en": "Keitzad Tzolin",
+"ru": "Кейцад Цолин",
+"fr": "Keitsad Tsolin",
+"es": "Keitzad Tzolin",
+"ko": "케이차드 초린",
+"yi": "כיצד צולין",
+"at": "74a"
+},
+{
+"he": "האשה",
+"en": "HaIshah",
+"ru": "Хайша",
+"fr": "Haïcha",
+"es": "Haisha",
+"ko": "하이샤",
+"yi": "האשה",
+"at": "87a"
+},
+{
+"he": "מי שהיה טמא",
+"en": "Mi SheHayah Tamei",
+"ru": "Ми Шехая Тамей",
+"fr": "Mi Chehaya Tamei",
+"es": "Mi Shehaya Tamei",
+"ko": "미 셰하야 타메이",
+"yi": "מי שהיה טמא",
+"at": "92b"
+},
+{
+"he": "ערבי פסחים",
+"en": "Arvei Pesachim",
+"ru": "Арвей Песахим",
+"fr": "Arvei Pessahim",
+"es": "Arvei Pesajim",
+"ko": "아르베이 페사힘",
+"yi": "ערבי פסחים",
+"at": "99b"
+}
+],
+"Yoma": [
+{
+"he": "שבעת ימים",
+"en": "Shivat Yamim",
+"ru": "Шиват Ямим",
+"fr": "Chivat Yamim",
+"es": "Shivat Yamim",
+"ko": "시바트 야밈",
+"yi": "שבעת ימים",
+"at": "2a"
+},
+{
+"he": "בראשונה",
+"en": "BaRishonah",
+"ru": "Баришона",
+"fr": "Barichona",
+"es": "Barishona",
+"ko": "바리쇼나",
+"yi": "בראשונה",
+"at": "22a"
+},
+{
+"he": "אמר להם הממונה",
+"en": "Amar Lahem HaMemunneh",
+"ru": "Амар Лахем Хамемуне",
+"fr": "Amar Lahem Hamemounne",
+"es": "Amar Lahem Hamemune",
+"ko": "아마르 라헴 하메문네",
+"yi": "אמר להם הממונה",
+"at": "28a"
+},
+{
+"he": "טרף בקלפי",
+"en": "Taraf BaKalpi",
+"ru": "Тараф Бакалпи",
+"fr": "Taraf Bakalpi",
+"es": "Taraf Bakalpi",
+"ko": "타라프 바칼피",
+"yi": "טרף בקלפי",
+"at": "39a"
+},
+{
+"he": "הוציאו לו",
+"en": "Hotziu Lo",
+"ru": "Хоциу Ло",
+"fr": "Hotsiou Lo",
+"es": "Hotziu Lo",
+"ko": "호치우 로",
+"yi": "הוציאו לו",
+"at": "47a"
+},
+{
+"he": "שני שעירי",
+"en": "Shenei Seirei",
+"ru": "Шеней Сейрей",
+"fr": "Chenei Seirei",
+"es": "Shenei Seirei",
+"ko": "셰네이 세이레이",
+"yi": "שני שעירי",
+"at": "62a"
+},
+{
+"he": "בא לו",
+"en": "Ba Lo",
+"ru": "Ба Ло",
+"fr": "Ba Lo",
+"es": "Ba Lo",
+"ko": "바 로",
+"yi": "בא לו",
+"at": "68b"
+},
+{
+"he": "יום הכפורים",
+"en": "Yom HaKippurim",
+"ru": "Йом Хакипурим",
+"fr": "Yom Hakippourim",
+"es": "Yom Hakipurim",
+"ko": "욤 하키푸림",
+"yi": "יום הכפורים",
+"at": "73b"
+}
+],
+"Sukkah": [
+{
+"he": "סוכה",
+"en": "Sukkah",
+"ru": "Сука",
+"fr": "Soukka",
+"es": "Suka",
+"ko": "수카",
+"yi": "סוכה",
+"at": "2a"
+},
+{
+"he": "הישן",
+"en": "HaYashen",
+"ru": "Хаяшен",
+"fr": "Hayachen",
+"es": "Hayashen",
+"ko": "하야셴",
+"yi": "הישן",
+"at": "20b"
+},
+{
+"he": "לולב הגזול",
+"en": "Lulav HaGazul",
+"ru": "Лулав Хагазул",
+"fr": "Loulav Hagazoul",
+"es": "Lulav Hagazul",
+"ko": "루라브 하가줄",
+"yi": "לולב הגזול",
+"at": "29b"
+},
+{
+"he": "לולב וערבה",
+"en": "Lulav VeAravah",
+"ru": "Лулав Веарава",
+"fr": "Loulav Vearava",
+"es": "Lulav Vearava",
+"ko": "루라브 베아라바",
+"yi": "לולב וערבה",
+"at": "42b"
+},
+{
+"he": "החליל",
+"en": "HeChalil",
+"ru": "Хехалил",
+"fr": "Hehalil",
+"es": "Hejalil",
+"ko": "헤하릴",
+"yi": "החליל",
+"at": "50a"
+}
+],
+"Beitzah": [
+{
+"he": "ביצה",
+"en": "Beitzah",
+"ru": "Бейца",
+"fr": "Beitsa",
+"es": "Beitza",
+"ko": "베이차",
+"yi": "ביצה",
+"at": "2a"
+},
+{
+"he": "יום טוב",
+"en": "Yom Tov",
+"ru": "Йом Тов",
+"fr": "Yom Tov",
+"es": "Yom Tov",
+"ko": "욤 토브",
+"yi": "יום טוב",
+"at": "15b"
+},
+{
+"he": "אין צדין",
+"en": "Ein Tzadin",
+"ru": "Эйн Цадин",
+"fr": "Ein Tsadin",
+"es": "Ein Tzadin",
+"ko": "에인 차딘",
+"yi": "אין צדין",
+"at": "23b"
+},
+{
+"he": "המביא כדי יין",
+"en": "HaMevi Kaddei Yayin",
+"ru": "Хамеви Кадей Яйин",
+"fr": "Hamevi Kaddei Yayin",
+"es": "Hamevi Kadei Yayin",
+"ko": "하메비 카데이 야인",
+"yi": "המביא כדי יין",
+"at": "29b"
+},
+{
+"he": "משילין",
+"en": "Mashilin",
+"ru": "Машилин",
+"fr": "Machilin",
+"es": "Mashilin",
+"ko": "마시린",
+"yi": "משילין",
+"at": "35b"
+}
+],
+"Rosh Hashanah": [
+{
+"he": "ארבעה ראשי שנים",
+"en": "Arba'ah Rashei Shanim",
+"ru": "Арбаа Рашей Шаним",
+"fr": "Arba'a Rachei Chanim",
+"es": "Arba'a Rashei Shanim",
+"ko": "아르바아 라셰이 샤님",
+"yi": "ארבעה ראשי שנים",
+"at": "2a"
+},
+{
+"he": "אם אינן מכירין",
+"en": "Im Einan Makkirin",
+"ru": "Им Эйнан Макирин",
+"fr": "Im Einan Makkirin",
+"es": "Im Einan Makirin",
+"ko": "임 에이난 마키린",
+"yi": "אם אינן מכירין",
+"at": "22a"
+},
+{
+"he": "ראוהו בית דין",
+"en": "Rauhu Beit Din",
+"ru": "Рауху Бейт Дин",
+"fr": "Raouhou Beit Din",
+"es": "Rauhu Beit Din",
+"ko": "라우후 베이트 딘",
+"yi": "ראוהו בית דין",
+"at": "25b"
+},
+{
+"he": "יום טוב",
+"en": "Yom Tov",
+"ru": "Йом Тов",
+"fr": "Yom Tov",
+"es": "Yom Tov",
+"ko": "욤 토브",
+"yi": "יום טוב",
+"at": "29b"
+}
+],
+"Taanit": [
+{
+"he": "מאימתי מזכירין",
+"en": "MeEimatai Mazkirin",
+"ru": "Меэйматай Мазкирин",
+"fr": "Meeimataï Mazkirin",
+"es": "Meeimatai Mazkirin",
+"ko": "메에이마타이 마즈키린",
+"yi": "מאימתי מזכירין",
+"at": "2a"
+},
+{
+"he": "סדר תעניות כיצד",
+"en": "Seder Ta'anit",
+"ru": "Седер Таанит",
+"fr": "Seder Ta'anit",
+"es": "Seder Ta'anit",
+"ko": "세데르 타아니트",
+"yi": "סדר תעניות כיצד",
+"at": "15a"
+},
+{
+"he": "סדר תעניות אלו",
+"en": "Seder Ta'aniyot Elu",
+"ru": "Седер Таанийот Элу",
+"fr": "Seder Ta'aniyot Elou",
+"es": "Seder Ta'aniyot Elu",
+"ko": "세데르 타아니요트 에루",
+"yi": "סדר תעניות אלו",
+"at": "18b"
+},
+{
+"he": "בשלשה פרקים",
+"en": "BiShloshah Perakim",
+"ru": "Бишлоша Пераким",
+"fr": "Bichlocha Perakim",
+"es": "Bishlosha Perakim",
+"ko": "비스로샤 페라킴",
+"yi": "בשלשה פרקים",
+"at": "26a"
+}
+],
+"Megillah": [
+{
+"he": "מגילה נקראת",
+"en": "Megillah Nikreit",
+"ru": "Мегила Никрейт",
+"fr": "Meguilla Nikreit",
+"es": "Meguila Nikreit",
+"ko": "메길라 니크레이트",
+"yi": "מגילה נקראת",
+"at": "2a"
+},
+{
+"he": "הקורא למפרע",
+"en": "HaKorei Lemafrea",
+"ru": "Хакорей Лемафреа",
+"fr": "Hakorei Lemafrea",
+"es": "Hakorei Lemafrea",
+"ko": "하코레이 레마프레아",
+"yi": "הקורא למפרע",
+"at": "17a"
+},
+{
+"he": "הקורא עומד",
+"en": "HaKorei Omed",
+"ru": "Хакорей Омед",
+"fr": "Hakorei Omed",
+"es": "Hakorei Omed",
+"ko": "하코레이 오메드",
+"yi": "הקורא עומד",
+"at": "21a"
+},
+{
+"he": "בני העיר",
+"en": "Benei HaIr",
+"ru": "Беней Хайр",
+"fr": "Benei Haïr",
+"es": "Benei Hair",
+"ko": "베네이 하이르",
+"yi": "בני העיר",
+"at": "25b"
+}
+],
+"Moed Katan": [
+{
+"he": "משקין בית השלחין",
+"en": "Mashkin Beit HaShelachin",
+"ru": "Машкин Бейт Хашелахин",
+"fr": "Machkin Beit Hachelahin",
+"es": "Mashkin Beit Hashelajin",
+"ko": "마스킨 베이트 하셰라힌",
+"yi": "משקין בית השלחין",
+"at": "2a"
+},
+{
+"he": "מי שהפך",
+"en": "Mi SheHafakh",
+"ru": "Ми Шехафах",
+"fr": "Mi Chehafakh",
+"es": "Mi Shehafaj",
+"ko": "미 셰하파흐",
+"yi": "מי שהפך",
+"at": "11b"
+},
+{
+"he": "ואלו מגלחין",
+"en": "VeEllu Megallechin",
+"ru": "Веэлу Мегалехин",
+"fr": "Veellou Megallehin",
+"es": "Veelu Megalejin",
+"ko": "베엘루 메갈레힌",
+"yi": "ואלו מגלחין",
+"at": "13b"
+}
+],
+"Chagigah": [
+{
+"he": "הכל חייבין",
+"en": "HaKol Chayyavin",
+"ru": "Хакол Хайявин",
+"fr": "Hakol Haïyavin",
+"es": "Hakol Jaiyavin",
+"ko": "하콜 하이야빈",
+"yi": "הכל חייבין",
+"at": "2a"
+},
+{
+"he": "אין דורשין",
+"en": "Ein Dorshin",
+"ru": "Эйн Доршин",
+"fr": "Ein Dorchin",
+"es": "Ein Dorshin",
+"ko": "에인 도르신",
+"yi": "אין דורשין",
+"at": "11b"
+},
+{
+"he": "חומר בקודש",
+"en": "Chomer BaKodesh",
+"ru": "Хомер Бакодеш",
+"fr": "Homer Bakodech",
+"es": "Jomer Bakodesh",
+"ko": "호메르 바코데스",
+"yi": "חומר בקודש",
+"at": "20b"
+}
+],
+"Yevamot": [
+{
+"he": "חמש עשרה נשים",
+"en": "Chamesh Esreh Nashim",
+"ru": "Хамеш Эсре Нашим",
+"fr": "Hamech Esre Nachim",
+"es": "Jamesh Esre Nashim",
+"ko": "하메스 에스레 나심",
+"yi": "חמש עשרה נשים",
+"at": "2a"
+},
+{
+"he": "כיצד אשת אחיו",
+"en": "Keitzad Eshet Achiv",
+"ru": "Кейцад Эшет Ахив",
+"fr": "Keitsad Echet Ahiv",
+"es": "Keitzad Eshet Ajiv",
+"ko": "케이차드 에셰트 아히브",
+"yi": "כיצד אשת אחיו",
+"at": "17a"
+},
+{
+"he": "ארבעה אחין",
+"en": "Arba'ah Achin",
+"ru": "Арбаа Ахин",
+"fr": "Arba'a Ahin",
+"es": "Arba'a Ajin",
+"ko": "아르바아 아힌",
+"yi": "ארבעה אחין",
+"at": "26a"
+},
+{
+"he": "החולץ",
+"en": "HaCholetz",
+"ru": "Хахолец",
+"fr": "Haholets",
+"es": "Hajoletz",
+"ko": "하호레츠",
+"yi": "החולץ",
+"at": "35b"
+},
+{
+"he": "רבן גמליאל",
+"en": "Rabban Gamliel",
+"ru": "Рабан Гамлиэл",
+"fr": "Rabban Gamliel",
+"es": "Raban Gamliel",
+"ko": "라반 가므리엘",
+"yi": "רבן גמליאל",
+"at": "50a"
+},
+{
+"he": "הבא על יבמתו",
+"en": "HaBa Al Yevimto",
+"ru": "Хаба Ал Йевимто",
+"fr": "Haba Al Yevimto",
+"es": "Haba Al Yevimto",
+"ko": "하바 알 예비므토",
+"yi": "הבא על יבמתו",
+"at": "53b"
+},
+{
+"he": "אלמנה לכהן גדול",
+"en": "Almanah LeKohen Gadol",
+"ru": "Алмана Лекохен Гадол",
+"fr": "Almana Lekohen Gadol",
+"es": "Almana Lekohen Gadol",
+"ko": "알마나 레코헨 가돌",
+"yi": "אלמנה לכהן גדול",
+"at": "66a"
+},
+{
+"he": "הערל",
+"en": "HaArel",
+"ru": "Хаарел",
+"fr": "Haarel",
+"es": "Haarel",
+"ko": "하아렐",
+"yi": "הערל",
+"at": "70a"
+},
+{
+"he": "יש מותרות",
+"en": "Yesh Muttarot",
+"ru": "Йеш Мутарот",
+"fr": "Yech Mouttarot",
+"es": "Yesh Mutarot",
+"ko": "예스 무타로트",
+"yi": "יש מותרות",
+"at": "84a"
+},
+{
+"he": "האישה רבה",
+"en": "HaIshah Rabbah",
+"ru": "Хайша Раба",
+"fr": "Haïcha Rabba",
+"es": "Haisha Raba",
+"ko": "하이샤 라바",
+"yi": "האישה רבה",
+"at": "87b"
+},
+{
+"he": "נושאין על האנוסה",
+"en": "Nosin Al HaAnusah",
+"ru": "Носин Ал Хаануса",
+"fr": "Nossin Al Haanoussa",
+"es": "Nosin Al Haanusa",
+"ko": "노신 알 하아누사",
+"yi": "נושאין על האנוסה",
+"at": "97a"
+},
+{
+"he": "מצות חליצה",
+"en": "Mitzvat Chalitzah",
+"ru": "Мицват Халица",
+"fr": "Mitsvat Halitsa",
+"es": "Mitzvat Jalitza",
+"ko": "미츠바트 하리차",
+"yi": "מצות חליצה",
+"at": "101a"
+},
+{
+"he": "בית שמאי",
+"en": "Beit Shammai",
+"ru": "Бейт Шамай",
+"fr": "Beit Chammaï",
+"es": "Beit Shamai",
+"ko": "베이트 샤므마이",
+"yi": "בית שמאי",
+"at": "107a"
+},
+{
+"he": "חרש שנשא",
+"en": "Cheresh SheNasa",
+"ru": "Хереш Шенаса",
+"fr": "Herech Chenassa",
+"es": "Jeresh Shenasa",
+"ko": "헤레스 셰나사",
+"yi": "חרש שנשא",
+"at": "112b"
+},
+{
+"he": "האשה שלום",
+"en": "HaIshah Shalom",
+"ru": "Хайша Шалом",
+"fr": "Haïcha Chalom",
+"es": "Haisha Shalom",
+"ko": "하이샤 샤롬",
+"yi": "האשה שלום",
+"at": "114b"
+},
+{
+"he": "האשה בתרא",
+"en": "HaIshah Batra",
+"ru": "Хайша Батра",
+"fr": "Haïcha Batra",
+"es": "Haisha Batra",
+"ko": "하이샤 바트라",
+"yi": "האשה בתרא",
+"at": "119a"
+}
+],
+"Ketubot": [
+{
+"he": "בתולה נשאת",
+"en": "Betulah Nisset",
+"ru": "Бетула Нисет",
+"fr": "Betoula Nisset",
+"es": "Betula Niset",
+"ko": "베투라 니세트",
+"yi": "בתולה נשאת",
+"at": "2a"
+},
+{
+"he": "האשה שנתארמלה",
+"en": "HaIshah SheNitarmelah",
+"ru": "Хайша Шенитармела",
+"fr": "Haïcha Chenitarmela",
+"es": "Haisha Shenitarmela",
+"ko": "하이샤 셰니타르메라",
+"yi": "האשה שנתארמלה",
+"at": "15b"
+},
+{
+"he": "אלו נערות",
+"en": "Ellu Na'arot",
+"ru": "Элу Наарот",
+"fr": "Ellou Na'arot",
+"es": "Elu Na'arot",
+"ko": "엘루 나아로트",
+"yi": "אלו נערות",
+"at": "29a"
+},
+{
+"he": "נערה שנתפתתה",
+"en": "Na'arah SheNitpattetah",
+"ru": "Наара Шенитпатета",
+"fr": "Na'ara Chenitpatteta",
+"es": "Na'ara Shenitpateta",
+"ko": "나아라 셰니트파테타",
+"yi": "נערה שנתפתתה",
+"at": "41b"
+},
+{
+"he": "אף על פי",
+"en": "Af Al Pi",
+"ru": "Аф Ал Пи",
+"fr": "Af Al Pi",
+"es": "Af Al Pi",
+"ko": "아프 알 피",
+"yi": "אף על פי",
+"at": "54b"
+},
+{
+"he": "מציאת האשה",
+"en": "Metziat HaIshah",
+"ru": "Мециат Хайша",
+"fr": "Metsiat Haïcha",
+"es": "Metziat Haisha",
+"ko": "메치아트 하이샤",
+"yi": "מציאת האשה",
+"at": "65b"
+},
+{
+"he": "המדיר",
+"en": "HaMaddir",
+"ru": "Хамадир",
+"fr": "Hamaddir",
+"es": "Hamadir",
+"ko": "하마디르",
+"yi": "המדיר",
+"at": "70a"
+},
+{
+"he": "האשה שנפלו",
+"en": "HaIshah SheNaflu",
+"ru": "Хайша Шенафлу",
+"fr": "Haïcha Chenaflou",
+"es": "Haisha Shenaflu",
+"ko": "하이샤 셰나프루",
+"yi": "האשה שנפלו",
+"at": "78a"
+},
+{
+"he": "הכותב לאשתו",
+"en": "HaKotev LeIshto",
+"ru": "Хакотев Лейшто",
+"fr": "Hakotev Leichto",
+"es": "Hakotev Leishto",
+"ko": "하코테브 레이스토",
+"yi": "הכותב לאשתו",
+"at": "83a"
+},
+{
+"he": "מי שהיה נשוי",
+"en": "Mi SheHayah Nasui",
+"ru": "Ми Шехая Насуй",
+"fr": "Mi Chehaya Nassouï",
+"es": "Mi Shehaya Nasui",
+"ko": "미 셰하야 나수이",
+"yi": "מי שהיה נשוי",
+"at": "90a"
+},
+{
+"he": "אלמנה ניזונת",
+"en": "Almanah Nizzonet",
+"ru": "Алмана Низонет",
+"fr": "Almana Nizzonet",
+"es": "Almana Nizonet",
+"ko": "알마나 니조네트",
+"yi": "אלמנה ניזונת",
+"at": "95b"
+},
+{
+"he": "הנושא את האשה",
+"en": "HaNosei et HaIshah",
+"ru": "Ханосей Эт Хайша",
+"fr": "Hanossei Et Haïcha",
+"es": "Hanosei Et Haisha",
+"ko": "하노세이 에트 하이샤",
+"yi": "הנושא את האשה",
+"at": "101b"
+},
+{
+"he": "שני דייני גזירות",
+"en": "Shenei Dayyanei Gezeirot",
+"ru": "Шеней Дайяней Гезейрот",
+"fr": "Chenei Daïyanei Guezeirot",
+"es": "Shenei Daiyanei Guezeirot",
+"ko": "셰네이 다이야네이 게제이로트",
+"yi": "שני דייני גזירות",
+"at": "104b"
+}
+],
+"Nedarim": [
+{
+"he": "כל כנויי",
+"en": "Kol Kinnuyei",
+"ru": "Кол Кинуйей",
+"fr": "Kol Kinnouyei",
+"es": "Kol Kinuyei",
+"ko": "콜 킨누예이",
+"yi": "כל כנויי",
+"at": "2a"
+},
+{
+"he": "ואלו מותרין",
+"en": "VeEllu Muttarin",
+"ru": "Веэлу Мутарин",
+"fr": "Veellou Mouttarin",
+"es": "Veelu Mutarin",
+"ko": "베엘루 무타린",
+"yi": "ואלו מותרין",
+"at": "13b"
+},
+{
+"he": "ארבעה נדרים",
+"en": "Arba'ah Nedarim",
+"ru": "Арбаа Недарим",
+"fr": "Arba'a Nedarim",
+"es": "Arba'a Nedarim",
+"ko": "아르바아 네다림",
+"yi": "ארבעה נדרים",
+"at": "20b"
+},
+{
+"he": "אין בין המודר",
+"en": "Ein Bein HaMuddar",
+"ru": "Эйн Бейн Хамудар",
+"fr": "Ein Bein Hamouddar",
+"es": "Ein Bein Hamudar",
+"ko": "에인 베인 하무다르",
+"yi": "אין בין המודר",
+"at": "32b"
+},
+{
+"he": "השותפין שנדרו",
+"en": "HaShuttafin SheNadru",
+"ru": "Хашутафин Шенадру",
+"fr": "Hachouttafin Chenadrou",
+"es": "Hashutafin Shenadru",
+"ko": "하슈타핀 셰나드루",
+"yi": "השותפין שנדרו",
+"at": "45b"
+},
+{
+"he": "הנודר מן המבושל",
+"en": "HaNoder Min HaMevushal",
+"ru": "Ханодер Мин Хамевушал",
+"fr": "Hanoder Min Hamevouchal",
+"es": "Hanoder Min Hamevushal",
+"ko": "하노데르 민 하메부샬",
+"yi": "הנודר מן המבושל",
+"at": "49a"
+},
+{
+"he": "הנודר מן הירק",
+"en": "HaNoder Min HaYarak",
+"ru": "Ханодер Мин Хаярак",
+"fr": "Hanoder Min Hayarak",
+"es": "Hanoder Min Hayarak",
+"ko": "하노데르 민 하야라크",
+"yi": "הנודר מן הירק",
+"at": "54a"
+},
+{
+"he": "קונם יין",
+"en": "Konam Yayin",
+"ru": "Конам Яйин",
+"fr": "Konam Yayin",
+"es": "Konam Yayin",
+"ko": "코남 야인",
+"yi": "קונם יין",
+"at": "60a"
+},
+{
+"he": "רבי אליעזר",
+"en": "Rabbi Eliezer",
+"ru": "Раби Элиэзер",
+"fr": "Rabbi Eliezer",
+"es": "Rabi Eliezer",
+"ko": "라비 에리에제르",
+"yi": "רבי אליעזר",
+"at": "64a"
+},
+{
+"he": "נערה המאורסה",
+"en": "Na'arah HaMeorasah",
+"ru": "Наара Хамеораса",
+"fr": "Na'ara Hameorassa",
+"es": "Na'ara Hameorasa",
+"ko": "나아라 하메오라사",
+"yi": "נערה המאורסה",
+"at": "66b"
+},
+{
+"he": "ואלו נדרים",
+"en": "VeEllu Nedarim",
+"ru": "Веэлу Недарим",
+"fr": "Veellou Nedarim",
+"es": "Veelu Nedarim",
+"ko": "베엘루 네다림",
+"yi": "ואלו נדרים",
+"at": "79a"
+}
+],
+"Nazir": [
+{
+"he": "כל כנויי נזירות",
+"en": "Kol Kinnuyei Nezirut",
+"ru": "Кол Кинуйей Незирут",
+"fr": "Kol Kinnouyei Nezirout",
+"es": "Kol Kinuyei Nezirut",
+"ko": "콜 킨누예이 네지루트",
+"yi": "כל כנויי נזירות",
+"at": "2a"
+},
+{
+"he": "הריני נזיר",
+"en": "Hareini Nazir",
+"ru": "Харейни Назир",
+"fr": "Hareini Nazir",
+"es": "Hareini Nazir",
+"ko": "하레이니 나지르",
+"yi": "הריני נזיר",
+"at": "9a"
+},
+{
+"he": "מי שאמר קמא",
+"en": "Mi SheAmar Kamma",
+"ru": "Ми Шеамар Кама",
+"fr": "Mi Cheamar Kamma",
+"es": "Mi Sheamar Kama",
+"ko": "미 셰아마르 카므마",
+"yi": "מי שאמר קמא",
+"at": "16a"
+},
+{
+"he": "מי שאמר בתרא",
+"en": "Mi SheAmar Batra",
+"ru": "Ми Шеамар Батра",
+"fr": "Mi Cheamar Batra",
+"es": "Mi Sheamar Batra",
+"ko": "미 셰아마르 바트라",
+"yi": "מי שאמר בתרא",
+"at": "20b"
+},
+{
+"he": "בית שמאי",
+"en": "Beit Shammai",
+"ru": "Бейт Шамай",
+"fr": "Beit Chammaï",
+"es": "Beit Shamai",
+"ko": "베이트 샤므마이",
+"yi": "בית שמאי",
+"at": "30b"
+},
+{
+"he": "שלשה מינין",
+"en": "Sheloshah Minin",
+"ru": "Шелоша Минин",
+"fr": "Chelocha Minin",
+"es": "Shelosha Minin",
+"ko": "셰로샤 미닌",
+"yi": "שלשה מינין",
+"at": "34a"
+},
+{
+"he": "כהן גדול",
+"en": "Kohen Gadol",
+"ru": "Кохен Гадол",
+"fr": "Kohen Gadol",
+"es": "Kohen Gadol",
+"ko": "코헨 가돌",
+"yi": "כהן גדול",
+"at": "47a"
+},
+{
+"he": "שני נזירים",
+"en": "Shenei Nezirim",
+"ru": "Шеней Незирим",
+"fr": "Chenei Nezirim",
+"es": "Shenei Nezirim",
+"ko": "셰네이 네지림",
+"yi": "שני נזירים",
+"at": "57a"
+},
+{
+"he": "הכותים אין להם נזירות",
+"en": "HaKutim Ein Lahem Nezirut",
+"ru": "Хакутим Эйн Лахем Незирут",
+"fr": "Hakoutim Ein Lahem Nezirout",
+"es": "Hakutim Ein Lahem Nezirut",
+"ko": "하쿠팀 에인 라헴 네지루트",
+"yi": "הכותים אין להם נזירות",
+"at": "61a"
+}
+],
+"Sotah": [
+{
+"he": "המקנא",
+"en": "HaMekannei",
+"ru": "Хамеканей",
+"fr": "Hamekannei",
+"es": "Hamekanei",
+"ko": "하메칸네이",
+"yi": "המקנא",
+"at": "2a"
+},
+{
+"he": "היה מביא",
+"en": "Hayah Mevi",
+"ru": "Хая Меви",
+"fr": "Haya Mevi",
+"es": "Haya Mevi",
+"ko": "하야 메비",
+"yi": "היה מביא",
+"at": "14a"
+},
+{
+"he": "היה נוטל",
+"en": "Hayah Notel",
+"ru": "Хая Нотел",
+"fr": "Haya Notel",
+"es": "Haya Notel",
+"ko": "하야 노텔",
+"yi": "היה נוטל",
+"at": "19a"
+},
+{
+"he": "ארוסה",
+"en": "Arusah",
+"ru": "Аруса",
+"fr": "Aroussa",
+"es": "Arusa",
+"ko": "아루사",
+"yi": "ארוסה",
+"at": "23b"
+},
+{
+"he": "כשם שהמים",
+"en": "KeShem SheHamayim",
+"ru": "Кешем Шехамайим",
+"fr": "Kechem Chehamayim",
+"es": "Keshem Shehamayim",
+"ko": "케솀 셰하마임",
+"yi": "כשם שהמים",
+"at": "27b"
+},
+{
+"he": "מי שקינא",
+"en": "Mi SheKinnei",
+"ru": "Ми Шекиней",
+"fr": "Mi Chekinnei",
+"es": "Mi Shekinei",
+"ko": "미 셰킨네이",
+"yi": "מי שקינא",
+"at": "31a"
+},
+{
+"he": "אלו נאמרין",
+"en": "Ellu Ne'emarin",
+"ru": "Элу Неэмарин",
+"fr": "Ellou Ne'emarin",
+"es": "Elu Ne'emarin",
+"ko": "엘루 네에마린",
+"yi": "אלו נאמרין",
+"at": "32a"
+},
+{
+"he": "משוח מלחמה",
+"en": "Mashuach Milchamah",
+"ru": "Машуах Милхама",
+"fr": "Machouah Milhama",
+"es": "Mashuaj Miljama",
+"ko": "마슈아흐 밀하마",
+"yi": "משוח מלחמה",
+"at": "42a"
+},
+{
+"he": "עגלה ערופה",
+"en": "Eglah Arufah",
+"ru": "Эгла Аруфа",
+"fr": "Egla Aroufa",
+"es": "Egla Arufa",
+"ko": "에그라 아루파",
+"yi": "עגלה ערופה",
+"at": "44b"
+}
+],
+"Gittin": [
+{
+"he": "המביא קמא",
+"en": "HaMevi Kamma",
+"ru": "Хамеви Кама",
+"fr": "Hamevi Kamma",
+"es": "Hamevi Kama",
+"ko": "하메비 카므마",
+"yi": "המביא קמא",
+"at": "2a"
+},
+{
+"he": "המביא בתרא",
+"en": "HaMevi Batra",
+"ru": "Хамеви Батра",
+"fr": "Hamevi Batra",
+"es": "Hamevi Batra",
+"ko": "하메비 바트라",
+"yi": "המביא בתרא",
+"at": "15a"
+},
+{
+"he": "כל הגט",
+"en": "Kol HaGet",
+"ru": "Кол Хагет",
+"fr": "Kol Haguet",
+"es": "Kol Haguet",
+"ko": "콜 하게트",
+"yi": "כל הגט",
+"at": "24a"
+},
+{
+"he": "השולח",
+"en": "HaSholeach",
+"ru": "Хашолеах",
+"fr": "Hacholeah",
+"es": "Hasholeaj",
+"ko": "하쇼레아흐",
+"yi": "השולח",
+"at": "32a"
+},
+{
+"he": "הניזקין",
+"en": "HaNizzakin",
+"ru": "Ханизакин",
+"fr": "Hanizzakin",
+"es": "Hanizakin",
+"ko": "하니자킨",
+"yi": "הניזקין",
+"at": "48b"
+},
+{
+"he": "האומר התקבל",
+"en": "HaOmer Hitkabbel",
+"ru": "Хаомер Хиткабел",
+"fr": "Haomer Hitkabbel",
+"es": "Haomer Hitkabel",
+"ko": "하오메르 히트카벨",
+"yi": "האומר התקבל",
+"at": "62b"
+},
+{
+"he": "מי שאחזו",
+"en": "Mi SheAchazo",
+"ru": "Ми Шеахазо",
+"fr": "Mi Cheahazo",
+"es": "Mi Sheajazo",
+"ko": "미 셰아하조",
+"yi": "מי שאחזו",
+"at": "67b"
+},
+{
+"he": "הזורק גט",
+"en": "HaZorek Get",
+"ru": "Хазорек Гет",
+"fr": "Hazorek Guet",
+"es": "Hazorek Guet",
+"ko": "하조레크 게트",
+"yi": "הזורק גט",
+"at": "77a"
+},
+{
+"he": "המגרש",
+"en": "HaMegaresh",
+"ru": "Хамегареш",
+"fr": "Hamegarech",
+"es": "Hamegaresh",
+"ko": "하메가레스",
+"yi": "המגרש",
+"at": "82a"
+}
+],
+"Kiddushin": [
+{
+"he": "האשה נקנית",
+"en": "HaIshah Nikneit",
+"ru": "Хайша Никнейт",
+"fr": "Haïcha Nikneit",
+"es": "Haisha Nikneit",
+"ko": "하이샤 니크네이트",
+"yi": "האשה נקנית",
+"at": "2a"
+},
+{
+"he": "האיש מקדש",
+"en": "HaIsh Mekaddesh",
+"ru": "Хайш Мекадеш",
+"fr": "Haïch Mekaddech",
+"es": "Haish Mekadesh",
+"ko": "하이스 메카데스",
+"yi": "האיש מקדש",
+"at": "41a"
+},
+{
+"he": "האומר לחברו",
+"en": "HaOmer LeChavero",
+"ru": "Хаомер Лехаверо",
+"fr": "Haomer Lehavero",
+"es": "Haomer Lejavero",
+"ko": "하오메르 레하베로",
+"yi": "האומר לחברו",
+"at": "58b"
+},
+{
+"he": "עשרה יוחסין",
+"en": "Asarah Yochasin",
+"ru": "Асара Йохасин",
+"fr": "Assara Yohassin",
+"es": "Asara Yojasin",
+"ko": "아사라 요하신",
+"yi": "עשרה יוחסין",
+"at": "69a"
+}
+],
+"Bava Kamma": [
+{
+"he": "ארבעה אבות",
+"en": "Arba'ah Avot",
+"ru": "Арбаа Авот",
+"fr": "Arba'a Avot",
+"es": "Arba'a Avot",
+"ko": "아르바아 아보트",
+"yi": "ארבעה אבות",
+"at": "2a"
+},
+{
+"he": "כיצד הרגל",
+"en": "Keitzad HaRegel",
+"ru": "Кейцад Харегел",
+"fr": "Keitsad Hareguel",
+"es": "Keitzad Hareguel",
+"ko": "케이차드 하레겔",
+"yi": "כיצד הרגל",
+"at": "17a"
+},
+{
+"he": "המניח",
+"en": "HaManiach",
+"ru": "Хаманиах",
+"fr": "Hamaniah",
+"es": "Hamaniaj",
+"ko": "하마니아흐",
+"yi": "המניח",
+"at": "27a"
+},
+{
+"he": "שור שנגח ד' וה'",
+"en": "Shor SheNagach Arba'ah VaChamishah",
+"ru": "Шор Шенагах Арбаа Вахамиша",
+"fr": "Chor Chenagah Arba'a Vahamicha",
+"es": "Shor Shenagaj Arba'a Vajamisha",
+"ko": "쇼르 셰나가흐 아르바아 바하미샤",
+"yi": "שור שנגח ד' וה'",
+"at": "36a"
+},
+{
+"he": "שור שנגח את הפרה",
+"en": "Shor SheNagach et HaParah",
+"ru": "Шор Шенагах Эт Хапара",
+"fr": "Chor Chenagah Et Hapara",
+"es": "Shor Shenagaj Et Hapara",
+"ko": "쇼르 셰나가흐 에트 하파라",
+"yi": "שור שנגח את הפרה",
+"at": "46a"
+},
+{
+"he": "הכונס",
+"en": "HaKones",
+"ru": "Хаконес",
+"fr": "Hakones",
+"es": "Hakones",
+"ko": "하코네스",
+"yi": "הכונס",
+"at": "55b"
+},
+{
+"he": "מרובה",
+"en": "Merubbeh",
+"ru": "Мерубе",
+"fr": "Meroubbe",
+"es": "Merube",
+"ko": "메루베",
+"yi": "מרובה",
+"at": "62b"
+},
+{
+"he": "החובל",
+"en": "HaChovel",
+"ru": "Хаховел",
+"fr": "Hahovel",
+"es": "Hajovel",
+"ko": "하호벨",
+"yi": "החובל",
+"at": "83b"
+},
+{
+"he": "הגוזל עצים",
+"en": "HaGozel Etzim",
+"ru": "Хагозел Эцим",
+"fr": "Hagozel Etsim",
+"es": "Hagozel Etzim",
+"ko": "하고젤 에침",
+"yi": "הגוזל עצים",
+"at": "93b"
+},
+{
+"he": "הגוזל בתרא",
+"en": "HaGozel Batra",
+"ru": "Хагозел Батра",
+"fr": "Hagozel Batra",
+"es": "Hagozel Batra",
+"ko": "하고젤 바트라",
+"yi": "הגוזל בתרא",
+"at": "111b"
+}
+],
+"Bava Metzia": [
+{
+"he": "שנים אוחזין",
+"en": "Shenayim Ochazin",
+"ru": "Шенайим Охазин",
+"fr": "Chenayim Ohazin",
+"es": "Shenayim Ojazin",
+"ko": "셰나임 오하진",
+"yi": "שנים אוחזין",
+"at": "2a"
+},
+{
+"he": "אלו מציאות",
+"en": "Ellu Metziot",
+"ru": "Элу Мециот",
+"fr": "Ellou Metsiot",
+"es": "Elu Metziot",
+"ko": "엘루 메치오트",
+"yi": "אלו מציאות",
+"at": "21a"
+},
+{
+"he": "המפקיד",
+"en": "HaMafkid",
+"ru": "Хамафкид",
+"fr": "Hamafkid",
+"es": "Hamafkid",
+"ko": "하마프키드",
+"yi": "המפקיד",
+"at": "33b"
+},
+{
+"he": "הזהב",
+"en": "HaZahav",
+"ru": "Хазахав",
+"fr": "Hazahav",
+"es": "Hazahav",
+"ko": "하자하브",
+"yi": "הזהב",
+"at": "44a"
+},
+{
+"he": "איזהו נשך",
+"en": "Eizehu Neshekh",
+"ru": "Эйзеху Нешех",
+"fr": "Eizehou Nechekh",
+"es": "Eizehu Neshej",
+"ko": "에이제후 네셰흐",
+"yi": "איזהו נשך",
+"at": "60b"
+},
+{
+"he": "השוכר את האומנין",
+"en": "HaSokher et HaUmmanin",
+"ru": "Хасохер Эт Хауманин",
+"fr": "Hassokher Et Haoummanin",
+"es": "Hasojer Et Haumanin",
+"ko": "하소헤르 에트 하우므마닌",
+"yi": "השוכר את האומנין",
+"at": "75b"
+},
+{
+"he": "השוכר את הפועלים",
+"en": "HaSokher et HaPoalim",
+"ru": "Хасохер Эт Хапоалим",
+"fr": "Hassokher Et Hapoalim",
+"es": "Hasojer Et Hapoalim",
+"ko": "하소헤르 에트 하포아림",
+"yi": "השוכר את הפועלים",
+"at": "83a"
+},
+{
+"he": "השואל את הפרה",
+"en": "HaShoel et HaParah",
+"ru": "Хашоэл Эт Хапара",
+"fr": "Hachoel Et Hapara",
+"es": "Hashoel Et Hapara",
+"ko": "하쇼엘 에트 하파라",
+"yi": "השואל את הפרה",
+"at": "94a"
+},
+{
+"he": "המקבל שדה מחבירו",
+"en": "HaMekabbel Sadeh MeChavero",
+"ru": "Хамекабел Саде Мехаверо",
+"fr": "Hamekabbel Sade Mehavero",
+"es": "Hamekabel Sade Mejavero",
+"ko": "하메카벨 사데 메하베로",
+"yi": "המקבל שדה מחבירו",
+"at": "103a"
+},
+{
+"he": "הבית והעלייה",
+"en": "HaBayit VeHa'aliyyah",
+"ru": "Хабайит Вехаалия",
+"fr": "Habayit Veha'aliyya",
+"es": "Habayit Veha'aliya",
+"ko": "하바이트 베하아리야",
+"yi": "הבית והעלייה",
+"at": "116b"
+}
+],
+"Bava Batra": [
+{
+"he": "השותפין",
+"en": "HaShuttafin",
+"ru": "Хашутафин",
+"fr": "Hachouttafin",
+"es": "Hashutafin",
+"ko": "하슈타핀",
+"yi": "השותפין",
+"at": "2a"
+},
+{
+"he": "לא יחפור",
+"en": "Lo Yachpor",
+"ru": "Ло Яхпор",
+"fr": "Lo Yahpor",
+"es": "Lo Yajpor",
+"ko": "로 야흐포르",
+"yi": "לא יחפור",
+"at": "17a"
+},
+{
+"he": "חזקת הבתים",
+"en": "Chezkat HaBattim",
+"ru": "Хезкат Хабатим",
+"fr": "Hezkat Habattim",
+"es": "Jezkat Habatim",
+"ko": "헤즈카트 하바팀",
+"yi": "חזקת הבתים",
+"at": "28a"
+},
+{
+"he": "המוכר את הבית",
+"en": "HaMokher et HaBayit",
+"ru": "Хамохер Эт Хабайит",
+"fr": "Hamokher Et Habayit",
+"es": "Hamojer Et Habayit",
+"ko": "하모헤르 에트 하바이트",
+"yi": "המוכר את הבית",
+"at": "61a"
+},
+{
+"he": "המוכר את הספינה",
+"en": "HaMokher et HaSefinah",
+"ru": "Хамохер Эт Хасефина",
+"fr": "Hamokher Et Hassefina",
+"es": "Hamojer Et Hasefina",
+"ko": "하모헤르 에트 하세피나",
+"yi": "המוכר את הספינה",
+"at": "73a"
+},
+{
+"he": "המוכר פירות",
+"en": "HaMokher Peirot",
+"ru": "Хамохер Пейрот",
+"fr": "Hamokher Peirot",
+"es": "Hamojer Peirot",
+"ko": "하모헤르 페이로트",
+"yi": "המוכר פירות",
+"at": "92a"
+},
+{
+"he": "בית כור",
+"en": "Beit Kur",
+"ru": "Бейт Кур",
+"fr": "Beit Kour",
+"es": "Beit Kur",
+"ko": "베이트 쿠르",
+"yi": "בית כור",
+"at": "102b"
+},
+{
+"he": "יש נוחלין",
+"en": "Yesh Nochalin",
+"ru": "Йеш Нохалин",
+"fr": "Yech Nohalin",
+"es": "Yesh Nojalin",
+"ko": "예스 노하린",
+"yi": "יש נוחלין",
+"at": "108a"
+},
+{
+"he": "מי שמת",
+"en": "Mi SheMet",
+"ru": "Ми Шемет",
+"fr": "Mi Chemet",
+"es": "Mi Shemet",
+"ko": "미 셰메트",
+"yi": "מי שמת",
+"at": "139b"
+},
+{
+"he": "גט פשוט",
+"en": "Get Pashut",
+"ru": "Гет Пашут",
+"fr": "Guet Pachout",
+"es": "Guet Pashut",
+"ko": "게트 파슈트",
+"yi": "גט פשוט",
+"at": "160a"
+}
+],
+"Sanhedrin": [
+{
+"he": "דיני ממונות",
+"en": "Dinei Mamonot",
+"ru": "Диней Мамонот",
+"fr": "Dinei Mamonot",
+"es": "Dinei Mamonot",
+"ko": "디네이 마모노트",
+"yi": "דיני ממונות",
+"at": "2a"
+},
+{
+"he": "כהן גדול",
+"en": "Kohen Gadol",
+"ru": "Кохен Гадол",
+"fr": "Kohen Gadol",
+"es": "Kohen Gadol",
+"ko": "코헨 가돌",
+"yi": "כהן גדול",
+"at": "18a"
+},
+{
+"he": "זה בורר",
+"en": "Zeh Borer",
+"ru": "Зе Борер",
+"fr": "Ze Borer",
+"es": "Ze Borer",
+"ko": "제 보레르",
+"yi": "זה בורר",
+"at": "23a"
+},
+{
+"he": "אחד דיני ממונות",
+"en": "Echad Dinei Mamonot",
+"ru": "Эхад Диней Мамонот",
+"fr": "Ehad Dinei Mamonot",
+"es": "Ejad Dinei Mamonot",
+"ko": "에하드 디네이 마모노트",
+"yi": "אחד דיני ממונות",
+"at": "32a"
+},
+{
+"he": "היו בודקין",
+"en": "Hayu Bodkin",
+"ru": "Хаю Бодкин",
+"fr": "Hayou Bodkin",
+"es": "Hayu Bodkin",
+"ko": "하유 보드킨",
+"yi": "היו בודקין",
+"at": "40a"
+},
+{
+"he": "נגמר הדין",
+"en": "Nigmar HaDin",
+"ru": "Нигмар Хадин",
+"fr": "Nigmar Hadin",
+"es": "Nigmar Hadin",
+"ko": "니그마르 하딘",
+"yi": "נגמר הדין",
+"at": "42b"
+},
+{
+"he": "ארבע מיתות",
+"en": "Arba Mitot",
+"ru": "Арба Митот",
+"fr": "Arba Mitot",
+"es": "Arba Mitot",
+"ko": "아르바 미토트",
+"yi": "ארבע מיתות",
+"at": "49b"
+},
+{
+"he": "בן סורר ומורה",
+"en": "Ben Sorer Umoreh",
+"ru": "Бен Сорер Уморе",
+"fr": "Ben Sorer Oumore",
+"es": "Ben Sorer Umore",
+"ko": "벤 소레르 우모레",
+"yi": "בן סורר ומורה",
+"at": "68b"
+},
+{
+"he": "הנשרפין",
+"en": "HaNisrafin",
+"ru": "Ханисрафин",
+"fr": "Hanisrafin",
+"es": "Hanisrafin",
+"ko": "하니스라핀",
+"yi": "הנשרפין",
+"at": "75a"
+},
+{
+"he": "אלו הן הנחנקין",
+"en": "Ellu Hen HaNechnakin",
+"ru": "Элу Хен Ханехнакин",
+"fr": "Ellou Hen Hanehnakin",
+"es": "Elu Hen Hanejnakin",
+"ko": "엘루 헨 하네흐나킨",
+"yi": "אלו הן הנחנקין",
+"at": "84b"
+},
+{
+"he": "חלק",
+"en": "Chelek",
+"ru": "Хелек",
+"fr": "Helek",
+"es": "Jelek",
+"ko": "헤레크",
+"yi": "חלק",
+"at": "90a"
+}
+],
+"Makkot": [
+{
+"he": "כיצד העדים",
+"en": "Keitzad HaEdim",
+"ru": "Кейцад Хаэдим",
+"fr": "Keitsad Haedim",
+"es": "Keitzad Haedim",
+"ko": "케이차드 하에딤",
+"yi": "כיצד העדים",
+"at": "2a"
+},
+{
+"he": "אלו הן הגולין",
+"en": "Ellu Hen HaGolin",
+"ru": "Элу Хен Хаголин",
+"fr": "Ellou Hen Hagolin",
+"es": "Elu Hen Hagolin",
+"ko": "엘루 헨 하고린",
+"yi": "אלו הן הגולין",
+"at": "7a"
+},
+{
+"he": "אלו הן הלוקין",
+"en": "Ellu Hen HaLokin",
+"ru": "Элу Хен Халокин",
+"fr": "Ellou Hen Halokin",
+"es": "Elu Hen Halokin",
+"ko": "엘루 헨 하로킨",
+"yi": "אלו הן הלוקין",
+"at": "13a"
+}
+],
+"Shevuot": [
+{
+"he": "שבועות שתים קמא",
+"en": "Shevuot Shetayim Kamma",
+"ru": "Шевуот Шетайим Кама",
+"fr": "Chevouot Chetayim Kamma",
+"es": "Shevuot Shetayim Kama",
+"ko": "셰부오트 셰타임 카므마",
+"yi": "שבועות שתים קמא",
+"at": "2a"
+},
+{
+"he": "ידיעות הטומאה",
+"en": "Yediot HaTumah",
+"ru": "Йедиот Хатума",
+"fr": "Yediot Hatouma",
+"es": "Yediot Hatuma",
+"ko": "예디오트 하투마",
+"yi": "ידיעות הטומאה",
+"at": "14a"
+},
+{
+"he": "שבועות שתים בתרא",
+"en": "Shevuot Shetayim Batra",
+"ru": "Шевуот Шетайим Батра",
+"fr": "Chevouot Chetayim Batra",
+"es": "Shevuot Shetayim Batra",
+"ko": "셰부오트 셰타임 바트라",
+"yi": "שבועות שתים בתרא",
+"at": "19b"
+},
+{
+"he": "שבועת העדות",
+"en": "Shevuat HaEdut",
+"ru": "Шевуат Хаэдут",
+"fr": "Chevouat Haedout",
+"es": "Shevuat Haedut",
+"ko": "셰부아트 하에두트",
+"yi": "שבועת העדות",
+"at": "30a"
+},
+{
+"he": "שבועת הפקדון",
+"en": "Shevuat HaPikkadon",
+"ru": "Шевуат Хапикадон",
+"fr": "Chevouat Hapikkadon",
+"es": "Shevuat Hapikadon",
+"ko": "셰부아트 하피카돈",
+"yi": "שבועת הפקדון",
+"at": "36b"
+},
+{
+"he": "שבועת הדיינין",
+"en": "Shevuat HaDayyanin",
+"ru": "Шевуат Хадайянин",
+"fr": "Chevouat Hadaïyanin",
+"es": "Shevuat Hadaiyanin",
+"ko": "셰부아트 하다이야닌",
+"yi": "שבועת הדיינין",
+"at": "38b"
+},
+{
+"he": "כל הנשבעין",
+"en": "Kol HaNishbain",
+"ru": "Кол Ханишбайн",
+"fr": "Kol Hanichbaïn",
+"es": "Kol Hanishbain",
+"ko": "콜 하니스바인",
+"yi": "כל הנשבעין",
+"at": "44b"
+},
+{
+"he": "ארבעה שומרין",
+"en": "Arba'ah Shomrim",
+"ru": "Арбаа Шомрим",
+"fr": "Arba'a Chomrim",
+"es": "Arba'a Shomrim",
+"ko": "아르바아 쇼므림",
+"yi": "ארבעה שומרין",
+"at": "49a"
+}
+],
+"Avodah Zarah": [
+{
+"he": "לפני אידיהן",
+"en": "Lifnei Eideihen",
+"ru": "Лифней Эйдейхен",
+"fr": "Lifnei Eideihen",
+"es": "Lifnei Eideihen",
+"ko": "리프네이 에이데이헨",
+"yi": "לפני אידיהן",
+"at": "2a"
+},
+{
+"he": "אין מעמידין",
+"en": "Ein Ma'amidin",
+"ru": "Эйн Маамидин",
+"fr": "Ein Ma'amidin",
+"es": "Ein Ma'amidin",
+"ko": "에인 마아미딘",
+"yi": "אין מעמידין",
+"at": "22a"
+},
+{
+"he": "כל הצלמים",
+"en": "Kol HaTzelamim",
+"ru": "Кол Хацеламим",
+"fr": "Kol Hatselamim",
+"es": "Kol Hatzelamim",
+"ko": "콜 하체라밈",
+"yi": "כל הצלמים",
+"at": "40b"
+},
+{
+"he": "רבי ישמעאל",
+"en": "Rabbi Yishmael",
+"ru": "Раби Йишмаэл",
+"fr": "Rabbi Yichmael",
+"es": "Rabi Yishmael",
+"ko": "라비 이스마엘",
+"yi": "רבי ישמעאל",
+"at": "49b"
+},
+{
+"he": "השוכר את הפועל",
+"en": "HaSokher et HaPoel",
+"ru": "Хасохер Эт Хапоэл",
+"fr": "Hassokher Et Hapoel",
+"es": "Hasojer Et Hapoel",
+"ko": "하소헤르 에트 하포엘",
+"yi": "השוכר את הפועל",
+"at": "62a"
+}
+],
+"Horayot": [
+{
+"he": "הורו בית דין",
+"en": "Horu Beit Din",
+"ru": "Хору Бейт Дин",
+"fr": "Horou Beit Din",
+"es": "Horu Beit Din",
+"ko": "호루 베이트 딘",
+"yi": "הורו בית דין",
+"at": "2a"
+},
+{
+"he": "הורה כהן משיח",
+"en": "Horah Kohen Mashiach",
+"ru": "Хора Кохен Машиах",
+"fr": "Hora Kohen Machiah",
+"es": "Hora Kohen Mashiaj",
+"ko": "호라 코헨 마시아흐",
+"yi": "הורה כהן משיח",
+"at": "6b"
+},
+{
+"he": "כהן משיח",
+"en": "Kohen Mashiach",
+"ru": "Кохен Машиах",
+"fr": "Kohen Machiah",
+"es": "Kohen Mashiaj",
+"ko": "코헨 마시아흐",
+"yi": "כהן משיח",
+"at": "9b"
+}
+],
+"Zevachim": [
+{
+"he": "כל הזבחים",
+"en": "Kol HaZevachim",
+"ru": "Кол Хазевахим",
+"fr": "Kol Hazevahim",
+"es": "Kol Hazevajim",
+"ko": "콜 하제바힘",
+"yi": "כל הזבחים",
+"at": "2a"
+},
+{
+"he": "כל הזבחים שקבלו דמן",
+"en": "Kol HaZevachim SheKibblu Daman",
+"ru": "Кол Хазевахим Шекиблу Даман",
+"fr": "Kol Hazevahim Chekibblou Daman",
+"es": "Kol Hazevajim Shekiblu Daman",
+"ko": "콜 하제바힘 셰키브루 다만",
+"yi": "כל הזבחים שקבלו דמן",
+"at": "15b"
+},
+{
+"he": "כל הפסולין",
+"en": "Kol HaPesulin",
+"ru": "Кол Хапесулин",
+"fr": "Kol Hapessoulin",
+"es": "Kol Hapesulin",
+"ko": "콜 하페수린",
+"yi": "כל הפסולין",
+"at": "31b"
+},
+{
+"he": "בית שמאי",
+"en": "Beit Shammai",
+"ru": "Бейт Шамай",
+"fr": "Beit Chammaï",
+"es": "Beit Shamai",
+"ko": "베이트 샤므마이",
+"yi": "בית שמאי",
+"at": "36b"
+},
+{
+"he": "איזהו מקומן",
+"en": "Eizehu Mekoman",
+"ru": "Эйзеху Мекоман",
+"fr": "Eizehou Mekoman",
+"es": "Eizehu Mekoman",
+"ko": "에이제후 메코만",
+"yi": "איזהו מקומן",
+"at": "47a"
+},
+{
+"he": "קדשי קדשים",
+"en": "Kodshei Kodashim",
+"ru": "Кодшей Кодашим",
+"fr": "Kodchei Kodachim",
+"es": "Kodshei Kodashim",
+"ko": "코드셰이 코다심",
+"yi": "קדשי קדשים",
+"at": "58a"
+},
+{
+"he": "חטאת העוף",
+"en": "Chatat HaOf",
+"ru": "Хатат Хаоф",
+"fr": "Hatat Haof",
+"es": "Jatat Haof",
+"ko": "하타트 하오프",
+"yi": "חטאת העוף",
+"at": "66a"
+},
+{
+"he": "כל הזבחים שנתערבו",
+"en": "Kol HaZevachim SheNitarvu",
+"ru": "Кол Хазевахим Шенитарву",
+"fr": "Kol Hazevahim Chenitarvou",
+"es": "Kol Hazevajim Shenitarvu",
+"ko": "콜 하제바힘 셰니타르부",
+"yi": "כל הזבחים שנתערבו",
+"at": "70b"
+},
+{
+"he": "המזבח מקדש",
+"en": "HaMizbeach Mekaddesh",
+"ru": "Хамизбеах Мекадеш",
+"fr": "Hamizbeah Mekaddech",
+"es": "Hamizbeaj Mekadesh",
+"ko": "하미즈베아흐 메카데스",
+"yi": "המזבח מקדש",
+"at": "83a"
+},
+{
+"he": "כל התדיר",
+"en": "Kol HaTadir",
+"ru": "Кол Хатадир",
+"fr": "Kol Hatadir",
+"es": "Kol Hatadir",
+"ko": "콜 하타디르",
+"yi": "כל התדיר",
+"at": "89a"
+},
+{
+"he": "דם חטאת",
+"en": "Dam Chatat",
+"ru": "Дам Хатат",
+"fr": "Dam Hatat",
+"es": "Dam Jatat",
+"ko": "담 하타트",
+"yi": "דם חטאת",
+"at": "92a"
+},
+{
+"he": "טבול יום",
+"en": "Tevul Yom",
+"ru": "Тевул Йом",
+"fr": "Tevoul Yom",
+"es": "Tevul Yom",
+"ko": "테불 욤",
+"yi": "טבול יום",
+"at": "98b"
+},
+{
+"he": "השוחט והמעלה",
+"en": "HaShochet VeHama'aleh",
+"ru": "Хашохет Вехамаале",
+"fr": "Hachohet Vehama'ale",
+"es": "Hashojet Vehama'ale",
+"ko": "하쇼헤트 베하마아레",
+"yi": "השוחט והמעלה",
+"at": "106a"
+},
+{
+"he": "פרת חטאת",
+"en": "Parat Chatat",
+"ru": "Парат Хатат",
+"fr": "Parat Hatat",
+"es": "Parat Jatat",
+"ko": "파라트 하타트",
+"yi": "פרת חטאת",
+"at": "112a"
+}
+],
+"Menachot": [
+{
+"he": "כל המנחות",
+"en": "Kol HaMenachot",
+"ru": "Кол Хаменахот",
+"fr": "Kol Hamenahot",
+"es": "Kol Hamenajot",
+"ko": "콜 하메나호트",
+"yi": "כל המנחות",
+"at": "2a"
+},
+{
+"he": "הקומץ את המנחה",
+"en": "HaKometz et HaMinchah",
+"ru": "Хакомец Эт Хаминха",
+"fr": "Hakomets Et Haminha",
+"es": "Hakometz Et Haminja",
+"ko": "하코메츠 에트 하민하",
+"yi": "הקומץ את המנחה",
+"at": "13a"
+},
+{
+"he": "הקומץ רבה",
+"en": "HaKometz Rabbah",
+"ru": "Хакомец Раба",
+"fr": "Hakomets Rabba",
+"es": "Hakometz Raba",
+"ko": "하코메츠 라바",
+"yi": "הקומץ רבה",
+"at": "17a"
+},
+{
+"he": "התכלת",
+"en": "HaTekhelet",
+"ru": "Хатехелет",
+"fr": "Hatekhelet",
+"es": "Hatejelet",
+"ko": "하테헤레트",
+"yi": "התכלת",
+"at": "38a"
+},
+{
+"he": "כל המנחות באות מצה",
+"en": "Kol HaMenachot Baot Matzah",
+"ru": "Кол Хаменахот Баот Маца",
+"fr": "Kol Hamenahot Baot Matsa",
+"es": "Kol Hamenajot Baot Matza",
+"ko": "콜 하메나호트 바오트 마차",
+"yi": "כל המנחות באות מצה",
+"at": "52b"
+},
+{
+"he": "רבי ישמעאל",
+"en": "Rabbi Yishmael",
+"ru": "Раби Йишмаэл",
+"fr": "Rabbi Yichmael",
+"es": "Rabi Yishmael",
+"ko": "라비 이스마엘",
+"yi": "רבי ישמעאל",
+"at": "63b"
+},
+{
+"he": "אלו מנחות נקמצות",
+"en": "Ellu Menachot Nikmatzot",
+"ru": "Элу Менахот Никмацот",
+"fr": "Ellou Menahot Nikmatsot",
+"es": "Elu Menajot Nikmatzot",
+"ko": "엘루 메나호트 니크마초트",
+"yi": "אלו מנחות נקמצות",
+"at": "72b"
+},
+{
+"he": "התודה היתה באה",
+"en": "HaTodah Haytah Ba'ah",
+"ru": "Хатода Хайта Баа",
+"fr": "Hatoda Haïta Ba'a",
+"es": "Hatoda Haita Ba'a",
+"ko": "하토다 하이타 바아",
+"yi": "התודה היתה באה",
+"at": "76b"
+},
+{
+"he": "כל קרבנות ציבור",
+"en": "Kol Korbanot Tzibbur",
+"ru": "Кол Корбанот Цибур",
+"fr": "Kol Korbanot Tsibbour",
+"es": "Kol Korbanot Tzibur",
+"ko": "콜 코르바노트 치부르",
+"yi": "כל קרבנות ציבור",
+"at": "83b"
+},
+{
+"he": "שתי מדות",
+"en": "Shetei Middot",
+"ru": "Шетей Мидот",
+"fr": "Chetei Middot",
+"es": "Shetei Midot",
+"ko": "셰테이 미도트",
+"yi": "שתי מדות",
+"at": "87a"
+},
+{
+"he": "שתי הלחם",
+"en": "Shetei HaLechem",
+"ru": "Шетей Халехем",
+"fr": "Chetei Halehem",
+"es": "Shetei Halejem",
+"ko": "셰테이 하레헴",
+"yi": "שתי הלחם",
+"at": "94a"
+},
+{
+"he": "המנחות והנסכים",
+"en": "HaMenachot VeHanesakhim",
+"ru": "Хаменахот Веханесахим",
+"fr": "Hamenahot Vehanessakhim",
+"es": "Hamenajot Vehanesajim",
+"ko": "하메나호트 베하네사힘",
+"yi": "המנחות והנסכים",
+"at": "100b"
+},
+{
+"he": "הרי עלי עשרון",
+"en": "Harei Alai Issaron",
+"ru": "Харей Алай Исарон",
+"fr": "Harei Alaï Issaron",
+"es": "Harei Alai Isaron",
+"ko": "하레이 아라이 이사론",
+"yi": "הרי עלי עשרון",
+"at": "104b"
+}
+],
+"Chullin": [
+{
+"he": "הכל שוחטין",
+"en": "HaKol Shochatin",
+"ru": "Хакол Шохатин",
+"fr": "Hakol Chohatin",
+"es": "Hakol Shojatin",
+"ko": "하콜 쇼하틴",
+"yi": "הכל שוחטין",
+"at": "2a"
+},
+{
+"he": "השוחט",
+"en": "HaShochet",
+"ru": "Хашохет",
+"fr": "Hachohet",
+"es": "Hashojet",
+"ko": "하쇼헤트",
+"yi": "השוחט",
+"at": "27a"
+},
+{
+"he": "אלו טרפות",
+"en": "Ellu Terefot",
+"ru": "Элу Терефот",
+"fr": "Ellou Terefot",
+"es": "Elu Terefot",
+"ko": "엘루 테레포트",
+"yi": "אלו טרפות",
+"at": "42a"
+},
+{
+"he": "בהמה המקשה",
+"en": "Behemah",
+"ru": "Бехема",
+"fr": "Behema",
+"es": "Behema",
+"ko": "베헤마",
+"yi": "בהמה המקשה",
+"at": "68a"
+},
+{
+"he": "אותו ואת בנו",
+"en": "Oto VeEt Beno",
+"ru": "Ото Веэт Бено",
+"fr": "Oto Veet Beno",
+"es": "Oto Veet Beno",
+"ko": "오토 베에트 베노",
+"yi": "אותו ואת בנו",
+"at": "78a"
+},
+{
+"he": "כסוי הדם",
+"en": "Kissui HaDam",
+"ru": "Кисуй Хадам",
+"fr": "Kissouï Hadam",
+"es": "Kisui Hadam",
+"ko": "키수이 하담",
+"yi": "כסוי הדם",
+"at": "83b"
+},
+{
+"he": "גיד הנשה",
+"en": "Gid HaNasheh",
+"ru": "Гид Ханаше",
+"fr": "Guid Hanache",
+"es": "Guid Hanashe",
+"ko": "기드 하나셰",
+"yi": "גיד הנשה",
+"at": "89b"
+},
+{
+"he": "כל הבשר",
+"en": "Kol HaBasar",
+"ru": "Кол Хабасар",
+"fr": "Kol Habassar",
+"es": "Kol Habasar",
+"ko": "콜 하바사르",
+"yi": "כל הבשר",
+"at": "103b"
+},
+{
+"he": "העור והרוטב",
+"en": "HaOr VeHarotev",
+"ru": "Хаор Вехаротев",
+"fr": "Haor Veharotev",
+"es": "Haor Veharotev",
+"ko": "하오르 베하로테브",
+"yi": "העור והרוטב",
+"at": "117b"
+},
+{
+"he": "הזרוע והלחיים",
+"en": "HaZeroa VeHalechayim",
+"ru": "Хазероа Вехалехайим",
+"fr": "Hazeroa Vehalehayim",
+"es": "Hazeroa Vehalejayim",
+"ko": "하제로아 베하레하임",
+"yi": "הזרוע והלחיים",
+"at": "130a"
+},
+{
+"he": "ראשית הגז",
+"en": "Reshit HaGez",
+"ru": "Решит Хагез",
+"fr": "Rechit Haguez",
+"es": "Reshit Haguez",
+"ko": "레시트 하게즈",
+"yi": "ראשית הגז",
+"at": "135a"
+},
+{
+"he": "שילוח הקן",
+"en": "Shilluach HaKen",
+"ru": "Шилуах Хакен",
+"fr": "Chillouah Haken",
+"es": "Shiluaj Haken",
+"ko": "실루아흐 하켄",
+"yi": "שילוח הקן",
+"at": "138b"
+}
+],
+"Bechorot": [
+{
+"he": "הלוקח עובר חמורו",
+"en": "HaLokeach Ubbar Chamoro",
+"ru": "Халокеах Убар Хаморо",
+"fr": "Halokeah Oubbar Hamoro",
+"es": "Halokeaj Ubar Jamoro",
+"ko": "하로케아흐 우바르 하모로",
+"yi": "הלוקח עובר חמורו",
+"at": "2a"
+},
+{
+"he": "הלוקח עובר פרתו",
+"en": "HaLokeach Ubbar Parato",
+"ru": "Халокеах Убар Парато",
+"fr": "Halokeah Oubbar Parato",
+"es": "Halokeaj Ubar Parato",
+"ko": "하로케아흐 우바르 파라토",
+"yi": "הלוקח עובר פרתו",
+"at": "13a"
+},
+{
+"he": "הלוקח בהמה",
+"en": "HaLokeach Behemah",
+"ru": "Халокеах Бехема",
+"fr": "Halokeah Behema",
+"es": "Halokeaj Behema",
+"ko": "하로케아흐 베헤마",
+"yi": "הלוקח בהמה",
+"at": "19b"
+},
+{
+"he": "עד כמה",
+"en": "Ad Kammah",
+"ru": "Ад Кама",
+"fr": "Ad Kamma",
+"es": "Ad Kama",
+"ko": "아드 카므마",
+"yi": "עד כמה",
+"at": "26b"
+},
+{
+"he": "כל פסולי המוקדשין",
+"en": "Kol Pesulei HaMukdashin",
+"ru": "Кол Песулей Хамукдашин",
+"fr": "Kol Pessoulei Hamoukdachin",
+"es": "Kol Pesulei Hamukdashin",
+"ko": "콜 페수레이 하무크다신",
+"yi": "כל פסולי המוקדשין",
+"at": "31a"
+},
+{
+"he": "על אלו מומין",
+"en": "Al Ellu Mumin",
+"ru": "Ал Элу Мумин",
+"fr": "Al Ellou Moumin",
+"es": "Al Elu Mumin",
+"ko": "알 엘루 무민",
+"yi": "על אלו מומין",
+"at": "37a"
+},
+{
+"he": "מומין אלו",
+"en": "Mumin Ellu",
+"ru": "Мумин Элу",
+"fr": "Moumin Ellou",
+"es": "Mumin Elu",
+"ko": "무민 엘루",
+"yi": "מומין אלו",
+"at": "43a"
+},
+{
+"he": "יש בכור",
+"en": "Yesh Bekhor",
+"ru": "Йеш Бехор",
+"fr": "Yech Bekhor",
+"es": "Yesh Bejor",
+"ko": "예스 베호르",
+"yi": "יש בכור",
+"at": "46a"
+},
+{
+"he": "מעשר בהמה",
+"en": "Ma'aser Behemah",
+"ru": "Маасер Бехема",
+"fr": "Ma'asser Behema",
+"es": "Ma'aser Behema",
+"ko": "마아세르 베헤마",
+"yi": "מעשר בהמה",
+"at": "53a"
+}
+],
+"Arachin": [
+{
+"he": "הכל מעריכין",
+"en": "HaKol Ma'arikhin",
+"ru": "Хакол Маарихин",
+"fr": "Hakol Ma'arikhin",
+"es": "Hakol Ma'arijin",
+"ko": "하콜 마아리힌",
+"yi": "הכל מעריכין",
+"at": "2a"
+},
+{
+"he": "אין נערכין",
+"en": "Ein Ne'erakhin",
+"ru": "Эйн Неэрахин",
+"fr": "Ein Ne'erakhin",
+"es": "Ein Ne'erajin",
+"ko": "에인 네에라힌",
+"yi": "אין נערכין",
+"at": "7b"
+},
+{
+"he": "יש בערכין",
+"en": "Yesh BaArakhin",
+"ru": "Йеш Баарахин",
+"fr": "Yech Baarakhin",
+"es": "Yesh Baarajin",
+"ko": "예스 바아라힌",
+"yi": "יש בערכין",
+"at": "13b"
+},
+{
+"he": "השג יד",
+"en": "Hesseg Yad",
+"ru": "Хесег Яд",
+"fr": "Hesseg Yad",
+"es": "Heseg Yad",
+"ko": "헤세그 야드",
+"yi": "השג יד",
+"at": "17a"
+},
+{
+"he": "האומר משקלי עלי",
+"en": "HaOmer Mishkali Alai",
+"ru": "Хаомер Мишкали Алай",
+"fr": "Haomer Michkali Alaï",
+"es": "Haomer Mishkali Alai",
+"ko": "하오메르 미스카리 아라이",
+"yi": "האומר משקלי עלי",
+"at": "19a"
+},
+{
+"he": "שום היתומים",
+"en": "Shum HaYetomim",
+"ru": "Шум Хайетомим",
+"fr": "Choum Hayetomim",
+"es": "Shum Hayetomim",
+"ko": "슘 하예토밈",
+"yi": "שום היתומים",
+"at": "21b"
+},
+{
+"he": "אין מקדישין",
+"en": "Ein Makdishin",
+"ru": "Эйн Макдишин",
+"fr": "Ein Makdichin",
+"es": "Ein Makdishin",
+"ko": "에인 마크디신",
+"yi": "אין מקדישין",
+"at": "24a"
+},
+{
+"he": "המקדיש שדהו",
+"en": "HaMakdish Sadehu",
+"ru": "Хамакдиш Садеху",
+"fr": "Hamakdich Sadehou",
+"es": "Hamakdish Sadehu",
+"ko": "하마크디스 사데후",
+"yi": "המקדיש שדהו",
+"at": "27a"
+},
+{
+"he": "המוכר שדהו",
+"en": "HaMokher Sadehu",
+"ru": "Хамохер Садеху",
+"fr": "Hamokher Sadehou",
+"es": "Hamojer Sadehu",
+"ko": "하모헤르 사데후",
+"yi": "המוכר שדהו",
+"at": "29b"
+}
+],
+"Temurah": [
+{
+"he": "הכל ממירין",
+"en": "HaKol Memirin",
+"ru": "Хакол Мемирин",
+"fr": "Hakol Memirin",
+"es": "Hakol Memirin",
+"ko": "하콜 메미린",
+"yi": "הכל ממירין",
+"at": "2a"
+},
+{
+"he": "יש בקרבנות",
+"en": "Yesh BeKorbenot",
+"ru": "Йеш Бекорбенот",
+"fr": "Yech Bekorbenot",
+"es": "Yesh Bekorbenot",
+"ko": "예스 베코르베노트",
+"yi": "יש בקרבנות",
+"at": "14a"
+},
+{
+"he": "אלו קדשים",
+"en": "Ellu Kadashim",
+"ru": "Элу Кадашим",
+"fr": "Ellou Kadachim",
+"es": "Elu Kadashim",
+"ko": "엘루 카다심",
+"yi": "אלו קדשים",
+"at": "17b"
+},
+{
+"he": "ולד חטאת",
+"en": "Velad Chatat",
+"ru": "Велад Хатат",
+"fr": "Velad Hatat",
+"es": "Velad Jatat",
+"ko": "베라드 하타트",
+"yi": "ולד חטאת",
+"at": "21b"
+},
+{
+"he": "כיצד מערימין",
+"en": "Keitzad Ma'arimin",
+"ru": "Кейцад Мааримин",
+"fr": "Keitsad Ma'arimin",
+"es": "Keitzad Ma'arimin",
+"ko": "케이차드 마아리민",
+"yi": "כיצד מערימין",
+"at": "24b"
+},
+{
+"he": "כל האסורין",
+"en": "Kol HaAsurin",
+"ru": "Кол Хаасурин",
+"fr": "Kol Haassourin",
+"es": "Kol Haasurin",
+"ko": "콜 하아수린",
+"yi": "כל האסורין",
+"at": "28a"
+},
+{
+"he": "יש בקדשי מזבח",
+"en": "Yesh BeKodshei Mizbeach",
+"ru": "Йеш Бекодшей Мизбеах",
+"fr": "Yech Bekodchei Mizbeah",
+"es": "Yesh Bekodshei Mizbeaj",
+"ko": "예스 베코드셰이 미즈베아흐",
+"yi": "יש בקדשי מזבח",
+"at": "31a"
+}
+],
+"Keritot": [
+{
+"he": "שלשים ושש",
+"en": "Sheloshim VeShesh",
+"ru": "Шелошим Вешеш",
+"fr": "Chelochim Vechech",
+"es": "Sheloshim Veshesh",
+"ko": "셰로심 베셰스",
+"yi": "שלשים ושש",
+"at": "2a"
+},
+{
+"he": "ארבעה מחוסרי כפרה",
+"en": "Arba'ah Mechusrei Kapparah",
+"ru": "Арбаа Мехусрей Капара",
+"fr": "Arba'a Mehousrei Kappara",
+"es": "Arba'a Mejusrei Kapara",
+"ko": "아르바아 메후스레이 카파라",
+"yi": "ארבעה מחוסרי כפרה",
+"at": "8b"
+},
+{
+"he": "אמרו לו",
+"en": "Amru Lo",
+"ru": "Амру Ло",
+"fr": "Amrou Lo",
+"es": "Amru Lo",
+"ko": "아므루 로",
+"yi": "אמרו לו",
+"at": "11b"
+},
+{
+"he": "ספק אכל חלב",
+"en": "Safek Akhal Chelev",
+"ru": "Сафек Ахал Хелев",
+"fr": "Safek Akhal Helev",
+"es": "Safek Ajal Jelev",
+"ko": "사페크 아할 헤레브",
+"yi": "ספק אכל חלב",
+"at": "17a"
+},
+{
+"he": "דם שחיטה",
+"en": "Dam Shechitah",
+"ru": "Дам Шехита",
+"fr": "Dam Chehita",
+"es": "Dam Shejita",
+"ko": "담 셰히타",
+"yi": "דם שחיטה",
+"at": "20b"
+},
+{
+"he": "המביא אשם",
+"en": "HaMevi Asham",
+"ru": "Хамеви Ашам",
+"fr": "Hamevi Acham",
+"es": "Hamevi Asham",
+"ko": "하메비 아샴",
+"yi": "המביא אשם",
+"at": "23b"
+}
+],
+"Meilah": [
+{
+"he": "קדשי קדשים",
+"en": "Kodshei Kodashim",
+"ru": "Кодшей Кодашим",
+"fr": "Kodchei Kodachim",
+"es": "Kodshei Kodashim",
+"ko": "코드셰이 코다심",
+"yi": "קדשי קדשים",
+"at": "2a"
+},
+{
+"he": "חטאת העוף",
+"en": "Chatat HaOf",
+"ru": "Хатат Хаоф",
+"fr": "Hatat Haof",
+"es": "Jatat Haof",
+"ko": "하타트 하오프",
+"yi": "חטאת העוף",
+"at": "8a"
+},
+{
+"he": "ולד חטאת",
+"en": "Velad Chatat",
+"ru": "Велад Хатат",
+"fr": "Velad Hatat",
+"es": "Velad Jatat",
+"ko": "베라드 하타트",
+"yi": "ולד חטאת",
+"at": "10b"
+},
+{
+"he": "קדשי מזבח",
+"en": "Kodshei Mizbeach",
+"ru": "Кодшей Мизбеах",
+"fr": "Kodchei Mizbeah",
+"es": "Kodshei Mizbeaj",
+"ko": "코드셰이 미즈베아흐",
+"yi": "קדשי מזבח",
+"at": "15a"
+},
+{
+"he": "הנהנה מן ההקדש",
+"en": "HaNeheneh Min HaHekdesh",
+"ru": "Ханехене Мин Хахекдеш",
+"fr": "Hanehene Min Hahekdech",
+"es": "Hanehene Min Hahekdesh",
+"ko": "하네헤네 민 하헤크데스",
+"yi": "הנהנה מן ההקדש",
+"at": "18a"
+},
+{
+"he": "השליח שעשה שליחותו",
+"en": "HaShaliach SheAsah Shelichuto",
+"ru": "Хашалиах Шеаса Шелихуто",
+"fr": "Hachaliah Cheassa Chelihouto",
+"es": "Hashaliaj Sheasa Shelijuto",
+"ko": "하샤리아흐 셰아사 셰리후토",
+"yi": "השליח שעשה שליחותו",
+"at": "20a"
+}
+],
+"Niddah": [
+{
+"he": "שמאי אומר",
+"en": "Shammai Omer",
+"ru": "Шамай Омер",
+"fr": "Chammaï Omer",
+"es": "Shamai Omer",
+"ko": "샤므마이 오메르",
+"yi": "שמאי אומר",
+"at": "2a"
+},
+{
+"he": "כל היד",
+"en": "Kol HaYad",
+"ru": "Кол Хаяд",
+"fr": "Kol Hayad",
+"es": "Kol Hayad",
+"ko": "콜 하야드",
+"yi": "כל היד",
+"at": "13a"
+},
+{
+"he": "המפלת חתיכה",
+"en": "HaMappelet Chatikhah",
+"ru": "Хамапелет Хатиха",
+"fr": "Hamappelet Hatikha",
+"es": "Hamapelet Jatija",
+"ko": "하마페레트 하티하",
+"yi": "המפלת חתיכה",
+"at": "21a"
+},
+{
+"he": "בנות כותים",
+"en": "Benot Kutim",
+"ru": "Бенот Кутим",
+"fr": "Benot Koutim",
+"es": "Benot Kutim",
+"ko": "베노트 쿠팀",
+"yi": "בנות כותים",
+"at": "31b"
+},
+{
+"he": "יוצא דופן",
+"en": "Yotze Dofen",
+"ru": "Йоце Дофен",
+"fr": "Yotse Dofen",
+"es": "Yotze Dofen",
+"ko": "요체 도펜",
+"yi": "יוצא דופן",
+"at": "40a"
+},
+{
+"he": "בא סימן",
+"en": "Ba Siman",
+"ru": "Ба Симан",
+"fr": "Ba Siman",
+"es": "Ba Siman",
+"ko": "바 시만",
+"yi": "בא סימן",
+"at": "48a"
+},
+{
+"he": "דם הנדה",
+"en": "Dam HaNiddah",
+"ru": "Дам Ханида",
+"fr": "Dam Hanidda",
+"es": "Dam Hanida",
+"ko": "담 하니다",
+"yi": "דם הנדה",
+"at": "54b"
+},
+{
+"he": "הרואה כתם",
+"en": "HaRoeh Ketem",
+"ru": "Хароэ Кетем",
+"fr": "Haroe Ketem",
+"es": "Haroe Ketem",
+"ko": "하로에 케템",
+"yi": "הרואה כתם",
+"at": "57b"
+},
+{
+"he": "האשה שהיא עושה",
+"en": "HaIshah SheHi Osah",
+"ru": "Хайша Шехи Оса",
+"fr": "Haïcha Chehi Ossa",
+"es": "Haisha Shehi Osa",
+"ko": "하이샤 셰히 오사",
+"yi": "האשה שהיא עושה",
+"at": "59b"
+},
+{
+"he": "תינוקת",
+"en": "Tinoket",
+"ru": "Тинокет",
+"fr": "Tinoket",
+"es": "Tinoket",
+"ko": "티노케트",
+"yi": "תינוקת",
+"at": "64b"
+}
+]
+}
