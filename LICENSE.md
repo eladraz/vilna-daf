@@ -77,6 +77,16 @@ Font License 1.1. https://fonts.google.com/specimen/Frank+Ruhl+Libre
 Copyright the Noto Project Authors. Licensed under the SIL Open Font
 License 1.1. https://fonts.google.com/specimen/Noto+Rashi+Hebrew
 
+### Noto Serif KR (Korean translation text)
+Copyright (c) 2017-2024 Adobe (http://www.adobe.com/). Licensed under the SIL Open
+Font License 1.1 (`fonts/OFL-NotoSerifKR.txt`). Bundled as a subset:
+`fonts/NotoSerifKR-hangul.woff2`. https://fonts.google.com/specimen/Noto+Serif+KR
+
+### Noto Serif (38 code points: Latin Extended, Cyrillic, Greek, punctuation; see fonts/SUBSETS.md)
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic).
+Licensed under the SIL Open Font License 1.1 (`fonts/OFL-NotoSerif.txt`). Bundled as a subset:
+`fonts/NotoSerif-extra.woff2`. https://fonts.google.com/specimen/Noto+Serif
+
 ---
 
 ## Attribution (required)
@@ -101,12 +111,26 @@ Sefaria version they were taken from. Each block records it in `sources` (`title
 removed: `grep -l '"special":true' data/offline/*/*.json`).
 
 - **Public Domain / CC0:** "Vilna Edition" Hebrew (Rashi, Tosafot, Gilyon HaShas, Rav Nissim
-  Gaon, Rabbeinu Chananel, most pages); Sefaria Community Translation (CC0).
-- **CC-BY-SA:** part of the Hebrew Rashi/Tosafot and other versions as listed per page.
-  Attribution to Sefaria and the version's contributors is required, and adaptations stay CC-BY-SA.
+  Gaon, Rabbeinu Chananel, most pages; Rashbam on Bava Batra and Pesachim; Ran on Nedarim);
+  "WikiSource Rashi" (Hebrew Rashi on some pages); Sefaria Community Translation (CC0).
+- **CC-BY-SA:** "Wikisource Talmud Bavli" (the Hebrew/Aramaic Gemara text used for the print
+  layout, stored as `print.gemara`), "Wikisource Ktav Yad Rashi" (Ktav Yad Rashi on Menachot), the
+  "Vilna Edition" Rashi/Tosafot versions that Sefaria licenses as CC-BY-SA (about 224 pages), and other
+  versions as listed per page. Attribution to Sefaria,
+  Hebrew Wikisource and the version's contributors is required, and adaptations stay CC-BY-SA.
+  The print-layout texts are recorded per page in `printSources`.
 - **CC-BY:** Tosafot translation by Jan Buckler (English).
 - **CC-BY-NC:** William Davidson Edition (Hebrew/Aramaic and English) of the Talmud — non-commercial use only.
+- **Public Domain (apparatus verses):** "Tanach with Ta'amei Hamikra" (Hebrew verses, niqqud and
+  cantillation removed); "The Holy Scriptures: A New Translation (JPS 1917)" (English verses); "Bible du
+  Rabbinat 1899" (French verses).
+- **CC0 (apparatus verses):** "Yehoyesh's Yiddish Tanakh Translation" (Yiddish verses). Sefaria lists some
+  of its books as Public Domain instead.
+- **Sefaria link data (citations), special:** the Masoret HaShas, Ein Mishpat and Torah Or references shown
+  in the apparatus (`apparatus`, `apparatusSources`). Not Public Domain / CC0: shown with attribution and
+  removable (`special: true`).
 - **Russian, Yiddish, French, Spanish, Korean:** translations made by Elad Raz using a variety
   of paid AI models, from the Hebrew and, where used, the English above. They are licensed here
-  under the Vilna-Daf license agreement (this file).
+  under the Vilna-Daf license agreement (this file), including the apparatus entries (citation titles
+  and Torah Or verses) in those languages.
 - Blocks whose version licence is unknown are not displayed.

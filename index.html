@@ -63,6 +63,12 @@
       </svg>
     </button>
 
+    <span class="zoom-ctl" dir="ltr">
+      <button id="btn-zoom-out" type="button" title="הקטנה (Ctrl + גלגלת)" aria-label="הקטנה">&minus;</button>
+      <button id="btn-zoom-val" type="button" title="איפוס זום ל־100%" aria-label="איפוס זום">100%</button>
+      <button id="btn-zoom-in" type="button" title="הגדלה (Ctrl + גלגלת)" aria-label="הגדלה">+</button>
+    </span>
+
     <button id="btn-reset" title="איפוס: מחיקת כל ההגדרות, הגופנים, הבחירות והעוגיות וחזרה לברירת המחדל">↺</button>
 
     <div class="lang-wrap">
@@ -165,7 +171,9 @@
         layoutPolicy: hook.get('policy') === 'adaptive' ? 'adaptive' : 'auto',
         profileId: hook.get('profile') || undefined,
         sheetWidth: sheetW > 0 ? sheetW : undefined,
-        interactive: !compareMode,
+        // The viewer below owns zoom for ALL sheets together (the engine's per-sheet
+        // zoom/pan would stack multi-sheet pages on top of each other).
+        interactive: false,
       });
       window.__vilna = renderer;
       const tractates = await renderer.getTractates();
@@ -387,53 +395,138 @@
       });
       updateLangLabel();
 
-      // ── Print: black-on-white daf, ONE printed page per sheet (strict
-      //    page, adaptive page and every continuation sheet). Each sheet is
-      //    scaled down as one rigid unit (transform: scale) inside a
-      //    .print-box that reserves its scaled footprint, so no geometry
-      //    reflows and nothing is split across pages. ──
-      //
-      //  SAFE_W/SAFE_H = the common printable area of Letter (216×279mm) and
-      //  A4 (210×297mm) at the @page 10mm margins, in CSS px @96dpi:
-      //    width  = min(210,216) − 20mm = 190mm ≈ 718px
-      //    height = min(279,297) − 20mm = 259mm ≈ 979px
-      //  Using the *intersection* guarantees a single-page fit on either paper.
-      const PRINT_SAFE_W = 700, PRINT_SAFE_H = 960; // px, small safety inset
+      // ── Print: black-on-white daf, ONE printed A4 page per sheet (strict page,
+      //    adaptive page, apparatus continuation and translated sheets). Each
+      //    sheet, with its sources note when one follows it, is scaled as one
+      //    rigid unit (uniform k) into a page-sized .print-box. The box size is
+      //    measured from the real printable area of A4 at the @page margin
+      //    (PRINT_MARGIN_MM, which must equal css/daf.css `@page margin`). ──
+      const PRINT_MARGIN_MM = 6;
       let printBoxes = [];
+      function printableBoxPx() {
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:absolute;visibility:hidden;left:0;top:0;' +
+          `width:${210 - 2 * PRINT_MARGIN_MM}mm;height:${297 - 2 * PRINT_MARGIN_MM}mm`;
+        document.body.appendChild(probe);
+        const r = { w: probe.offsetWidth, h: probe.offsetHeight };
+        probe.remove();
+        return r;
+      }
       function beforePrint() {
         if (printBoxes.length) return;
-        const sheets = [...document.querySelectorAll('#daf-content > .page-sheet')];
-        for (const sheet of sheets) {
-          const W = sheet.offsetWidth, H = sheet.offsetHeight;
-          if (!W || !H) continue;
-          // Smaller of the two fit ratios; never enlarge (cap at 1).
-          const k = Math.min(PRINT_SAFE_W / W, PRINT_SAFE_H / H, 1);
+        const content = document.getElementById('daf-content');
+        if (!content) return;
+        const P = printableBoxPx();
+        // 1 px inside the box on each side: sub-pixel rounding must not spill a sheet onto the next page.
+        const W0 = P.w - 2, H0 = P.h - 2;
+        const groups = [];
+        for (const node of [...content.children]) {
+          if (node.classList.contains('page-sheet')) groups.push({ sheet: node, note: null });
+          else if (node.classList.contains('daf-sources') && groups.length && !groups[groups.length - 1].note) {
+            groups[groups.length - 1].note = node;
+          }
+        }
+        for (const g of groups) {
+          const { sheet, note } = g;
+          const sw = sheet.offsetWidth, sh = sheet.offsetHeight;
+          if (!sw || !sh) continue;
           const box = document.createElement('div');
           box.className = 'print-box';
-          box.style.cssText = `position:relative;width:${W * k}px;height:${H * k}px;margin:0 auto;`;
-          // Stash whatever inline values zoom/pan left so we can restore them.
-          const saved = {
-            transform: sheet.style.transform, transformOrigin: sheet.style.transformOrigin,
-            position: sheet.style.position, top: sheet.style.top, right: sheet.style.right,
-          };
-          sheet.parentNode.insertBefore(box, sheet);
-          box.appendChild(sheet);
-          // Scale the sheet as one rigid unit from its top-right corner (RTL).
-          sheet.style.position = 'absolute';
-          sheet.style.top = '0';
-          sheet.style.right = '0';
-          sheet.style.transformOrigin = 'top right';
-          sheet.style.transform = 'scale(' + k + ')';
-          printBoxes.push({ box, sheet, saved });
+          box.style.cssText = `position:relative;overflow:hidden;width:${P.w}px;height:${P.h}px;`;
+          const fit = document.createElement('div');
+          fit.className = 'print-fit';
+          // Unscaled footprint = the sheet's width; the sources note is laid out at THAT width (on screen it is
+          // a full-width flex row as wide as the window, which must not set the scale).
+          const W = sw;
+          fit.style.cssText = `position:absolute;left:0;top:0;width:${W}px;transform-origin:0 0;`;
+          content.insertBefore(box, sheet);
+          fit.appendChild(sheet);
+          if (note) {
+            note.dataset.printSaved = note.getAttribute('style') || '';
+            note.style.cssText += ';display:block;width:' + W + 'px;max-width:none;margin:0;box-sizing:border-box;';
+            fit.appendChild(note);
+          }
+          box.appendChild(fit);
+          const H = sh + (note ? note.offsetHeight : 0);
+          fit.style.height = H + 'px';
+          // Uniform scale that fills the printable box along its limiting dimension.
+          const k = Math.min(W0 / W, H0 / H);
+          fit.style.left = ((P.w - W * k) / 2).toFixed(2) + 'px';
+          fit.style.top = ((P.h - H * k) / 2).toFixed(2) + 'px';
+          fit.style.transform = `scale(${k.toFixed(5)})`;
+          printBoxes.push({ box, sheet, note, k });
         }
       }
       function afterPrint() {
-        for (const { box, sheet, saved } of printBoxes) {
-          Object.assign(sheet.style, saved);
-          if (box.parentNode) { box.parentNode.insertBefore(sheet, box); box.remove(); }
+        const content = document.getElementById('daf-content');
+        for (const { box, sheet, note } of printBoxes) {
+          if (content && box.parentNode === content) {
+            content.insertBefore(sheet, box);
+            if (note) {
+              note.setAttribute('style', note.dataset.printSaved || '');
+              if (!note.getAttribute('style')) note.removeAttribute('style');
+              delete note.dataset.printSaved;
+              content.insertBefore(note, box);
+            }
+            box.remove();
+          }
         }
         printBoxes = [];
       }
+
+      // ── Zoom + side-by-side sheets. One zoom factor scales every sheet of the amud
+      //    together. Each sheet is scaled with a transform and its layout box is
+      //    compensated with margins, so #daf-content (a wrapping flex row) reflows:
+      //    sheets sit side by side, in reading order, whenever the window has room. ──
+      const ZMIN = 0.3, ZMAX = 3;
+      let zoom = 1;
+      try { const z = parseFloat(localStorage.getItem('vilnaDafZoom')); if (z >= ZMIN && z <= ZMAX) zoom = z; } catch (e) {}
+      const zoomVal = document.getElementById('btn-zoom-val');
+      let zoomApplying = false;
+      function applyZoom() {
+        const content = document.getElementById('daf-content');
+        if (!content || printBoxes.length || compareMode) return;
+        const sheets = [...content.children].filter(n => n.classList.contains('page-sheet'));
+        // Never scale while the engine is still laying out: it measures sheet widths
+        // (a scaled sheet would look "narrow" and collapse into one long sheet).
+        if (!sheets.length || sheets[0].dataset.vilnaReady !== '1') return;
+        zoomApplying = true;
+        content.classList.add('vz');
+        const first = sheets[0];
+        const tl = first && first.dataset.textLang;
+        const ltr = !!(first && (first.classList.contains('tsheet-ltr') || (tl && tl !== 'he' && tl !== 'yi')));
+        content.classList.toggle('vz-ltr', ltr);   // RTL: sheet 1 on the right; LTR: on the left
+        for (const sh of sheets) {
+          sh.style.transform = zoom === 1 ? '' : `scale(${zoom})`;
+          sh.style.transformOrigin = ltr ? 'top left' : 'top right';
+          sh.style.marginLeft = sh.style.marginRight = '';
+          sh.style[ltr ? 'marginRight' : 'marginLeft'] = zoom === 1 ? '' : `${(zoom - 1) * sh.offsetWidth}px`;
+          sh.style.marginBottom = zoom === 1 ? '' : `calc(0.5rem + ${(zoom - 1) * sh.offsetHeight}px)`;
+        }
+        zoomVal.textContent = `${Math.round(zoom * 100)}%`;
+        zoomApplying = false;
+      }
+      function setZoom(z) {
+        zoom = Math.max(ZMIN, Math.min(ZMAX, Math.round(z * 100) / 100));
+        try { localStorage.setItem('vilnaDafZoom', String(zoom)); } catch (e) {}
+        applyZoom();
+      }
+      document.getElementById('btn-zoom-in').addEventListener('click', () => setZoom(zoom * 1.25));
+      document.getElementById('btn-zoom-out').addEventListener('click', () => setZoom(zoom / 1.25));
+      zoomVal.addEventListener('click', () => setZoom(1));
+      document.getElementById('daf-content').addEventListener('wheel', e => {
+        if (!e.ctrlKey && !e.metaKey) return;
+        e.preventDefault();
+        setZoom(zoom * (e.deltaY > 0 ? 0.92 : 1.08));
+      }, { passive: false });
+      if (typeof MutationObserver !== 'undefined') {
+        // Re-apply whenever the engine (re)renders sheets; sheet sizes may also change with the window.
+        new MutationObserver(() => { if (!zoomApplying) applyZoom(); })
+          .observe(document.getElementById('daf-content'),
+            { childList: true, subtree: true, attributes: true, attributeFilter: ['data-vilna-ready'] });
+      }
+      window.addEventListener('resize', applyZoom);
+      applyZoom();
       window.addEventListener('beforeprint', beforePrint);
       window.addEventListener('afterprint', afterPrint);
       document.getElementById('btn-print').addEventListener('click', () => window.print());

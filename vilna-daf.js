@@ -288,6 +288,1049 @@
     return fnv1a64(s);
   }
 
+  // ═════════════════ Pixel layout without PDF text (docs/VILNA_LAYOUT_SPEC.md §3, §7) ═════════════════
+  // A vilna-layout/1 page carries geometry and token references into the offline store; hydration
+  // turns it back into a vilna-profile/1 page (same shape as the local reference profile).
+
+  const LAYOUT_SCHEMA = 'vilna-layout/1';
+  const LAYOUT_INDEX_SCHEMA = 'vilna-layout-index/1';
+  const LAYOUT_BASE = 'data/vilna-layout';
+  const LAYOUT_LAYER_SCHEMA = 'vilna-layout-layer/1';
+  const LAYOUT_ENTITIES = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" };
+
+  /** Token stream of a block value (spec §3): [{text, seg, sub}] in reading order. */
+  function layoutTokenStream(value) {
+    const out = [];
+    const leaf = (x, seg, sub) => {
+      const t = String(x == null ? '' : x)
+        .replace(/<br\s*\/?>/gi, ' ')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&(nbsp|amp|lt|gt|quot|#39);/g, (m, k) => LAYOUT_ENTITIES[k]);
+      for (const text of t.split(/\s+/)) if (text) out.push({ text, seg, sub });
+    };
+    const deep = (x, seg, sub) => {
+      if (Array.isArray(x)) for (const y of x) deep(y, seg, sub);
+      else leaf(x, seg, sub);
+    };
+    const top = Array.isArray(value) ? value : [value];
+    top.forEach((s, i) => {
+      if (!Array.isArray(s)) { leaf(s, i, null); return; }
+      s.forEach((u, j) => deep(u, i, j));
+    });
+    return out;
+  }
+
+  /**
+   * A layout stream's text from one offline store, with the source entry it is licensed under
+   * (spec §4 names: print.<block> → store.print / printSources; <block> → langs[lang] / sources), or null.
+   */
+  function layoutStreamEntry(store, name, lang) {
+    if (!store || typeof store !== 'object') return null;
+    if (name.startsWith('print.')) {
+      const block = name.slice(6);
+      const ps = store.printSources && store.printSources[block];
+      if (!ps || ps.show !== true) return null;
+      const v = store.print && store.print[block];
+      return v != null ? { value: v, block, entry: ps } : null;
+    }
+    const s = store.sources && store.sources[name] && store.sources[name][lang];
+    if (!s || s.show !== true) return null;
+    const langs = store.langs && store.langs[lang];
+    const v = langs && langs[name];
+    return v != null ? { value: v, block: name, entry: s } : null;
+  }
+
+  /**
+   * Punctuation patches of a run ref (spec §4 `p`): [pos, del, ins] applied in order; pos and del
+   * are UTF-16 code-unit counts into the current text. A patch may not delete a Hebrew letter and
+   * its insertion may not contain a Hebrew, Latin or Cyrillic letter (words come from Sefaria only).
+   */
+  const PATCH_HEB_RE = /[א-תװ-ײיִ-ﭏ]/;
+  const PATCH_NOINS_RE = /[א-תװ-ײיִ-ﭏA-Za-zÀ-ÖØ-öø-ɏЀ-ԯ]/;
+  function applyRunPatches(text, ops) {
+    if (!Array.isArray(ops)) throw LAYOUT_BAD;
+    let s = text;
+    for (const op of ops) {
+      if (!Array.isArray(op) || op.length !== 3) throw LAYOUT_BAD;
+      const [pos, del, ins] = op;
+      if (!Number.isInteger(pos) || !Number.isInteger(del) || pos < 0 || del < 0 || pos + del > s.length) throw LAYOUT_BAD;
+      if (typeof ins !== 'string' || PATCH_NOINS_RE.test(ins)) throw LAYOUT_BAD;
+      if (PATCH_HEB_RE.test(s.slice(pos, pos + del))) throw LAYOUT_BAD;
+      s = s.slice(0, pos) + ins + s.slice(pos + del);
+    }
+    return s;
+  }
+
+  /**
+   * vilna-layout/1 page + offline store → vilna-profile/1 page (spec §7), or null on any mismatch
+   * (layer missing, stream count/hash, unknown stream, bad span, malformed line). `layer` is the
+   * sibling layer object for `lang`; by default the page's own layers[lang]. Inputs are never mutated.
+   */
+  function hydrateLayout(layoutPage, store, lang = 'he', layer = null, opts = {}) {
+    const bad = () => { throw LAYOUT_BAD; };
+    const pdOnly = !!opts && opts.licenseMode === 'pd';
+    const info = new Map(), usedOrder = [];
+    try {
+      const lp = layoutPage;
+      if (!lp || lp.schema !== LAYOUT_SCHEMA || !lp.page || !Array.isArray(lp.faces) || !Array.isArray(lp.regions)) bad();
+      if (!Number.isInteger(lp.daf) || typeof lp.side !== 'string') bad();
+      // Only the immediately previous and next amud may be referenced (spec §8.1; same as the builder).
+      const allowed = layoutNeighbourKeys(lp.daf, lp.side);
+      const L = layer || (lp.layers && lp.layers[lang]) || null;
+      if (!L || typeof L !== 'object' || (L.lang != null && L.lang !== lang)) bad();
+      if (!L.streams || typeof L.streams !== 'object' || !Array.isArray(L.regions) || L.regions.length !== lp.regions.length) bad();
+      const streams = new Map();
+      const gemSegs = new Set();
+      for (const name of Object.keys(L.streams)) {
+        const want = L.streams[name] || {};
+        // <name>@<daf><side>: the same stream of the neighbouring amud (spec §8.1).
+        const at = name.indexOf('@');
+        const suffix = at < 0 ? null : name.slice(at + 1);
+        if (at >= 0 && !allowed.includes(suffix)) bad();
+        const st = at < 0 ? store : (opts && opts.stores && Object.prototype.hasOwnProperty.call(opts.stores, suffix) ? opts.stores[suffix] : null);
+        const got = layoutStreamEntry(st, at < 0 ? name : name.slice(0, at), lang);
+        if (!got) bad();
+        // Licence mode 'pd': a non-PD or special source is never used (spec §8.2).
+        if (pdOnly && (got.entry.special || got.entry.pd !== true)) bad();
+        const toks = layoutTokenStream(got.value);
+        if (toks.length !== want.n || fnv1a64(toks.map(t => t.text).join(' ')) !== want.h) bad();
+        streams.set(name, toks);
+        info.set(name, { stream: name, block: got.block, title: got.entry.title || null,
+          license: got.entry.license || null, special: !!got.entry.special, page: suffix });
+      }
+      // Segment (1-based) of each Gemara token, for the key letters of a translated sheet.
+      const layerTokSegs = streams.has('gemara') ? streams.get('gemara').map(t => t.seg + 1) : null;
+      const refText = ref => {
+        if (typeof ref === 'string' || ref == null) return ref;
+        if (typeof ref !== 'object' || !Array.isArray(ref.r)) bad();
+        const parts = [];
+        for (const span of ref.r) {
+          if (!Array.isArray(span) || span.length !== 3 || !streams.has(span[0])) bad();
+          const toks = streams.get(span[0]);
+          const i0 = span[1], i1 = span[2];
+          if (!Number.isInteger(i0) || !Number.isInteger(i1) || i0 < 0 || i0 > i1 || i1 > toks.length) bad();
+          if (i1 > i0) parts.push(toks.slice(i0, i1).map(t => t.text).join(' '));
+          if (span[0] === 'gemara') for (let t = i0; t < i1; t++) gemSegs.add(toks[t].seg + 1);
+          if (!usedOrder.includes(span[0])) usedOrder.push(span[0]);
+        }
+        let text = parts.join(' ') + (ref.sp ? ' ' : '');
+        if (ref.p !== undefined) text = applyRunPatches(text, ref.p);
+        return text;
+      };
+      const regions = [];
+      lp.regions.forEach((shared, i) => {
+        const lr = L.regions[i];
+        if (lr == null) return; // not shown in this language
+        if (!shared || typeof shared !== 'object' || typeof lr !== 'object') bad();
+        if (lr.flow !== undefined) {
+          // Apparatus flow slot (spec §9.4): geometry only, no text, no lines.
+          if (typeof lr.flow !== 'string' || !Array.isArray(lr.box) || lr.box.length !== 4 ||
+              !lr.box.every(v => Number.isFinite(v)) || !Number.isFinite(lr.maxBottom)) bad();
+          regions.push(Object.assign({}, shared, {
+            flow: lr.flow, box: lr.box.slice(), maxBottom: lr.maxBottom,
+            face: lr.face != null ? lr.face : shared.face, titleFace: lr.titleFace != null ? lr.titleFace : null,
+          }));
+          return;
+        }
+        if (!Array.isArray(lr.lines)) bad();
+        const lines = lr.lines.map(ln => {
+          if (!Array.isArray(ln) || ln.length < 4) bad();
+          const nl = ln.slice();
+          const content = ln[3];
+          if (content == null || typeof content === 'string') return nl;
+          if (!Array.isArray(content)) bad();
+          nl[3] = content.map(run => {
+            if (!Array.isArray(run) || run.length < 2) bad();
+            const nr = run.slice();
+            nr[1] = refText(run[1]);
+            return nr;
+          });
+          return nl;
+        });
+        const out = Object.assign({}, shared, { lines });
+        if (lr.segs !== undefined) out.segs = lr.segs;
+        // Gemara segment starts on this sheet (T2e key letters): [{line, word, seg}], words = tokens of the line.
+        if (shared.id === 'gemara' && streams.has('gemara') && layerTokSegs) {
+          const starts = []; let lastSeg = null;
+          lr.lines.forEach((ln, li) => {
+            const c = ln[3];
+            if (!Array.isArray(c)) return;
+            let w = 0;
+            for (const run of c) {
+              const ref = run && run[1];
+              if (!ref || typeof ref !== 'object' || !Array.isArray(ref.r)) continue;
+              for (const span of ref.r) {
+                if (span[0] !== 'gemara') continue;
+                for (let t = span[1]; t < span[2]; t++, w++) {
+                  const sg = layerTokSegs[t];
+                  if (sg !== lastSeg) { starts.push({ line: li, word: w, seg: sg }); lastSeg = sg; }
+                }
+              }
+            }
+          });
+          out.segStarts = starts;
+        }
+        regions.push(out);
+      });
+      // Margin text of a translated page (margin stack, spec §9.12 / §10.2): {id: {r: [[id, a, b]]}} → per id, one
+      // note per source segment [{seg, text, n}] (n = tokens), checked against the verified streams like any ref.
+      let marginText = null;
+      if (L.marginText != null) {
+        if (typeof L.marginText !== 'object') bad();
+        marginText = {};
+        for (const id of Object.keys(L.marginText)) {
+          const ref = L.marginText[id];
+          if (!ref || typeof ref !== 'object' || !Array.isArray(ref.r)) bad();
+          const notes = [];
+          for (const span of ref.r) {
+            if (!Array.isArray(span) || span.length !== 3 || span[0] !== id || !streams.has(id)) bad();
+            const toks = streams.get(id);
+            const i0 = span[1], i1 = span[2];
+            if (!Number.isInteger(i0) || !Number.isInteger(i1) || i0 < 0 || i0 > i1 || i1 > toks.length) bad();
+            for (let t = i0; t < i1; t++) {
+              const sg = toks[t].seg;
+              const last = notes[notes.length - 1];
+              if (last && last.seg === sg) { last.text += ' ' + toks[t].text; last.n++; }
+              else notes.push({ seg: sg, text: toks[t].text, n: 1 });
+            }
+            if (i1 > i0 && !usedOrder.includes(id)) usedOrder.push(id);
+          }
+          marginText[id] = notes;
+        }
+      }
+      return {
+        schema: PROFILE_SCHEMA, marginText,
+        profileId: lp.profileId, tractateKey: lp.tractateKey, daf: lp.daf, side: lp.side,
+        certifiable: L.certifiable, page: lp.page,
+        faces: Array.isArray(L.faces) ? L.faces : lp.faces, ornaments: lp.ornaments || [],
+        regions,
+        // Streams actually referenced by the page, in first-use order (for the sources note).
+        sourcesUsed: usedOrder.map(n => info.get(n)),
+        // Gemara segments (1-based) this page's Gemara lines show: a translated sheet's apparatus goes here.
+        gemaraSegs: [...gemSegs].sort((a, b) => a - b),
+      };
+    } catch (e) {
+      if (e !== LAYOUT_BAD) console.warn('[vilna-daf] layout hydration failed', e);
+      return null;
+    }
+  }
+  const LAYOUT_BAD = { layoutBad: true };
+
+  // ─── Translation layers, layer/2 (spec §10.6; renderer-3 T4) ───
+  const LAYOUT_LAYER2_SCHEMA = 'vilna-layout-layer/2';
+  /** Labels the engine draws on a translated sheet (spec §10.6: no label is stored in a layer). */
+  const TSHEET_I18N = {
+    en: { cont: '(cont.)', rashi: 'Rashi', tosafot: 'Tosafot', mesoretHaShas: 'Masoret HaShas', einMishpat: 'Ein Mishpat', torahOr: 'Torah Or', gilyonHaShas: 'Gilyon HaShas', ravNissimGaon: 'Rav Nissim Gaon' },
+    ru: { cont: '(продолж.)', rashi: 'Раши', tosafot: 'Тосафот', mesoretHaShas: 'Масорет ха-Шас', einMishpat: 'Эйн Мишпат', torahOr: 'Тора Ор', gilyonHaShas: 'Гилйон ха-Шас', ravNissimGaon: 'Рав Ниссим Гаон' },
+    fr: { cont: '(suite)', rashi: 'Rachi', tosafot: 'Tossafot', mesoretHaShas: 'Massorète HaShas', einMishpat: 'Ein Mishpat', torahOr: 'Torah Or', gilyonHaShas: 'Guilyon HaShas', ravNissimGaon: 'Rav Nissim Gaon' },
+    es: { cont: '(cont.)', rashi: 'Rashi', tosafot: 'Tosafot', mesoretHaShas: 'Masoret HaShas', einMishpat: 'Ein Mishpat', torahOr: 'Torá Or', gilyonHaShas: 'Guilyón HaShás', ravNissimGaon: 'Rav Nisim Gaón' },
+    yi: { cont: '(המשך)', rashi: 'רש״י', tosafot: 'תוספות', mesoretHaShas: 'מסורת הש״ס', einMishpat: 'עין משפט נר מצוה', torahOr: 'תורה אור', gilyonHaShas: 'גליון הש״ס', ravNissimGaon: 'רבינו נסים גאון' },
+    ko: { cont: '(계속)', rashi: '라시', tosafot: '토사포트', mesoretHaShas: '마소라 하-샤스', einMishpat: '에인 미슈파트', torahOr: '토라 오르', gilyonHaShas: '길욘 하-샤스', ravNissimGaon: '라브 니심 가온' },
+  };
+
+  /**
+   * Layer/2 refs-only check (spec §10.6, T1): every run is a ref into the language's streams, no bare
+   * string carries a letter, and no punctuation patch. Returns a reason string, or null when it passes.
+   */
+  function layer2RefsOnly(regions) {
+    for (const r of regions) {
+      if (r == null) continue;
+      if (typeof r !== 'object') return 'schema';
+      if (r.flow !== undefined) continue;
+      if (!Array.isArray(r.lines)) return 'schema';
+      for (const ln of r.lines) {
+        if (!Array.isArray(ln) || ln.length < 4) return 'schema';
+        const c = ln[3];
+        if (c == null) continue;
+        if (typeof c === 'string') { if (/\p{L}/u.test(c)) return 'literal'; continue; }
+        if (!Array.isArray(c)) return 'schema';
+        for (const run of c) {
+          if (!Array.isArray(run) || run.length < 2) return 'schema';
+          const ref = run[1];
+          if (typeof ref === 'string') { if (/\p{L}/u.test(ref)) return 'literal'; continue; }
+          if (!ref || typeof ref !== 'object' || !Array.isArray(ref.r)) return 'schema';
+          if (ref.p !== undefined) return 'patch';
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Faces of a layer/2 page (spec §10.4, §10.6). The builder writes the Hebrew page's face table and the
+   * index of each line's face into it; the printed size of a translated line is that table's size × the
+   * amud's scale k (build.k, as in layoutTranslationSheet's faceSize × k), and its typeface is the bundled
+   * stack of the language (TSHEET.FAMILY): gemara region → gem stack, every commentary region → comm stack.
+   * Returns [[stack, printedPt], …] in the layer's index order, or null when k or the table is unusable.
+   */
+  function translationFaces(lp, layer, lang) {
+    const k = layer.build && Number(layer.build.k);
+    if (!(k > 0) || !Array.isArray(layer.faces)) return null;
+    const fam = TSHEET.FAMILY[lang] || TSHEET.FAMILY.def;
+    const gem = lp.regions.find(r => r && r.id === 'gemara');
+    const gemFace = gem && gem.face != null ? gem.face : 0;
+    const out = [];
+    for (let i = 0; i < layer.faces.length; i++) {
+      const f = layer.faces[i];
+      if (!Array.isArray(f) || !Number.isFinite(Number(f[1]))) return null;
+      // A face already given as a CSS stack (quoted family) keeps its size; anything else is scaled.
+      if (/^['"]/.test(String(f[0]))) out.push([String(f[0]), Number(f[1])]);
+      else out.push([i === gemFace ? fam.gem : fam.comm, Number(f[1]) * k]);
+    }
+    return out;
+  }
+
+  /**
+   * Margin stack plan of a layout page (spec §9.12): the two margin columns of the Hebrew page and, per column,
+   * its blocks in their printed top-to-bottom order. Blocks: the apparatus flow slots (masoretHaShas, einMishpat,
+   * torahOr; kind 'flow') and the line-based margin text (gilyonHaShas, ravNissimGaon; kind 'text'), each on the
+   * physical side (L/R) of its printed centre. A column's x-range is the union of its narrow blocks (narrower than
+   * 0.2 of the page; a wide block, e.g. Rav Nissim Gaon printed under a column, takes the column of its side),
+   * mapped by mapX (σ on a translated sheet); a side without a narrow block mirrors the other column.
+   * Returns {cols: {L?, R?: {x0, x1, top, blocks}}, pw} or null when the page has no margin block.
+   */
+  function marginPlanOf(lp, mapX) {
+    const he = lp && lp.layers && lp.layers.he;
+    if (!he || !Array.isArray(he.regions) || !Array.isArray(lp.regions)) return null;
+    const pw = Number(lp.page && lp.page.w) || 0;
+    const mx = mapX || (x => x);
+    const blocks = [];
+    lp.regions.forEach((r, i) => {
+      if (!r || r.kind !== 'margin') return;
+      const lr = he.regions[i];
+      if (!lr || typeof lr !== 'object') return;
+      if (lr.flow !== undefined) {
+        if (!Array.isArray(lr.box) || lr.box.length !== 4) return;
+        blocks.push({ id: apparatusKeyOf(lr.flow), region: r.id, kind: 'flow', x0: +lr.box[0], x1: +lr.box[2],
+          top: +lr.box[1], bottom: +lr.box[3], face: lr.face != null ? lr.face : r.face,
+          titleFace: lr.titleFace != null ? lr.titleFace : null });
+      } else if (Array.isArray(lr.lines) && lr.lines.some(Array.isArray)) {
+        const ls = lr.lines.filter(Array.isArray);
+        const sz = lp.faces && lp.faces[r.face] ? Number(lp.faces[r.face][1]) || 7 : 7;
+        blocks.push({ id: r.id, region: r.id, kind: 'text', x0: Math.min(...ls.map(l => +l[1])), x1: Math.max(...ls.map(l => +l[2])),
+          top: Math.min(...ls.map(l => +l[0])) - sz, bottom: Math.max(...ls.map(l => +l[0])) + 0.3 * sz,
+          face: r.face, titleFace: null });
+      }
+    });
+    if (!blocks.length || !(pw > 0)) return null;
+    for (const b of blocks) {
+      b.side = (b.x0 + b.x1) / 2 < pw / 2 ? 'L' : 'R';
+      b.narrow = (b.x1 - b.x0) < 0.2 * pw;
+    }
+    const raw = {};
+    for (const side of ['L', 'R']) {
+      const nar = blocks.filter(b => b.side === side && b.narrow);
+      if (nar.length) raw[side] = [Math.min(...nar.map(b => b.x0)), Math.max(...nar.map(b => b.x1))];
+    }
+    if (!raw.L && !raw.R) return null;
+    if (!raw.L) raw.L = [pw - raw.R[1], pw - raw.R[0]];
+    if (!raw.R) raw.R = [pw - raw.L[1], pw - raw.L[0]];
+    const cols = {};
+    for (const side of ['L', 'R']) {
+      const bs = blocks.filter(b => b.side === side).sort((p, q) => p.top - q.top);
+      if (!bs.length) continue;
+      cols[side] = { side, x0: Math.max(3, mx(raw[side][0])), x1: Math.min(pw - 3, mx(raw[side][1])), heX: raw[side].slice(),
+        top: Math.min(...bs.map(b => b.top)), blocks: bs };
+    }
+    return { cols, pw };
+  }
+
+  /**
+   * layer/2 → one hydrated profile page per sheet (each through hydrateLayout, so every stream's n/h is
+   * verified), or {layoutUnusable, reason} when the layer is rejected (the page then renders adaptive).
+   */
+  function hydrateLayer2(lp, store, lang, layer, opts) {
+    const bad = reason => ({ layoutUnusable: true, reason });
+    if (layer.schema !== LAYOUT_LAYER2_SCHEMA || layer.lang !== lang || !layer.streams || typeof layer.streams !== 'object') return bad('schema');
+    if (!Array.isArray(layer.sheets) || !layer.sheets.length) return bad('schema');
+    if (opts && opts.licenseMode === 'pd') return bad('pd');
+    const faces = translationFaces(lp, layer, lang);
+    if (!faces) return bad('faces');
+    const pages = [];
+    // Margin stack geometry (spec §9.12): the Hebrew page's margin columns and block order, σ-mapped (K4).
+    const fr = layer.frame || {};
+    const sig = Number(fr.stretch) || TSHEET.SIGMA;
+    const x0f = fr.x0f != null ? Number(fr.x0f) : TSHEET.X0F;
+    const plan = marginPlanOf(lp, x => x0f + (x - TSHEET.X0F) * sig);
+    if (layer.marginText != null && (typeof layer.marginText !== 'object' || Array.isArray(layer.marginText))) return bad('schema');
+    for (const [si, sh] of layer.sheets.entries()) {
+      if (!sh || !Array.isArray(sh.regions)) return bad('schema');
+      const why = layer2RefsOnly(sh.regions);
+      if (why) return bad(why);
+      const page = hydrateLayout(lp, store, lang, {
+        schema: 'vilna-layout-layer/1', lang, dir: layer.dir, certifiable: layer.certifiable,
+        streams: layer.streams, faces, regions: sh.regions, marginText: si === 0 ? (layer.marginText || null) : null,
+      }, opts);
+      if (!page) return bad('hydrate');
+      page.carryIn = sh.carryIn || null;
+      // Hebrew ornaments sit at Hebrew positions: a translated sheet draws none (spec §10.6); the margin stack
+      // draws its own dividers (spec §9.12).
+      page.ornaments = [];
+      page.marginPlan = plan;
+      pages.push(page);
+    }
+    const mt = pages[0].marginText || null;
+    for (const pg of pages) pg.marginText = mt;
+    // Every shown stream on every sheet (spec §10.4: the sources note lists every stream shown).
+    const used = new Map();
+    for (const pg of pages) for (const u of pg.sourcesUsed) if (u && !used.has(u.stream)) used.set(u.stream, u);
+    for (const pg of pages) { pg.sourcesUsed = [...used.values()]; pg.layoutSheets = pages.length; }
+    return { sheets: pages };
+  }
+
+  // ═════════════════ Translation sheets (spec §10.4; plan §2–§5, renderer-1 T2) ═════════════════
+  // One translated sheet of a vilna-layout/2 layer: Gemara centre, Rashi inner, Tosafot outer, placed
+  // in the Hebrew amud's own column x-ranges (modal line x0/x1 of he layer, σ-mapped by K4). All
+  // coordinates are layout pt; printed size = layout size × K3. Advances are measured in the DOM with
+  // the face named by the font stack (bundled faces only; no generic fallback in any stack).
+  // Not in this function: margin blocks, apparatus slots, header, catchword, the (cont.) labels and
+  // the M-loop (builder, T3). See exportSheetLines for the layer/2 line shape.
+  const TSHEET = {
+    PRINT: 720 / 826,                // K3
+    SIGMA: 1.0698,                   // K4 (frame.stretch overrides)
+    X0F: 58,                         // K1 frame left
+    CORE_TOP: 47, CORE_BOTTOM: 832,  // K1 core y
+    LEAD: { gem: 1.30, comm: 1.22 }, // K14
+    KEY_EM: 0.5,                     // apparatus key box = 0.5 × Gemara size (viewer: insertTranslatedKeys)
+    TOP_LINES: 4,                    // later sheets: commentary lines above the Gemara (§10.4)
+    GUTTER: 15,                      // K26 (pt, layout units x sigma)
+    MARGIN_MIN_PT: 6.0,              // K7 apparatus/margin minimum, printed pt (yi + K9 0.5): §9.4, margin text is never below it
+    RHO: [0.75, 1.50],               // K23 Gemara band factor bounds (0.05 grid)
+    COMM_W: { def: 0.262, min: 0.15, max: 0.40 }, // K24 canonical commentary column (fractions of the core)
+    FAMILY: {                        // bundled faces only (css/daf.css @font-face names)
+      // Stacks of css/daf.css --font-gemara / --font-rashi (fonts worker: NotoSerif-extra covers Ḥ ḥ һ). Builder
+      // measurement and viewer read this one table; keep it in step with the CSS when a face changes.
+      def: { gem: "'VilnaExtra', 'VilnaCyrFrank', 'FrankRuhl', 'RashiScript'", comm: "'VilnaExtra', 'VilnaCyrRashi', 'RashiScript', 'FrankRuhl'" },
+      ko: { gem: "'VilnaKR', 'VilnaExtra', 'FrankRuhl'", comm: "'VilnaKR', 'VilnaExtra', 'RashiScript'" },
+      yi: { gem: "'VilnaExtra', 'FrankRuhl'", comm: "'VilnaExtra', 'FrankRuhl'" },
+    },
+  };
+
+  function tsFamily(lang, which) {
+    const f = TSHEET.FAMILY[lang] || TSHEET.FAMILY.def;
+    return f[which];
+  }
+
+  let _tsHost = null;
+  function tsHost() {
+    if (!_tsHost) {
+      _tsHost = document.createElement('div');
+      _tsHost.setAttribute('aria-hidden', 'true');
+      _tsHost.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;white-space:pre;';
+      document.body.appendChild(_tsHost);
+    }
+    return _tsHost;
+  }
+
+  // Font readiness (T3e): every face of the TSHEET.FAMILY stacks is loaded before the first translation
+  // measurement (tsFontsReady), and no measure taken while a face is loading is cached (it may be a fallback).
+  const TS_FONT_SAMPLE = 'אבגדהוזחטיכלמנסעפצקרשתךםןףץ ײַ װױײ ׳״ ־ AaZz ÀÉÑßÖüéèêçñ ‘’“”„«»—–… ' +
+    'АБВЖЙЯабвжйяё\u0301\u0300\u0306\u0323\u0331 һҺӣғқүҳәӡ ḤḥĤĥḵẒẓāōŌěəśšʻʼʿΧ\u00AD\u2011‟‡№⅓ ' +
+    '가나다라마바사아자차카타파하 수장';
+  let _tsFontsOk = false, _tsUnstable = 0;
+  function tsFontsLoaded() { return typeof document !== 'undefined' && !!document.fonts && document.fonts.status === 'loaded'; }
+  async function tsFontsReady() {
+    if (typeof document === 'undefined' || !document.fonts) return false;
+    const fams = new Set();
+    for (const f of Object.values(TSHEET.FAMILY)) for (const st of [f.gem, f.comm]) {
+      for (const n of st.split(',')) fams.add(n.trim().replace(/^['"]|['"]$/g, ''));
+    }
+    for (const fam of fams) {
+      try { await document.fonts.load(`16px "${fam}"`, TS_FONT_SAMPLE); } catch (e) { /* a missing family is reported by the font check */ }
+    }
+    await document.fonts.ready;
+    _tsAdv.clear(); _tsInk.clear(); _tsBase.clear();
+    _tsFontsOk = tsFontsLoaded();
+    return _tsFontsOk;
+  }
+
+  const _tsAdv = new Map();
+  // Advance of `text` in layout pt at face size `size` (measured at the face size, as the units files).
+  function tsAdvance(family, size, text) {
+    const key = family + '|' + size + '|' + text;
+    let w = _tsAdv.get(key);
+    if (w === undefined) {
+      const s = document.createElement('span');
+      s.style.fontFamily = family;
+      s.style.fontSize = size + 'px';
+      // The same shaping as the strict lines (css .policy-strict .vl): no kerning, no ligatures (T2e).
+      s.style.fontKerning = 'none';
+      s.style.fontVariantLigatures = 'none';
+      s.textContent = text;
+      tsHost().appendChild(s);
+      w = s.getBoundingClientRect().width;
+      s.remove();
+      if (tsFontsLoaded()) _tsAdv.set(key, w); else _tsUnstable++;
+    }
+    return w;
+  }
+
+  const _tsBase = new Map();
+  // Baseline offset from the top of a line box of height lh (layout pt), measured in the DOM.
+  function tsBaseOffset(family, size, lh) {
+    const key = family + '|' + size + '|' + lh;
+    let v = _tsBase.get(key);
+    if (v === undefined) {
+      const d = document.createElement('div');
+      d.style.cssText = 'position:absolute;top:0;left:0;white-space:pre;font-family:' + family +
+        ';font-size:' + size + 'px;line-height:' + lh + 'px;';
+      const t = document.createElement('span');
+      t.textContent = 'Hx';
+      const m = document.createElement('span');
+      m.style.cssText = 'display:inline-block;width:0;height:0;';
+      d.appendChild(t);
+      d.appendChild(m);
+      tsHost().appendChild(d);
+      v = m.getBoundingClientRect().top - d.getBoundingClientRect().top;
+      d.remove();
+      if (tsFontsLoaded()) _tsBase.set(key, v); else _tsUnstable++;
+    }
+    return v;
+  }
+
+  // Modal [x0, x1] of a region's lines (ties: first seen), layer/1 line = [baseline, x0, x1, runs].
+  function tsModal(lines) {
+    const counts = new Map();
+    let best = null, bestN = 0;
+    for (const ln of lines || []) {
+      const key = Math.round(ln[1] * 1000) + '|' + Math.round(ln[2] * 1000);
+      const n = (counts.get(key) || 0) + 1;
+      counts.set(key, n);
+      if (n > bestN) { bestN = n; best = [ln[1], ln[2]]; }
+    }
+    return best;
+  }
+
+  // Narrowest Gemara range that recurs (>= 3 lines): the Gemara's band beside both commentary columns.
+  // (A wide modal, e.g. full width where one commentary column is absent, is not the narrow band.)
+  function tsNarrowModal(lines) {
+    const counts = new Map();
+    for (const ln of lines || []) {
+      const key = Math.round(ln[1] * 1000) + '|' + Math.round(ln[2] * 1000);
+      const c = counts.get(key) || { n: 0, x0: ln[1], x1: ln[2] };
+      c.n++;
+      counts.set(key, c);
+    }
+    let best = null;
+    for (const c of counts.values()) {
+      if (c.n < 3) continue;
+      if (!best || (c.x1 - c.x0) < (best.x1 - best.x0) - 1e-9 || (Math.abs((c.x1 - c.x0) - (best.x1 - best.x0)) < 1e-9 && c.n > best.n)) best = c;
+    }
+    return best ? [best.x0, best.x1] : tsModal(lines);
+  }
+
+  // First slot at or after y where a line of height lh fits inside one band and above the bottom.
+  function tsNextSlot(bands, y, lh, bottom) {
+    for (let bi = 0; bi < bands.length; bi++) {
+      const b = bands[bi];
+      const s = Math.max(y == null ? -Infinity : y, b.y0);
+      if (s + lh <= b.y1 + 1e-9 && s + lh <= bottom + 1e-9) return { y: s, bi };
+    }
+    return null;
+  }
+
+  // Glyph extents of a line (canvas actualBoundingBox*, bundled faces, layout pt): ascent above and descent
+  // below its baseline. Used for the ink-clearance leading rule (T2d item 3).
+  const _tsInk = new Map();
+  let _tsInkCtx = null;
+  const TS_INK_GAP = 0.25;   // pt of clear space between one line's ink bottom and the next line's ink top
+  function tsInk(family, size, text) {
+    const key = family + '|' + size + '|' + text;
+    let v = _tsInk.get(key);
+    if (v === undefined) {
+      if (!_tsInkCtx) _tsInkCtx = document.createElement('canvas').getContext('2d');
+      // Measured at 200 px and scaled: canvas ink metrics are whole pixels at small sizes (up to 0.5 px error).
+      _tsInkCtx.font = `200px ${family}`;
+      _tsInkCtx.fontKerning = 'none';
+      const m = _tsInkCtx.measureText(text);
+      v = { asc: m.actualBoundingBoxAscent * size / 200, desc: m.actualBoundingBoxDescent * size / 200 };
+      if (tsFontsLoaded()) _tsInk.set(key, v); else _tsUnstable++;
+    }
+    return v;
+  }
+
+  // Greedy line breaking of tokens [start, end) of one column. Words only: a token wider than its band
+  // stops the column (reported as tooWide). A paragraph start (paras) always begins a new line.
+  // Leading (T2d): a line's top is at least the nominal pitch below the previous top, and its ink top clears
+  // the previous line's ink bottom by TS_INK_GAP, so the layout never produces ink contact.
+  function tsBreakColumn(c) {
+    const lines = [];
+    const sp = tsAdvance(c.fam, c.size, ' ');
+    const lh = c.lh;
+    const boff = tsBaseOffset(c.fam, c.size, lh);
+    let i = c.start, y = null, tooWide = 0, prevInk = null;
+    while (i < c.end) {
+      let pos = tsNextSlot(c.bands, y, lh, c.bottom);
+      if (!pos) break;
+      let top = pos.y, bi = pos.bi, j = i, w = 0, ink = null, placed = false, band = null;
+      for (let attempt = 0; attempt < 6 && !placed; attempt++) {
+        band = c.bands[bi];
+        const W = band.x1 - band.x0;
+        j = i; w = 0;
+        while (j < c.end) {
+          const tw = tsAdvance(c.fam, c.size, c.texts[j]) + (c.extra ? c.extra[j] || 0 : 0);
+          const nw = j === i ? tw : w + sp + tw;
+          if (nw > W + 1e-6) break;
+          w = nw;
+          j++;
+          if (j < c.end && c.paras.has(j)) break;
+        }
+        if (j === i) break;
+        ink = tsInk(c.fam, c.size, c.texts.slice(i, j).join(' '));
+        let need = prevInk == null ? -Infinity : prevInk + ink.asc + TS_INK_GAP - boff;
+        // Cross-region ink rule (T3e): the ink of a line of another region (c.obstacles: lines of the other
+        // columns) under the band's x-range is cleared by TS_INK_GAP; the line moves below it.
+        if (c.obstacles) {
+          const bl = top + boff;
+          for (const o of c.obstacles) {
+            if (!(o.x0 < band.x1 - 1e-6 && band.x0 < o.x1 - 1e-6)) continue;
+            if (bl - ink.asc < o.baseline + o.inkD + TS_INK_GAP - 1e-6 && o.baseline - o.inkA < bl + ink.desc + TS_INK_GAP - 1e-6) {
+              need = Math.max(need, o.baseline + o.inkD + TS_INK_GAP + ink.asc - boff);
+            }
+          }
+        }
+        if (top >= need - 1e-9) { placed = true; break; }
+        const p2 = tsNextSlot(c.bands, need, lh, c.bottom);
+        if (!p2) break;
+        top = p2.y; bi = p2.bi;
+      }
+      if (!placed) { if (j === i) tooWide++; break; }
+      y = top;
+      const last = j === c.end || c.paras.has(j);
+      const x0 = !last ? band.x0 : (c.rtl ? band.x1 - w : band.x0);
+      const x1 = !last ? band.x1 : (c.rtl ? band.x1 : band.x0 + w);
+      lines.push({ id: c.id, stream: c.stream, face: c.face, size: c.size, top: y, bottom: y + lh,
+        baseline: y + boff, x0, x1, natW: w, a: i, b: j, last, inkA: ink.asc, inkD: ink.desc });
+      prevInk = y + boff + ink.desc;
+      y += lh;
+      i = j;
+    }
+    return { lines, next: i, tooWide };
+  }
+
+  function tsCapacity(bands, lh, bottom) {
+    let n = 0, y = null;
+    for (;;) {
+      const pos = tsNextSlot(bands, y, lh, bottom);
+      if (!pos) break;
+      n++;
+      y = pos.y + lh;
+    }
+    return n;
+  }
+
+  /**
+   * Lays out ONE translated sheet (spec §10.4, §10.4a). Returns a plain object; see exportSheetLines.
+   *  frame      { box:[58,15,621,841], stretch:1.0698, x0f?:58, coreTop?:47, coreBottom?:832,
+   *               rho?: Gemara band factor (K23: 0.75–1.50 on a 0.05 grid; default 1) }
+   *  heGeom     { faces: page.faces, coreTop?, regions: [{ id:'gemara'|'inner'|'outer', face, lines }] }
+   *             lines = the amud's he layer/1 lines [baseline, x0, x1, runs] (Hebrew geometry only).
+   *             inner / outer may be missing (absent column, §10.4a rule 5); null entries are ignored.
+   *  sheetUnits { first: bool, gem:[i0,i1), rashi:[i0,i1), tosafot:[i0,i1),
+   *               streams:{gemara, rashi, tosafot} (layoutTokenStream arrays: {text,...}),
+   *               paras?:{gemara, rashi, tosafot} (token indices that start a new paragraph) }
+   *  carryIn    { rashi: tokenIdx|null, tosafot: tokenIdx|null } from the previous sheet (null on sheet 1)
+   *  k          scale (K12 grid; the caller checks the grid and the bounds)
+   *  lang       'en' | 'ru' | 'fr' | 'es' | 'ko' | 'yi'
+   */
+  function layoutTranslationSheet(frame, heGeom, sheetUnits, carryIn, k, lang) {
+    if (typeof document === 'undefined') throw new Error('layoutTranslationSheet needs a DOM');
+    if (!_tsFontsOk) throw new Error('layoutTranslationSheet: await VilnaDaf.tsFontsReady() before the first measurement');
+    const unstable0 = _tsUnstable;
+    const fr = frame || {};
+    const su = sheetUnits || {};
+    const ci = carryIn || {};
+    const L = String(lang || 'en');
+    const sig = Number(fr.stretch) || TSHEET.SIGMA;
+    const x0f = fr.x0f != null ? Number(fr.x0f) : TSHEET.X0F;
+    const coreTop = fr.coreTop != null ? Number(fr.coreTop) : TSHEET.CORE_TOP;
+    const coreBottom = fr.coreBottom != null ? Number(fr.coreBottom) : TSHEET.CORE_BOTTOM;
+    const rho = fr.rho != null ? Number(fr.rho) : 1;
+    if (!(rho >= TSHEET.RHO[0] - 1e-9 && rho <= TSHEET.RHO[1] + 1e-9) || Math.abs(rho * 20 - Math.round(rho * 20)) > 1e-6) {
+      throw new Error(`translation sheet: rho ${fr.rho} is outside K23 (0.75–1.50, 0.05 grid)`);
+    }
+    const mapX = x => x0f + (x - TSHEET.X0F) * sig;
+    const reg = id => (heGeom.regions || []).find(r => r && r.id === id) || null;
+    const gemR = reg('gemara'), innR = reg('inner'), outR = reg('outer');
+    if (!gemR) throw new Error('translation sheet: he geometry needs the gemara region');
+    const faceSize = r => Number(heGeom.faces[r.face][1]);
+    const gemFirst = Math.min(...gemR.lines.map(l => l[0]));
+    const heCoreTop = heGeom.coreTop != null ? Number(heGeom.coreTop) : TSHEET.CORE_TOP;
+    const belowGem = lines => (lines || []).filter(l => l[0] >= gemFirst);
+    // Absent column (§10.4a rule 5): no lines of that column below the Gemara start (Berachot 32a, 56b, 64a).
+    const inP = !!innR && belowGem(innR.lines).length > 0;
+    const outP = !!outR && belowGem(outR.lines).length > 0;
+    if (!inP && !outP) throw new Error('translation sheet: he geometry has no commentary column');
+    const colLines = { in: inP ? innR.lines : [], out: outP ? outR.lines : [] };
+    const present0 = { in: inP, out: outP };
+    const Fg = faceSize(gemR), Fc = faceSize(inP ? innR : outR);
+    const first = !!su.first;
+    const sG = k * Fg, sC = k * Fc;
+    const lhG = TSHEET.LEAD.gem * sG, lhC = TSHEET.LEAD.comm * sC;
+    // Last sheet with a catchword: one Gemara line stays free at the bottom for it (T2d item 2).
+    const catchOn = !!(su.last && su.catch && Array.isArray(su.catch.tokens) && su.catch.tokens.length);
+    const coreBottomX = catchOn ? coreBottom - lhG : coreBottom;
+    // Margin text blocks (T2e): heGeom.margins = [{id, lines (he layer lines of that region)}]. Each block keeps
+    // its he region's x-range and top; it grows down to the next slot or block below it, or the core bottom.
+    const gut = TSHEET.GUTTER * sig;                       // K26
+    const gemTop = first ? coreTop + (gemFirst - heCoreTop) * k : coreTop + TSHEET.TOP_LINES * lhC;
+
+    // ---- §10.4a rule 1: canonical columns from the he layer (all lines of the three regions, σ-mapped).
+    const allX = [...gemR.lines, ...colLines.in, ...colLines.out].flatMap(l => [mapX(l[1]), mapX(l[2])]);
+    const cL = Math.min(...allX), cR = Math.max(...allX), Wc = cR - cL, cmid = (cL + cR) / 2;
+    const cen = ls => ls.reduce((s, l) => s + (l[1] + l[2]) / 2, 0) / ls.length;
+    let cLeft;
+    if (inP && outP) {
+      cLeft = cen(innR.lines) <= cen(outR.lines) ? 'in' : 'out';
+    } else {
+      // One column only: it is on the side of the Gemara it sits beside; the absent one takes the other side.
+      const pc = tsModal(belowGem(inP ? innR.lines : outR.lines));
+      const gm = tsNarrowModal(gemR.lines);
+      const presentLeft = !(pc[0] > (gm[0] + gm[1]) / 2);
+      cLeft = (presentLeft === inP) ? 'in' : 'out';
+    }
+    const cRight = cLeft === 'in' ? 'out' : 'in';
+    // K24: modal narrow-line width of the column (below the Gemara start), if within [0.15, 0.40] of the core
+    // and supported by >= 3 lines; else 0.262 of the core. An absent column has width 0.
+    const ccol = lines => {
+      const nl = belowGem(lines).filter(l => (l[2] - l[1]) * sig <= TSHEET.COMM_W.max * Wc);
+      const m = nl.length >= 3 ? tsModal(nl) : null;
+      const w = m ? (m[1] - m[0]) * sig : null;
+      return (w != null && w >= TSHEET.COMM_W.min * Wc && w <= TSHEET.COMM_W.max * Wc) ? w : TSHEET.COMM_W.def * Wc;
+    };
+    const wcol = { in: inP ? ccol(innR.lines) : 0, out: outP ? ccol(outR.lines) : 0 };
+    const wl = wcol[cLeft], wr = wcol[cRight];
+    // Canonical Gemara band (between the commentary columns with K26 gutters; core edge beside an absent column).
+    const gemC = [cL + wl + (wl ? gut : 0), cR - wr - (wr ? gut : 0)];
+    // ---- §10.4a rule 2: Gemara band factor rho. The change (rho - 1) x width is taken from / given to the two
+    // commentary columns in proportion to their canonical widths; their outer core edges never move.
+    const d = (rho - 1) * (gemC[1] - gemC[0]);
+    const fl = wl + wr > 0 ? wl / (wl + wr) : 0.5;
+    const nl = wl ? [cL, cL + wl - d * fl] : [cL, cL];
+    const nr = wr ? [cR - (wr - d * (1 - fl)), cR] : [cR, cR];
+    if ((wl && !(nl[1] > nl[0])) || (wr && !(nr[1] > nr[0]))) throw new Error(`translation sheet: rho ${rho} leaves a commentary column with no width`);
+    const narrow = { [cLeft]: nl, [cRight]: nr };
+    const gemN = [wl ? nl[1] + gut : cL, wr ? nr[0] - gut : cR];
+    // ---- §10.4a rule 3: wrap bands (half of the core while the partner column is present).
+    const half = { [cLeft]: [cL, cmid - gut / 2], [cRight]: [cmid + gut / 2, cR] };
+
+    const toks = arr => (arr || []).map(t => (t && typeof t === 'object' ? String(t.text) : String(t)));
+    const streams = su.streams || {};
+    const texts = { gemara: toks(streams.gemara), rashi: toks(streams.rashi), tosafot: toks(streams.tosafot) };
+    const paras = name => new Set((su.paras && su.paras[name]) || []);
+    const rtl = L === 'yi';
+    const famG = tsFamily(L, 'gem'), famC = tsFamily(L, 'comm');
+    const gemRange = su.gem || [0, 0];
+    const rRange = [ci.rashi != null ? ci.rashi : (su.rashi || [0, 0])[0], (su.rashi || [0, 0])[1]];
+    const tRange = [ci.tosafot != null ? ci.tosafot : (su.tosafot || [0, 0])[0], (su.tosafot || [0, 0])[1]];
+    // Key reservation (T2g): su.keySegs = {segNum: count} (apparatus entries anchored to that Gemara segment, from
+    // page.links). A key box is TS_KEY_EM × the Gemara size wide; it is reserved in front of the first token of its
+    // segment, as the viewer draws it, so the line is laid out with the keys in place.
+    const keyCountAt = {};
+    const gemStreamTok = streams.gemara || [];
+    if (su.keySegs && gemStreamTok.length) {
+      gemStreamTok.forEach((tok, t) => {
+        if (t > 0 && tok.seg === gemStreamTok[t - 1].seg) return;
+        const cnt = su.keySegs[(Number(tok.seg) || 0) + 1] || 0;
+        if (cnt > 0) keyCountAt[t] = cnt;
+      });
+    }
+    const keyAdv = sG * TSHEET.KEY_EM;
+    const extraG = gemStreamTok.map((_, t) => (keyCountAt[t] ? keyCountAt[t] * keyAdv : 0));
+    const run = (id, stream, face, fam, size, lh, bands, range, obstacles) => tsBreakColumn({
+      id, stream, face, fam, size, lh, bands, bottom: coreBottomX, rtl, texts: texts[stream],
+      start: range[0], end: range[1], paras: paras(stream),
+      extra: stream === 'gemara' ? extraG : null, obstacles: obstacles && obstacles.length ? obstacles : null,
+    });
+    // Ink contacts between lines of different regions (T3e): x-ranges cross and the ink intervals (plus
+    // TS_INK_GAP) meet. 0 by construction when the solver converges; the loop runs until it is 0.
+    const inkMeet = (A, B) => A.x0 < B.x1 - 1e-6 && B.x0 < A.x1 - 1e-6
+      && A.baseline - A.inkA < B.baseline + B.inkD + TS_INK_GAP - 1e-6 && B.baseline - B.inkA < A.baseline + A.inkD + TS_INK_GAP - 1e-6;
+    const crossInkOf = groups => {
+      let n = 0;
+      for (let p = 0; p < groups.length; p++) for (let q = p + 1; q < groups.length; q++)
+        for (const A of groups[p]) for (const B of groups[q]) if (inkMeet(A, B)) n++;
+      return n;
+    };
+    // Band solver (staircase, canonical columns). A column is "present" at y while y is above its content
+    // end (ends.in / ends.out) and the Gemara while y is above ends.gem.
+    //  - Gemara: narrow; a side widens to the core edge where the commentary column on that side ended.
+    //  - Commentary column c: above the Gemara start, its half band while the other column is present (else
+    //    full core width); beside the Gemara, its narrow band; below the Gemara end, its half band while the
+    //    other column is present, else full core width.
+    // Solved by iterating the content ends (fixed order, at most 8 rounds from all-present).
+    // §10.4 item 4: the margin/apparatus slots of the he layer, σ-mapped to this sheet (same boxes on every
+    // sheet; their entries are placed by anchor segment). A band that a slot overlaps gives way to it.
+    // A slot's σ-mapped right edge may pass the page edge (the stretch widens the margins): it is clamped to
+    // the page (heGeom.pageW, default the Berachot page width 643.575 pt), so no note is drawn off the sheet.
+    const pageW = Number(heGeom.pageW) || 643.575;
+    const slots = (heGeom.flows || []).map(f => ({ id: f.id, face: f.face, titleFace: f.titleFace,
+      box: [Math.max(3, mapX(f.box[0])), f.box[1], Math.min(mapX(f.box[2]), pageW - 3), f.box[3]], maxBottom: f.maxBottom }))
+      .filter(sl => sl.box[2] - sl.box[0] > 10);
+    const flowYs = slots.flatMap(sl => [sl.box[1], sl.box[3]]);
+    const flowCut = (a, b, xr) => {
+      let x0 = xr[0], x1 = xr[1];
+      for (const sl of slots) {
+        if (!(sl.box[1] < b - 1e-9 && sl.box[3] > a + 1e-9)) continue;
+        if ((sl.box[0] + sl.box[2]) / 2 > cmid) x1 = Math.min(x1, sl.box[0] - gut);
+        else x0 = Math.max(x0, sl.box[2] + gut);
+      }
+      return [x0, x1];
+    };
+    const bandsFrom = (fn, cutsY) => {
+      const cuts = [...new Set([coreTop, gemTop, ...cutsY, ...flowYs, coreBottomX].filter(v => v >= coreTop && v <= coreBottomX))].sort((x, y) => x - y);
+      const out = [];
+      for (let q = 0; q + 1 < cuts.length; q++) {
+        const a = cuts[q], b = cuts[q + 1];
+        if (b - a <= 1e-9) continue;
+        const xr = flowCut(a, b, fn((a + b) / 2));
+        if (!(xr[1] > xr[0])) continue;
+        const last = out[out.length - 1];
+        if (last && last.y1 === a && Math.abs(last.x0 - xr[0]) < 1e-9 && Math.abs(last.x1 - xr[1]) < 1e-9) last.y1 = b;
+        else out.push({ y0: a, y1: b, x0: xr[0], x1: xr[1] });
+      }
+      return out;
+    };
+    const endOf = (res, range) => (res.next < range[1] ? coreBottomX : (res.lines.length ? Math.max(...res.lines.map(l => l.bottom)) : coreTop));
+    let ends = { gem: coreBottomX, in: inP ? coreBottomX : coreTop, out: outP ? coreBottomX : coreTop };
+    let G, R, T, bandsG, bandsR, bandsT, it = 0, crossInk = 0;
+    for (it = 0; it < 12; it++) {
+      const present = (c, y) => y < ends[c] - 1e-9;
+      bandsG = bandsFrom(y => [present(cLeft, y) ? gemN[0] : cL, present(cRight, y) ? gemN[1] : cR],
+        [ends.in, ends.out]).map(b => ({ y0: Math.max(b.y0, gemTop), y1: b.y1, x0: b.x0, x1: b.x1 })).filter(b => b.y1 > b.y0 + 1e-9);
+      G = run('gemara', 'gemara', 0, famG, sG, lhG, bandsG, gemRange, R && T ? [...R.lines, ...T.lines] : null);
+      const gemEnd = G.next < gemRange[1] ? coreBottomX : (G.lines.length ? Math.max(...G.lines.map(l => l.bottom)) : gemTop);
+      const gPresent = y => y < gemEnd - 1e-9;
+      const colBand = (c, y) => {
+        const other = c === 'in' ? 'out' : 'in';
+        if (y < gemTop) return present(other, y) ? half[c] : [cL, cR];
+        if (gPresent(y)) return narrow[c];
+        return present(other, y) ? half[c] : [cL, cR];
+      };
+      bandsR = bandsFrom(y => colBand('in', y), [gemEnd, ends.out]);
+      bandsT = bandsFrom(y => colBand('out', y), [gemEnd, ends.in]);
+      R = run('inner', 'rashi', 1, famC, sC, lhC, bandsR, rRange, [...G.lines, ...(T ? T.lines : [])]);
+      T = run('outer', 'tosafot', 1, famC, sC, lhC, bandsT, tRange, [...G.lines, ...R.lines]);
+      const next = { gem: gemEnd, in: endOf(R, rRange), out: endOf(T, tRange) };
+      crossInk = crossInkOf([G.lines, R.lines, T.lines]);
+      const same = next.gem === ends.gem && next.in === ends.in && next.out === ends.out && crossInk === 0;
+      ends = next;
+      if (same) break;
+    }
+    const lines = [...G.lines, ...R.lines, ...T.lines];
+    // ---- Margin text blocks (T2e, §10.2 unanchored margin entries): in order over the sheets. A block's text
+    // (su.margins[id].tokens, from store.langs[lang][id]) is set in its box, on every sheet, from its carried
+    // position; what does not fit carries to the next sheet. A block without a translation (no tokens) is empty.
+    const marginOut = {}, marginCarry = {};
+    const faceBaseN = (heGeom.faces || []).length, facesExtra = [];
+    let marginStalls = 0;
+    const mBlocks = (heGeom.margins || []).filter(m => m && Array.isArray(m.lines) && m.lines.length);
+    const mBoxes = mBlocks.map(m => {
+      const xs = m.lines.flatMap(l => [mapX(l[1]), mapX(l[2])]);
+      const ys = m.lines.map(l => l[0]);
+      const x0 = Math.max(3, Math.min(...xs)), x1 = Math.min(pageW - 3, Math.max(...xs));
+      const y0 = Math.max(coreTop, Math.min(...ys) - sC);
+      // Margin text is set in the margin region's own he face (its printed size × k), as the he layer does, but
+      // never below the margin minimum (§9.4, K7: 6.0 pt printed, yi 6.5): margin text is sized independently of k.
+      // A raised size is a facesExtra entry stored as size / k at 3 decimals (exportSheetLines): it is rounded UP on
+      // that grid, so that the size the viewer prints (stored × k) is never below the minimum (T3e).
+      const sMin = (TSHEET.MARGIN_MIN_PT + (L === 'yi' ? 0.5 : 0)) / TSHEET.PRINT;
+      const sHe = k * Number(heGeom.faces[m.face][1]);
+      const sMinQ = (Math.ceil(sMin / k * 1000 - 1e-6) / 1000) * k;
+      const sM = sHe >= sMin ? sHe : sMinQ;
+      return { id: m.id, x0, x1, y0, y1: coreBottomX, face: m.face, size: sM, sMin: Math.min(sM, sMinQ), raised: sM > sHe + 1e-9 };
+    });
+    // Blocks that share a margin column split its largest free stretch (between the slots beside it) into equal
+    // parts, in the order of their he regions. A block alone takes the whole free stretch.
+    const groups = [];
+    for (const bx of [...mBoxes].sort((p, q) => p.y0 - q.y0)) {
+      const g = groups.find(gr => gr.some(o => o.x0 < bx.x1 && bx.x0 < o.x1));
+      if (g) g.push(bx); else groups.push([bx]);
+    }
+    for (const g of groups) {
+      const gx0 = Math.min(...g.map(b => b.x0)), gx1 = Math.max(...g.map(b => b.x1));
+      const busy = slots.filter(o => o.box[0] < gx1 && gx0 < o.box[2] && o.box[3] > coreTop && o.box[1] < coreBottomX)
+        .map(o => [o.box[1] - gut, o.box[3] + gut]).sort((p, q) => p[0] - q[0]);
+      const free = [];
+      let cur = coreTop;
+      for (const [a, b] of busy) { if (a > cur) free.push([cur, a]); cur = Math.max(cur, b); }
+      if (cur < coreBottomX) free.push([cur, coreBottomX]);
+      const best = free.reduce((m, f) => (f[1] - f[0] > m[1] - m[0] ? f : m), [coreTop, coreTop]);
+      const h = (best[1] - best[0]) / g.length;
+      g.forEach((bx, i) => { bx.y0 = best[0] + i * h; bx.y1 = best[0] + (i + 1) * h - gut; });
+    }
+    // facesExtra entry of a margin size (size / k on the 3-decimal grid of exportSheetLines) -> face index
+    const extraFace = (size, tid) => {
+      let fe = facesExtra.findIndex(x => Math.abs(x.size - size / k) < 1e-6);
+      if (fe < 0) { facesExtra.push({ tid, size: size / k }); fe = facesExtra.length - 1; }
+      return faceBaseN + fe;
+    };
+    for (const bx of mBoxes) {
+      const mt = su.margins && su.margins[bx.id];
+      const toksM = mt && Array.isArray(mt.tokens) ? toks(mt.tokens) : [];
+      // carried position: a block finished on an earlier sheet has null there (nothing more to place)
+      const endM = mt && mt.range ? mt.range[1] : toksM.length;
+      const startM = ci.margins && bx.id in ci.margins ? (ci.margins[bx.id] == null ? endM : ci.margins[bx.id]) : (mt && mt.range ? mt.range[0] : 0);
+      marginOut[bx.id] = { lines: [], next: startM, box: [bx.x0, bx.y0, bx.x1, bx.y1] };
+      if (!toksM.length || !(endM > startM) || !(bx.y1 > bx.y0 + lhC) || !(bx.x1 > bx.x0)) { marginCarry[bx.id] = startM < endM ? startM : null; continue; }
+      const bands = flowCut(bx.y0, bx.y1, [bx.x0, bx.x1]);
+      const band = [{ y0: bx.y0, y1: bx.y1, x0: bands[0], x1: bands[1] }];
+      if (!(band[0].x1 > band[0].x0)) { marginCarry[bx.id] = startM < endM ? startM : null; continue; }
+      // No word may be dropped (T2f): a block whose widest word does not fit its column is set in a smaller size
+      // (down to 0.7 of its face), as its own face entry (facesExtra) appended after the he faces. Below that: stall.
+      const bandW = band[0].x1 - band[0].x0;
+      let sMx = bx.size, longest = 0;
+      for (let q = startM; q < endM; q++) longest = Math.max(longest, tsAdvance(famC, sMx, toksM[q]));
+      let faceIdx = bx.face, tid = bx.raised ? 'margin-min' : null;
+      if (longest > bandW * 0.98) {
+        // size / k floored on the 3-decimal grid (the stored size is the printed one)
+        const f2 = (Math.floor(sMx * (bandW * 0.98 / longest) / k * 1000) / 1000) * k;
+        // reduced at most to 0.7 of the face, and never below the margin minimum (§9.4)
+        if (f2 >= 0.7 * bx.size && f2 >= bx.sMin - 1e-9) { sMx = f2; tid = 'margin-reduced'; }
+      }
+      if (tid) faceIdx = extraFace(sMx, tid);
+      const res = tsBreakColumn({ id: bx.id, stream: bx.id, face: faceIdx, fam: famC, size: sMx, lh: TSHEET.LEAD.comm * sMx, bands: band,
+        bottom: bx.y1, rtl, texts: toksM, start: startM, end: endM, paras: new Set() });
+      const stalled = res.next === startM && startM < endM;
+      if (stalled) marginStalls += endM - startM;
+      marginOut[bx.id] = { lines: res.lines, next: res.next, box: [bx.x0, bx.y0, bx.x1, bx.y1], face: faceIdx, size: sMx };
+      marginCarry[bx.id] = res.next < endM ? res.next : null;
+    }
+    // §10.6 catchword (last sheet only): the first words of the next amud's Gemara (stream su.catch.stream,
+    // e.g. gemara@3a), under the Gemara's last line in the Gemara band, where no line or slot is in the way.
+    let catchLine = null;
+    const cs = su.catch;
+    if (su.last && cs && Array.isArray(cs.tokens) && cs.tokens.length) {
+      const cw = cs.tokens.map(t => (t && typeof t === 'object' ? String(t.text) : String(t)));
+      const bw = tsBaseOffset(famG, sG, lhG);
+      const cx0 = gemN[0], cx1 = gemN[1];
+      let m = 0, wsum = 0;
+      while (m < cw.length) {
+        const nw = m === 0 ? tsAdvance(famG, sG, cw[0]) : wsum + tsAdvance(famG, sG, ' ') + tsAdvance(famG, sG, cw[m]);
+        if (nw > (cx1 - cx0) + 1e-6) break;
+        wsum = nw; m++;
+      }
+      if (m > 0) {
+        const w = wsum;
+        const x0 = rtl ? cx1 - w : cx0;
+        const cInk = tsInk(famG, sG, cw.slice(0, m).join(' '));
+        const top0 = G.lines.length ? Math.max(...G.lines.map(l => l.bottom)) : gemTop;
+        // Candidate tops (T3e): under the Gemara's last line, under each line or slot, the ink clearance of each
+        // line, and the reserved last line (coreBottom - lhG); the first free one in reading order is taken.
+        const cand = [top0, coreBottom - lhG, ...lines.map(l => l.bottom), ...slots.map(sl => sl.box[3]),
+          ...lines.map(l => l.baseline + l.inkD + TS_INK_GAP + cInk.asc - bw + 1e-6)]
+          .filter(t => t >= top0 - 1e-9 && t + lhG <= coreBottom + 1e-9).sort((p, q) => p - q);
+        for (const top of cand) {
+          const bx0 = x0, bx1 = x0 + w, by0 = top, by1 = top + lhG;
+          const probe = { x0: bx0, x1: bx1, baseline: by0 + bw, inkA: cInk.asc, inkD: cInk.desc };
+          const hit = lines.some(l => (l.x0 < bx1 - 1e-6 && bx0 < l.x1 - 1e-6 && l.top < by1 - 1e-6 && by0 < l.bottom - 1e-6) || inkMeet(probe, l))
+            || slots.some(sl => sl.box[0] < bx1 && bx0 < sl.box[2] && sl.box[1] < by1 && by0 < sl.box[3]);
+          if (!hit) {
+            catchLine = { region: 'catchword', stream: cs.stream, face: 0, size: sG, top: by0, bottom: by1,
+              baseline: by0 + bw, x0: bx0, x1: bx1, a: 0, b: m, natW: w, last: true, inkA: cInk.asc, inkD: cInk.desc };
+            break;
+          }
+        }
+      }
+    }
+    // Ink contacts (T2d): consecutive lines of one column whose glyph extents touch or cross.
+    let inkContacts = 0;
+    const allCols = ['gemara', 'inner', 'outer', ...mBoxes.map(b => b.id)];
+    for (const colId of allCols) {
+      const cl = [...lines, ...Object.values(marginOut).flatMap(m => m.lines)].filter(l => l.id === colId).sort((p, q) => p.baseline - q.baseline);
+      for (let p = 0; p + 1 < cl.length; p++) {
+        const A = cl[p], B = cl[p + 1];
+        if (B.baseline - B.inkA < A.baseline + A.inkD + TS_INK_GAP - 1e-6) inkContacts++;
+      }
+    }
+    // Lines over an apparatus slot (T2d: 0 by construction; counted for the reviewer).
+    let flowOverlaps = 0;
+    const marginLines = Object.values(marginOut).flatMap(m => m.lines);
+    for (const sl of slots) for (const l of [...lines, ...marginLines]) {
+      if (l.x0 < sl.box[2] - 1e-6 && sl.box[0] < l.x1 - 1e-6 && l.top < sl.box[3] - 1e-6 && sl.box[1] < l.bottom - 1e-6) flowOverlaps++;
+    }
+    const capOf = (bands, lh) => tsCapacity(bands, lh, coreBottom);
+    const capacity = capOf(bandsG, lhG) + capOf(bandsR, lhC) + capOf(bandsT, lhC);
+    const placedN = (x) => x.lines.length;
+    const overlaps = (() => {
+      let n = 0;
+      for (let p = 0; p < lines.length; p++) for (let q = p + 1; q < lines.length; q++) {
+        const a = lines[p], b = lines[q];
+        if (a.x0 < b.x1 - 1e-6 && b.x0 < a.x1 - 1e-6 && a.top < b.bottom - 1e-6 && b.top < a.bottom - 1e-6) n++;
+      }
+      return n;
+    })();
+    const commW = R.lines.concat(T.lines).reduce((s, l) => s + l.natW, 0);
+    const allW = lines.reduce((s, l) => s + l.natW, 0);
+    const sheet = {
+      lang: L, k, rtl, rho,
+      faces: [[famG, sG], [famC, sC]],
+      flows: slots, catch: catchLine, margins: marginOut, marginCarry, facesExtra, faceBaseN,
+      lines: lines.map(l => ({ region: l.id, stream: l.stream, face: l.face, baseline: l.baseline,
+        x0: l.x0, x1: l.x1, top: l.top, bottom: l.bottom, a: l.a, b: l.b, size: l.size, last: l.last })),
+      placed: { gemara: [gemRange[0], G.next], rashi: [rRange[0], R.next], tosafot: [tRange[0], T.next] },
+      carryOut: { rashi: R.next < rRange[1] ? R.next : null, tosafot: T.next < tRange[1] ? T.next : null, margins: marginCarry },
+      geometry: {
+        coreTop, coreBottom, gemTop, first, rho,
+        core: [cL, cR], gemCanon: gemC, gemNarrow: gemN,
+        columns: { leftC: cLeft, rightC: cRight, absent: ['in', 'out'].filter(c => !present0[c]),
+          width: { in: wcol.in, out: wcol.out }, narrow, half },
+        bands: { gem: bandsG, rashi: bandsR, tosafot: bandsT }, ends, iterations: it + 1,
+      },
+      measures: {
+        overflowGem: gemRange[1] - G.next,           // tokens of the Gemara not placed (must be 0)
+        carryRashi: rRange[1] - R.next > 0 ? rRange[1] - R.next : 0,
+        carryTosafot: tRange[1] - T.next > 0 ? tRange[1] - T.next : 0,
+        tooWide: G.tooWide + R.tooWide + T.tooWide,
+        overlaps,
+        inkContacts, flowOverlaps, catchword: !!catchLine,
+        crossInk: crossInk + (catchLine ? lines.filter(l => inkMeet(catchLine, l)).length : 0),
+        fontsUnstable: _tsUnstable - unstable0,   // measures taken while a face was loading (must be 0)
+        marginLines: marginLines.length, marginStalls,
+        lines: lines.length,
+        fill: capacity > 0 ? (placedN(G) + placedN(R) + placedN(T)) / capacity : 0,
+        fillCol: { gemara: placedN(G) / Math.max(1, capOf(bandsG, lhG)), rashi: placedN(R) / Math.max(1, capOf(bandsR, lhC)), tosafot: placedN(T) / Math.max(1, capOf(bandsT, lhC)) },
+        minPrintPt: { gemara: lines.some(l => l.id === 'gemara') ? sG * TSHEET.PRINT : null,
+          comm: R.lines.length + T.lines.length ? sC * TSHEET.PRINT : null },
+        commShare: allW > 0 ? commW / allW : 0,
+      },
+    };
+    return sheet;
+  }
+
+  /**
+   * Serialisable layer/2 sheet shape for the builder (renderer-1 T2). Input: array of sheets from
+   * layoutTranslationSheet, in order. Output per sheet: regions (ids gemara|inner|outer, each line
+   * [baseline, x0, x1, [[face, {r:[[stream, i0, i1]]}]]]; face 0 = gemara face, 1 = commentary face,
+   * see `faces`), rho (K23) and geometry.columns (§10.4a), placed/carryOut and measures.
+   */
+  function exportSheetLines(sheets) {
+    return (sheets || []).map((s, j) => {
+      const byId = { gemara: [], inner: [], outer: [] };
+      const sorted = s.lines.slice().sort((p, q) => (p.region === q.region ? p.top - q.top : (p.region < q.region ? -1 : 1)));
+      const r3 = v => Math.round(v * 1000) / 1000;
+      for (const ln of sorted) {
+        byId[ln.region].push([r3(ln.baseline), r3(ln.x0), r3(ln.x1),
+          [[ln.face, { r: [[ln.stream, ln.a, ln.b]] }]]]);
+      }
+      const streamOf = { gemara: 'gemara', inner: 'rashi', outer: 'tosafot' };
+      return {
+        j, lang: s.lang, k: s.k, rho: s.rho, faces: s.faces,
+        regions: ['gemara', 'inner', 'outer'].map(id => ({ id, stream: streamOf[id], lines: byId[id] })),
+        // Apparatus/margin slots of the sheet (he layer flow regions, σ-mapped; face = he face index).
+        flows: (s.flows || []).map(f => ({ id: f.id, box: f.box.map(r3), maxBottom: r3(f.maxBottom), face: f.face, titleFace: f.titleFace })),
+        // Catchword line (last sheet): [baseline, x0, x1, [[0, {r:[[stream, 0, n]]}]]] (face 0 = gemara face), else null.
+        catchword: s.catch ? [[r3(s.catch.baseline), r3(s.catch.x0), r3(s.catch.x1), [[0, { r: [[s.catch.stream, 0, s.catch.b]] }]]]] : null,
+        // Margin text blocks (T2e): id -> lines [baseline, x0, x1, [[heFace, {r:[[stream, a, b]]}]]] (heFace = the margin region's face index).
+        // Extra faces for reduced margin text: append to the layer's faces at index faceBase + j (faceBase = he faces count).
+        facesExtra: (s.facesExtra || []).map(f => [f.tid, Math.round(f.size * 1000) / 1000]), faceBase: s.faceBaseN,
+        margins: Object.fromEntries(Object.entries(s.margins || {}).map(([id, m]) => [id, m.lines.map(ln => [r3(ln.baseline), r3(ln.x0), r3(ln.x1), [[ln.face, { r: [[id, ln.a, ln.b]] }]]])])),
+        placed: s.placed, carryOut: s.carryOut, measures: s.measures, geometry: s.geometry,
+        minPrintPt: s.measures.minPrintPt,
+      };
+    });
+  }
+
   // ═════════════════ Layout policy (one engine, two policies) ═════════════════
   //   strict-vilna — effective settings equal DEFAULT_SETTINGS and a per-amud
   //                  reference profile exists: place the printed lines exactly.
@@ -878,6 +1921,10 @@
     if (o.layoutPolicy === 'adaptive') return { policy: 'adaptive', fallback: 'none', reason: 'forced-adaptive' };
     // Translations (design §2.5): en/ru store text is laid out by the band solver, even with a profile.
     if (settings && settings.textLang && settings.textLang !== 'he') {
+      // A translated layer/2 page (spec §10.6) is drawn as strict sheets; any other translation stays adaptive.
+      if (profilePage && profilePage.layoutSheets && settings.licenseMode !== 'pd') {
+        return { policy: 'strict-vilna', fallback: 'best-effort', reason: 'translation-layout' };
+      }
       return { policy: 'adaptive', fallback: 'best-effort', reason: 'translation' };
     }
     const def = isDefaultSettings(settings);
@@ -938,6 +1985,158 @@
     return fetchJSONQuiet(`${base}/${id}/${tractateKey(tractate)}/${page}${side}.json`);
   }
 
+  /** The immediately previous and next amud of `page`/`side`, keyed by "<daf><side>" (spec §8.1). */
+  function amudNeighbours(page, side) {
+    const m = {};
+    for (const k of layoutNeighbourKeys(page, side)) m[k] = { page: parseInt(k, 10), side: k.slice(-1) };
+    return m;
+  }
+
+  /** Keys ("28a" style) of the immediately previous and next amud (spec §8.1; as the builder). */
+  function layoutNeighbourKeys(daf, side) {
+    const out = [];
+    if (side === 'a') { if (daf > 1) out.push(`${daf - 1}b`); out.push(`${daf}b`); }
+    else { out.push(`${daf}a`); out.push(`${daf + 1}a`); }
+    return out;
+  }
+
+  // Layout index and edition profile are memoised per base, like the profile index.
+  const _layoutIndex = {};
+  const _layoutEdition = {};
+  function layoutIndex(base) {
+    if (!(base in _layoutIndex)) {
+      _layoutIndex[base] = fetchJSONQuiet(`${base}/index.json`).then(idx =>
+        (idx && idx.schema === LAYOUT_INDEX_SCHEMA && idx.default ? idx : null));
+    }
+    return _layoutIndex[base];
+  }
+  function layoutEdition(base, id) {
+    const k = `${base}|${id}`;
+    if (!(k in _layoutEdition)) _layoutEdition[k] = fetchJSONQuiet(`${base}/${id}/profile.json`);
+    return _layoutEdition[k];
+  }
+
+  /** Returned by loadLayoutPage when a layout exists for the amud but cannot be used. */
+  const LAYOUT_UNUSABLE = { layoutUnusable: true };
+  /** A layout that exists but is rejected: the page falls back to adaptive with this diagnostic reason. */
+  function layoutUnusable(reason) { return { layoutUnusable: true, reason: String(reason || 'unknown') }; }
+
+  /**
+   * Published layout (no local profiles): index → edition profile → page (+ sibling layer for a
+   * translation) → neighbouring offline stores that the layer references → hydration.
+   * Resolves {id, page, edition, gemaraSrc}; null when there is no layout for this amud (no index,
+   * no page file, no sibling layer); LAYOUT_UNUSABLE when a layout exists but cannot be used.
+   */
+  async function loadLayoutPage(base, tractate, page, side, storeP, lang = 'he', licenseMode = 'all') {
+    const idx = await layoutIndex(base);   // memoised; needed to locate the layout folder
+    if (!idx) return null;
+    const id = String(idx.default);
+    const dir = `${base}/${id}/${tractateKey(tractate)}`;
+    const daf = `${page}${side}`;
+    // A translation needs its sibling layer: when it is missing, nothing else is fetched.
+    let layer = null;
+    // Translation layers never apply under ?license=pd (T7, spec §10.4): no request, adaptive as before.
+    if (lang !== 'he' && licenseMode === 'pd') return null;
+    if (lang !== 'he') {
+      layer = await fetchJSONQuiet(`${dir}/${daf}.${lang}.json`);
+      if (!layer) return null;
+      if (layer.schema !== LAYOUT_LAYER_SCHEMA && layer.schema !== LAYOUT_LAYER2_SCHEMA) return layoutUnusable('schema');
+    }
+    const [lp, edition, store] = await Promise.all([
+      fetchJSONQuiet(`${dir}/${daf}.json`),
+      layoutEdition(base, id),
+      Promise.resolve(storeP).then(s => s, () => null),
+    ]);
+    if (!lp) return null;
+    if (!edition || typeof edition !== 'object') return LAYOUT_UNUSABLE;
+    // Neighbour stores: only the amuds the layer references, fetched in parallel.
+    const L = layer || (lp.layers && lp.layers[lang]) || {};
+    const near = amudNeighbours(page, side);
+    const suffixes = [];
+    for (const name of Object.keys(L.streams || {})) {
+      const at = name.indexOf('@');
+      if (at < 0) continue;
+      const suffix = name.slice(at + 1);
+      if (Object.prototype.hasOwnProperty.call(near, suffix) && !suffixes.includes(suffix)) suffixes.push(suffix);
+    }
+    const loaded = await Promise.all(suffixes.map(s => loadTextStore(tractate, near[s].page, near[s].side)));
+    const stores = {};
+    suffixes.forEach((s, i) => { stores[s] = loaded[i]; });
+    if (layer && layer.schema === LAYOUT_LAYER2_SCHEMA) {
+      const got = hydrateLayer2(lp, store, lang, layer, { licenseMode, stores });
+      if (got.layoutUnusable) return layoutUnusable(got.reason);
+      const gemaraSrc = store && store.printSources && store.printSources.gemara;
+      return { id, page: got.sheets[0], sheets: got.sheets, edition, gemaraSrc: gemaraSrc && gemaraSrc.show === true ? gemaraSrc : null,
+        apparatusSources: store && store.apparatusSources && typeof store.apparatusSources === 'object' ? store.apparatusSources : null };
+    }
+    const hydrated = hydrateLayout(lp, store, lang, layer, { licenseMode, stores });
+    if (!hydrated) return layoutUnusable('hydrate');
+    hydrated.marginPlan = marginPlanOf(lp, null);
+    const gemaraSrc = store && store.printSources && store.printSources.gemara;
+    return { id, page: hydrated, edition, gemaraSrc: gemaraSrc && gemaraSrc.show === true ? gemaraSrc : null,
+      apparatusSources: store && store.apparatusSources && typeof store.apparatusSources === 'object' ? store.apparatusSources : null };
+  }
+
+  /** Sources of a layout page: the Gemara text is the Wikisource print version (spec §2). */
+  function applyLayoutGemaraSource(model, src) {
+    if (!model || !src) return model;
+    model.sources = Object.assign({}, model.sources || {}, {
+      gemara: { lang: 'he', title: src.title || null, license: src.license || null, special: !!src.special,
+        mt: false, derivedFrom: null, fallbackFrom: null },
+    });
+    return model;
+  }
+
+  function markLayoutSheets(container) {
+    for (const s of container.querySelectorAll('.page-sheet')) s.dataset.profileSource = 'layout';
+  }
+
+  /** Labels of the streams a layout can name (spec §8.2); other blocks use SRC_BLOCK_HE / block id. */
+  const LAYOUT_BLOCK_LABEL = { ran: 'רן / Ran', rashbam: 'רשב״ם / Rashbam', ktavYadRashi: 'כתב יד רש״י / Ktav Yad Rashi',
+    mesoretHaShas: 'מסורת הש״ס / Masoret HaShas', einMishpat: 'עין משפט נר מצוה / Ein Mishpat', torahOr: 'תורה אור / Torah Or' };
+
+  /**
+   * Sources note of a layout page: one line per stream actually used (title and licence of its
+   * source entry), plus the model-sourced blocks drawn by anchored flows. Appended after the sheets.
+   */
+  function appendLayoutSourcesNote(container, used, flowBlocks, model, apEntries) {
+    const entries = [];
+    const seen = new Set();
+    const add = e => {
+      const k = `${e.block}|${e.title}|${e.license}`;
+      if (!seen.has(k)) { seen.add(k); entries.push(e); }
+    };
+    for (const u of used || []) if (u) add({ block: u.block, title: u.title, license: u.license, special: u.special });
+    for (const a of apEntries || []) add(a);
+    for (const b of flowBlocks || []) {
+      const s = model && model.sources && model.sources[b];
+      if (s) add({ block: b, title: s.title, license: s.license, special: s.special });
+    }
+    if (!entries.length) return null;
+    const note = el('div', 'daf-sources');
+    note.setAttribute('lang', 'he');
+    note.dir = 'rtl';
+    const head = el('div', 'daf-sources-h');
+    head.textContent = 'מקורות הטקסט · Sources';
+    note.appendChild(head);
+    let anySpecial = false;
+    for (const e of entries) {
+      const label = LAYOUT_BLOCK_LABEL[e.block] || SRC_BLOCK_HE[e.block] || (EXTRA_COMMENTARIES.find(x => x.id === e.block) || {}).he || e.block;
+      const line = el('div', 'daf-src-line');
+      line.dataset.noteBlock = e.block;
+      if (e.special) { anySpecial = true; line.dataset.special = '1'; }
+      line.textContent = `${label} — ${e.title || e.block}${e.license ? ` · ${e.license}` : ''} · Sefaria.org${e.special ? ' †' : ''}`;
+      note.appendChild(line);
+    }
+    if (anySpecial) {
+      const key = el('div', 'daf-src-key');
+      key.textContent = '† טקסט בעל רישיון מוגבל (CC-BY-NC / CC-BY-SA), שאינו נחלת הציבור.';
+      note.appendChild(key);
+    }
+    container.appendChild(note);
+    return note;
+  }
+
   // Tractate catalogue (built in; the library needs no data files to run).
   const TRACTATES = [{"name_en":"Berachot","name_he":"ברכות","sefaria_name":"Berakhot","last_page":64,"ends_on_b":false,"first_page":2},{"name_en":"Shabbat","name_he":"שבת","sefaria_name":"Shabbat","last_page":157,"ends_on_b":true,"first_page":2},{"name_en":"Eiruvin","name_he":"עירובין","sefaria_name":"Eiruvin","last_page":105,"ends_on_b":false,"first_page":2},{"name_en":"Pesachim","name_he":"פסחים","sefaria_name":"Pesachim","last_page":121,"ends_on_b":true,"first_page":2},{"name_en":"Shekalim","name_he":"שקלים","sefaria_name":"Shekalim","last_page":22,"ends_on_b":true,"first_page":2},{"name_en":"Yoma","name_he":"יומא","sefaria_name":"Yoma","last_page":88,"ends_on_b":false,"first_page":2},{"name_en":"Sukkah","name_he":"סוכה","sefaria_name":"Sukkah","last_page":56,"ends_on_b":true,"first_page":2},{"name_en":"Beitzah","name_he":"ביצה","sefaria_name":"Beitzah","last_page":40,"ends_on_b":true,"first_page":2},{"name_en":"Rosh Hashanah","name_he":"ראש השנה","sefaria_name":"Rosh Hashanah","last_page":35,"ends_on_b":false,"first_page":2},{"name_en":"Taanit","name_he":"תענית","sefaria_name":"Taanit","last_page":31,"ends_on_b":false,"first_page":2},{"name_en":"Megillah","name_he":"מגילה","sefaria_name":"Megillah","last_page":32,"ends_on_b":false,"first_page":2},{"name_en":"Moed Katan","name_he":"מועד קטן","sefaria_name":"Moed Katan","last_page":29,"ends_on_b":false,"first_page":2},{"name_en":"Chagigah","name_he":"חגיגה","sefaria_name":"Chagigah","last_page":27,"ends_on_b":false,"first_page":2},{"name_en":"Yevamot","name_he":"יבמות","sefaria_name":"Yevamot","last_page":122,"ends_on_b":true,"first_page":2},{"name_en":"Ketubot","name_he":"כתובות","sefaria_name":"Ketubot","last_page":112,"ends_on_b":true,"first_page":2},{"name_en":"Nedarim","name_he":"נדרים","sefaria_name":"Nedarim","last_page":91,"ends_on_b":true,"first_page":2},{"name_en":"Nazir","name_he":"נזיר","sefaria_name":"Nazir","last_page":66,"ends_on_b":true,"first_page":2},{"name_en":"Sotah","name_he":"סוטה","sefaria_name":"Sotah","last_page":49,"ends_on_b":true,"first_page":2},{"name_en":"Gittin","name_he":"גיטין","sefaria_name":"Gittin","last_page":90,"ends_on_b":true,"first_page":2},{"name_en":"Kiddushin","name_he":"קידושין","sefaria_name":"Kiddushin","last_page":82,"ends_on_b":true,"first_page":2},{"name_en":"Bava Kamma","name_he":"בבא קמא","sefaria_name":"Bava Kamma","last_page":119,"ends_on_b":true,"first_page":2},{"name_en":"Bava Metzia","name_he":"בבא מציעא","sefaria_name":"Bava Metzia","last_page":119,"ends_on_b":false,"first_page":2},{"name_en":"Bava Batra","name_he":"בבא בתרא","sefaria_name":"Bava Batra","last_page":176,"ends_on_b":true,"first_page":2},{"name_en":"Sanhedrin","name_he":"סנהדרין","sefaria_name":"Sanhedrin","last_page":113,"ends_on_b":true,"first_page":2},{"name_en":"Makkot","name_he":"מכות","sefaria_name":"Makkot","last_page":24,"ends_on_b":true,"first_page":2},{"name_en":"Shevuot","name_he":"שבועות","sefaria_name":"Shevuot","last_page":49,"ends_on_b":true,"first_page":2},{"name_en":"Avodah Zarah","name_he":"עבודה זרה","sefaria_name":"Avodah Zarah","last_page":76,"ends_on_b":true,"first_page":2},{"name_en":"Horayot","name_he":"הוריות","sefaria_name":"Horayot","last_page":14,"ends_on_b":false,"first_page":2},{"name_en":"Zevachim","name_he":"זבחים","sefaria_name":"Zevachim","last_page":120,"ends_on_b":true,"first_page":2},{"name_en":"Menachot","name_he":"מנחות","sefaria_name":"Menachot","last_page":110,"ends_on_b":false,"first_page":2},{"name_en":"Chullin","name_he":"חולין","sefaria_name":"Chullin","last_page":142,"ends_on_b":false,"first_page":2},{"name_en":"Bechorot","name_he":"בכורות","sefaria_name":"Bechorot","last_page":61,"ends_on_b":false,"first_page":2},{"name_en":"Arachin","name_he":"ערכין","sefaria_name":"Arachin","last_page":34,"ends_on_b":false,"first_page":2},{"name_en":"Temurah","name_he":"תמורה","sefaria_name":"Temurah","last_page":34,"ends_on_b":false,"first_page":2},{"name_en":"Keritot","name_he":"כריתות","sefaria_name":"Keritot","last_page":28,"ends_on_b":true,"first_page":2},{"name_en":"Meilah","name_he":"מעילה","sefaria_name":"Meilah","last_page":22,"ends_on_b":false,"first_page":2},{"name_en":"Niddah","name_he":"נידה","sefaria_name":"Niddah","last_page":73,"ends_on_b":false,"first_page":2}];
 
@@ -948,7 +2147,7 @@
   let OFFLINE_BASE = 'data/offline';
   const OFFLINE_SCHEMAS = ['vilna-offline/1', 'vilna-text/1'];
   const _textStoreMemo = new Map();
-  const TEXT_STORE_MEMO_MAX = 2;
+  const TEXT_STORE_MEMO_MAX = 4;
   function loadTextStore(tractate, page, side) {
     const key = `${tractate}|${page}|${side}`;
     if (_textStoreMemo.has(key)) {
@@ -1026,6 +2225,12 @@
 
   function stripText(s) {
     return s.replace(/ /g, ' ').replace(DIACRITICS_RE, '').replace(PUNCT_RE, '');
+  }
+
+  /** HTML-escape a data string (apparatus text comes from the offline store) for innerHTML or an attribute. */
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   // Strip only outside of tags so attribute values are untouched.
@@ -1396,6 +2601,9 @@
     }
     model.sources = sources;
     model.hiddenBlocks = hiddenBlocks;
+    // Apparatus text (spec §9.1) and its licence entries; read by buildKeyIndex / the sources note.
+    model.apparatus = store && store.apparatus && typeof store.apparatus === 'object' ? store.apparatus : null;
+    model.apparatusSources = store && store.apparatusSources && typeof store.apparatusSources === 'object' ? store.apparatusSources : null;
     if (lang === 'he' || !store) return model;
 
     const seg = block => { const r = resolveBlock(store, block, lang, s); return r ? r.segs : []; };
@@ -1576,6 +2784,70 @@
 
   // ═════════════════════════ HTML assembly ═════════════════════════
 
+  /** Apparatus blocks with a store text (spec §9.1), in margin order. */
+  const APP_BLOCKS = ['mesoretHaShas', 'einMishpat', 'torahOr'];
+  const APP_TITLE_HE = { mesoretHaShas: 'מסורת הש״ס', einMishpat: 'עין משפט נר מצוה', torahOr: 'תורה אור' };
+  /** Language of the apparatus text: the page's textLang when it is a translation, else Hebrew. */
+  function apparatusLang(model) {
+    const t = model && model.settings && model.settings.textLang;
+    return t && t !== 'he' ? t : 'he';
+  }
+  /** store.apparatus[lang][block] items, falling back to he; null when neither has them. */
+  function apparatusItems(model, block, lang) {
+    const ap = model && model.apparatus;
+    if (!ap) return null;
+    for (const l of [lang, 'he']) {
+      const arr = ap[l] && ap[l][block];
+      if (Array.isArray(arr) && arr.length) return arr;
+    }
+    return null;
+  }
+  /** Licence lines of the apparatus blocks (spec §9.3: Torah Or verse entry and its refs entry). */
+  function apparatusEntriesFor(apSources, blocks, lang) {
+    const out = [];
+    if (!apSources) return out;
+    for (const b of blocks) {
+      const per = apSources[b];
+      const e = per && (per[lang] || per.he);
+      if (!e) continue;
+      out.push({ block: b, title: e.title, license: e.license, special: !!e.special });
+      if (e.refs) out.push({ block: b, title: e.refs.title, license: e.refs.license, special: !!e.refs.special });
+    }
+    return out;
+  }
+  /**
+   * Licence mode 'pd' (spec §9.7): an apparatus block whose source is special (Sefaria link data,
+   * citations, and any translation derived from them) is not shown. A block with no declared source
+   * entry is link-derived text, i.e. citations, and is hidden too.
+   */
+  function apparatusHiddenInPd(model, block, lang) {
+    if (!model || !model.settings || model.settings.licenseMode !== 'pd') return false;
+    const per = model.apparatusSources && model.apparatusSources[block];
+    const e = per && (per[lang] || per.he);
+    if (!e) return true;
+    return !!(e.special || e.pd === false || (e.refs && (e.refs.special || e.refs.pd === false)));
+  }
+  /** Apparatus blocks that a layout page prints as flow slots. */
+  function flowBlocksOf(pp) {
+    return ((pp && pp.regions) || []).filter(r => r && r.flow).map(r => apparatusKeyOf(r.flow));
+  }
+  /** Region id → apparatus key (spec §9.1 names the block mesoretHaShas; the region is masoretHaShas). */
+  function apparatusKeyOf(id) {
+    return id === 'masoretHaShas' ? 'mesoretHaShas' : String(id);
+  }
+  /** Flow-slot blocks of a layout page that have entries (an empty block is not shown). */
+  function renderedFlowBlocks(pp, model) {
+    const k = buildKeyIndex(model);
+    return flowBlocksOf(pp).filter(b => k[b] && k[b].entries.length);
+  }
+  /** Adaptive pages: licence lines of the apparatus blocks that are printed on the page. */
+  function adaptiveApparatusEntries(model) {
+    if (!model || !model.apparatusSources) return [];
+    const keyIdx = buildKeyIndex(model);
+    const blocks = APP_BLOCKS.filter(b => keyIdx[b] && keyIdx[b].entries.length);
+    return apparatusEntriesFor(model.apparatusSources, blocks, apparatusLang(model));
+  }
+
   function buildKeyIndex(model) {
     const links = model.links || {};
     const defs = [
@@ -1587,20 +2859,29 @@
     // LTR translation pages cite the source in Latin (sourceRef); Hebrew and
     // Yiddish pages (both RTL) keep sourceHeRef.
     const latinRefs = !!(model.settings && isLtrLang(model.settings.textLang));
+    const apLang = apparatusLang(model);
     for (const d of defs) {
       idx[d.key] = { cls: d.cls, title: d.title, entries: [] };
+      // Licence mode 'pd': a block from a special source (citations) has no entries (spec §9.10).
+      if (apparatusHiddenInPd(model, d.key, apLang)) continue;
+      const items = apparatusItems(model, d.key, apLang);
+      const itemByI = new Map();
+      for (const x of items || []) if (x && !itemByI.has(x.i)) itemByI.set(x.i, x);
       (links[d.key] || []).forEach((lk, i) => {
         const m = (lk.anchorRef || '').match(/:(\d+)/);
         // Margin shows only the ONE quoted pasuk (first verse if the ref is a
         // range); the full chapter context lives in the hover popup.
         const heArr = Array.isArray(lk.he) ? lk.he.flat(3).filter(Boolean) : (lk.he ? [lk.he] : []);
         const oneVerse = heArr.length ? String(heArr[0]) : '';
+        // Apparatus text (spec §9.2): entry i of store.apparatus[lang][block] (fallback he), else the link text.
+        const it = itemByI.get(i) || null;
         idx[d.key].entries.push({
           id: `note-${d.key}-${i}`,
           segNum: m ? parseInt(m[1]) : 0,
           letter: hebLetter(i),
-          ref: stripText(latinRefs ? (lk.sourceRef || lk.sourceHeRef || '') : (lk.sourceHeRef || lk.sourceRef || '')),
-          verse: oneVerse ? cleanGemara(oneVerse) : '',
+          ref: it && it.ref ? stripText(String(it.ref)) : stripText(latinRefs ? (lk.sourceRef || lk.sourceHeRef || '') : (lk.sourceHeRef || lk.sourceRef || '')),
+          short: it && it.short ? stripText(String(it.short)) : '',
+          verse: it ? (it.verse ? String(it.verse) : '') : (oneVerse ? cleanGemara(oneVerse) : ''),
           cls: d.cls,
         });
       });
@@ -1731,11 +3012,14 @@
   // the exception — its pasuk text is shown inline (showVerse), matching the
   // traditional layout.
   function marginNotesHTML(entries, showVerse = false) {
-    return entries.map(e =>
-      `<span class="marg-note" id="${e.id}" data-seg="${e.segNum}"><span class="key">${e.letter}</span> ` +
-      (showVerse && e.verse ? `<span class="verse-text">${e.verse}</span> ` : '') +
-      `<span class="note-ref">${e.ref}</span></span>`
-    ).join('');
+    return entries.map(e => {
+      // Compact citation in the margin (`short`); the full citation is the hover text (title).
+      // Every string here comes from the offline store, so it is escaped (spec §9.11).
+      const tip = e.short && e.short !== e.ref ? ` title="${escHtml(e.ref)}"` : '';
+      return `<span class="marg-note" id="${escHtml(e.id)}" data-seg="${escHtml(e.segNum)}"><span class="key">${escHtml(e.letter)}</span> ` +
+        (showVerse && e.verse ? `<span class="verse-text">${escHtml(e.verse)}</span> ` : '') +
+        `<span class="note-ref"${tip}>${escHtml(e.short || e.ref)}</span></span>`;
+    }).join('');
   }
 
   // ── Attribution (design §5, D8) ──
@@ -1814,6 +3098,14 @@
         mt.textContent = ltr ? `Machine translation, based on ${from}` : `תרגום מכונה — מבוסס על ${from}`;
         note.appendChild(mt);
       }
+    }
+    for (const e of (model && model.apparatusNoteEntries) || []) {
+      const line = el('div', 'daf-src-line');
+      line.dataset.noteBlock = e.block;
+      if (e.special) { anySpecial = true; line.dataset.special = '1'; }
+      line.textContent = `${LAYOUT_BLOCK_LABEL[e.block] || e.block} — ${e.title || e.block}${e.license ? ` · ${e.license}` : ''} · Sefaria.org${e.special ? ' †' : ''}`;
+      note.appendChild(line);
+      n++;
     }
     if (!n) return null;
     if (anySpecial) {
@@ -2511,7 +3803,7 @@
       if (seg === _activeSeg) return;
       clr(); _activeSeg = seg;
       for (const e of root.querySelectorAll(`[data-seg="${CSS.escape(String(seg))}"]`)) {
-        if (e.classList.contains('comment') || e.classList.contains('gseg')) {
+        if (e.classList.contains('comment') || e.classList.contains('gseg') || e.classList.contains('marg-note')) {
           e.classList.add('hl-seg'); _hlEls.add(e);
         }
       }
@@ -2522,7 +3814,7 @@
       setTimeout(() => node.classList.remove('hl-flash'), 1500);
     };
     root.addEventListener('pointerover', e => {
-      const se = e.target.closest && e.target.closest('.gseg[data-seg], .comment[data-seg], .ref-key[data-seg]');
+      const se = e.target.closest && e.target.closest('.gseg[data-seg], .comment[data-seg], .ref-key[data-seg], .marg-note[data-seg]');
       if (se) hl(se.dataset.seg);
     });
     root.addEventListener('pointerout', e => {
@@ -2728,6 +4020,17 @@
       // horizontal ink correction (sidebearing difference), em, + = right
       shiftXEm: fitted ? num(wf.inkShiftXEm, 0) : (family === fb.family ? fb.inkShiftXEm : num(wf.inkShiftXEm, 0)),
     };
+  }
+
+  /**
+   * A translated layer's face (spec §10.4, D6): its entry is a bundled CSS family stack (e.g. 'VilnaKR'),
+   * not an edition typeface, so it takes no Hebrew web font, no fitted shift and no sidebearing correction.
+   */
+  function translationFace(stack) {
+    const css = String(stack);
+    const family = (css.split(',')[0] || '').replace(/['"\s]/g, '');
+    return { typefaceId: css, family, file: null, script: 'translation', fitted: false, css,
+      wght: 400, sizeScale: 1, shiftEm: 0, shiftXEm: 0 };
   }
 
   async function ensureWebFont(wf) {
@@ -3100,7 +4403,10 @@
    *   4. any residual > 0.3px → scaleX (last resort).
    * All lengths are emitted in pt (calc(var(--pt) * N)).
    */
-  function fitStrictLines(sheet, pxPerPt, advanceK, anchoredLen) {
+  function fitStrictLines(sheet, pxPerPt, advanceK, anchoredLen, translated = false) {
+    // translated (layer/2 sheet): word gaps only, within the bounds; a line that cannot be filled that way
+    // keeps its natural width from its start (ragged last lines, single words). No letter-spacing and no
+    // glyph scaling, so the printed letters are the bundled face at the printed size.
     const sheetR = sheet.getBoundingClientRect();
     const lines = [...sheet.querySelectorAll('.vl')];
     const faceOf = e => { const m = /(?:^|\s)f(\d+)(?:\s|$)/.exec(e.className); return m ? +m[1] : 0; };
@@ -3182,6 +4488,27 @@
       }
       const wsMin = FIT.wsMin * u.fs, wsMax = FIT.wsMax * u.fs;
       const ws0 = u.spaces ? d / u.spaces : NaN;
+      if (translated) {
+        // Word gaps may tighten by up to 0.12 em (the key letters inserted in a line add width to it).
+        const lo = d < 0 ? -0.12 * u.fs : wsMin;
+        if (u.spaces && ws0 >= lo && ws0 <= wsMax) { u.ws = ws0; u.mode = 'ws'; setSpacing(u); continue; }
+        // Full justification (spec §10.4b): a line the layout set to its band's full width (every line but the
+        // last of a paragraph) fills it, however few its words. Hangul text spreads the extra space over its
+        // letters as well as its word gaps (letter gap : word gap = 1 : 2, letter gap at most 0.15 em); other
+        // scripts open the word gaps only. A one-word line of a non-Hangul script keeps its natural width.
+        if (d > 0) {
+          const n = Math.max(1, u.chars - u.spaces);
+          if (/[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/.test(u.text)) {
+            u.ls = Math.min(0.15 * u.fs, d / (n + 2 * u.spaces));
+            u.ws = u.spaces ? (d - u.ls * n) / u.spaces : 0;
+            if (!u.spaces) u.ls = Math.min(0.15 * u.fs, d / n);
+          } else if (u.spaces) u.ws = ws0;
+          else continue;
+          u.mode = 'tj'; u.wide = true;
+          setSpacing(u);
+        }
+        continue;
+      }
       if (u.spaces && ws0 >= wsMin && ws0 <= wsMax) { u.ws = ws0; u.mode = 'ws'; }
       else if (u.spaces && ws0 > wsMax) {
         // Sparse printed line (keys/parts set far apart): open the word gaps
@@ -3201,9 +4528,13 @@
       setSpacing(u);
     }
     // Pass 3 (read, still unscaled) → refine word/letter spacing.
-    for (const u of units) if (u.mode === 'ws' || u.mode === 'ls') u.n1 = u.measure();
+    for (const u of units) if (u.mode === 'ws' || u.mode === 'ls' || u.mode === 'tj') u.n1 = u.measure();
     for (const u of units) {
-      if (u.mode === 'ws') {
+      if (u.mode === 'tj') {
+        const r = u.target - u.n1;
+        if (u.spaces) u.ws += r / u.spaces;
+        else u.ls = Math.min(0.15 * u.fs, u.ls + r / Math.max(1, u.chars));
+      } else if (u.mode === 'ws') {
         const ws = u.ws + (u.target - u.n1) / u.spaces;
         if (u.wide || (ws >= FIT.wsMin * u.fs && ws <= FIT.wsMax * u.fs)) u.ws = ws;
       } else if (u.mode === 'ls') {
@@ -3218,7 +4549,7 @@
     for (const u of units) {
       if (!u.n2 || u.target <= 0) continue;
       const r = u.target - u.n2;
-      if (u.shrinkOnly ? r < 0 : (u.mode !== 'none' && Math.abs(r) > FIT.sxTolPx)) {
+      if (u.shrinkOnly ? r < 0 : (!translated && u.mode !== 'none' && Math.abs(r) > FIT.sxTolPx)) {
         u.sx = u.target / u.n2;
         u.mode = 'sx';
         u.box.style.transform = `scaleX(${u.sx.toFixed(5)})`;
@@ -3237,16 +4568,27 @@
     return counts;
   }
 
+  /** Apparatus check counts of a render result (null where the page has no layout apparatus). */
+  function apparatusChecksOf(out) {
+    if (!out || out.apparatusUnplaced === undefined || out.apparatusUnplaced === null) return null;
+    const o = { unplaced: out.apparatusUnplaced, duplicated: out.apparatusDuplicated, offSheet: out.apparatusOffSheet,
+      overlap: out.apparatusOverlap, ornamentCross: out.apparatusOrnamentCross };
+    if (out.marginTextUnplaced != null) { o.marginTextUnplaced = out.marginTextUnplaced; o.marginTextDuplicated = out.marginTextDuplicated; }
+    return o;
+  }
+
   async function renderStrict(container, rawModel, pp, edition, env) {
-    container.innerHTML = '';
-    container.dir = 'rtl';
+    // env.multi: one sheet of a translated layer/2 page (renderStrictSheets); absent for every other page.
+    const ms = env.multi || null;
+    if (!ms || ms.j === 0) { container.innerHTML = ''; container.dir = 'rtl'; }
     const pw = +pp.page.w, ph = +pp.page.h;
     const side = pp.side || rawModel.side || 'a';
-    const sheet = el('div', `page-sheet policy-strict side-${side}`);
+    const sheet = el('div', `page-sheet policy-strict side-${side}${ms ? ' tsheet' : ''}${ms && ms.dir === 'ltr' ? ' tsheet-ltr' : ''}`);
     sheet.dataset.policy = 'strict-vilna';
     sheet.dataset.fallback = env.pol.fallback;
-    sheet.dataset.sheet = '0';
-    sheet.setAttribute('lang', 'he');
+    sheet.dataset.sheet = String(ms ? ms.j : 0);
+    if (ms) { sheet.dataset.sheets = String(ms.N); sheet.dir = ms.dir; }
+    sheet.setAttribute('lang', ms ? ms.lang : 'he');
     sheet.style.setProperty('--pw', String(pw));
     sheet.style.setProperty('--ph', String(ph));
     container.appendChild(sheet);
@@ -3264,7 +4606,7 @@
     // (typeface, printed pt size), measured by the per-run raster audit
     // (iteration 5) — the same face set at different sizes sits differently.
     const faces = (pp.faces || []).map(([tid, size]) => {
-      const wf = webFontFor(edition, tid);
+      const wf = ms ? translationFace(tid) : webFontFor(edition, tid);
       const by = wf.fitted && edition && edition.webFonts && edition.webFonts[tid] && edition.webFonts[tid].baselineShiftBySize;
       const ex = by ? Number(by[(+size).toFixed(2)]) : NaN;
       return { tid, size: +size, wf: Number.isFinite(ex) && ex ? Object.assign({}, wf, { shiftEm: wf.shiftEm + ex }) : wf };
@@ -3272,16 +4614,33 @@
     const css = faces.map((f, i) =>
       `.page-sheet.policy-strict .f${i}{font-family:${f.wf.css};font-weight:${f.wf.wght};` +
       `font-size:calc(var(--pt) * ${(f.size * f.wf.sizeScale).toFixed(4)});}` +
-      `.page-sheet.policy-strict .vr.f${i}{--vsh:${(-f.wf.shiftEm).toFixed(4)}em;--hsh:${f.wf.shiftXEm.toFixed(4)}em;}`).join('\n');
+      `.page-sheet.policy-strict .vr.f${i}{--vsh:${(-f.wf.shiftEm).toFixed(4)}em;--hsh:${f.wf.shiftXEm.toFixed(4)}em;}`).join('\n') +
+      `\n.page-sheet.policy-strict .vapp{position:absolute;margin:0;overflow:visible;direction:rtl;text-align:right;line-height:1.3;}` +
+      `\n.page-sheet.policy-strict .vapp .marg-note{display:block;margin-bottom:1px;}` +
+      `\n.page-sheet.policy-strict .vapp .marg-note-cont,.page-sheet.policy-strict .vapp .marg-tnote{display:block;margin-bottom:1px;}` +
+      `\n.page-sheet.policy-strict .vapp-stack,.page-sheet.policy-strict .acont-block{overflow-wrap:anywhere;}` +
+      `\n.page-sheet.policy-strict .vapp-stack .marg-title{border-bottom:none;margin-bottom:0;}` +
+      // Tall faces (Hangul) draw a content box taller than the 1.3 line: 1 pt between notes, 1.5 pt under a title.
+      `\n.page-sheet.policy-strict .vapp-stack .vapp-title,.page-sheet.policy-strict .acont-block .vapp-title{margin-bottom:calc(var(--pt) * 1.5);}` +
+      `\n.page-sheet.policy-strict .vapp-stack .vapp-body>*{margin-bottom:calc(var(--pt) * 1);}`;
     const style = el('style');
     style.textContent = css;
     sheet.appendChild(style);
 
     const core = el('div', 'core vcore');
-    core.id = 'daf-core';
+    core.id = ms ? `daf-core-${ms.j}` : 'daf-core';
     sheet.appendChild(core);
 
     const usedIds = new Set();
+    const flowSlots = [];
+    const isLayout = !!env.layoutPage;
+    const flowKeys = isLayout || pp.regions.some(r => r.flow) ? buildKeyIndex(rawModel) : null;
+    // A translated sheet shows only the apparatus entries whose anchor segment it holds (renderStrictSheets).
+    if (ms && flowKeys) for (const b of Object.keys(flowKeys)) flowKeys[b].entries = flowKeys[b].entries.filter(e => ms.keep(b, e));
+    // Margin stacks (spec §9.12) replace the fixed apparatus slots on a layout page: on a Hebrew page when any
+    // apparatus block has entries (pd mode shows none, so a pd page is unchanged), on every translated sheet.
+    const plan = isLayout && flowKeys ? pp.marginPlan || null : null;
+    const stackOn = !!plan && (ms ? true : APP_BLOCKS.some(b => flowKeys[b] && flowKeys[b].entries.length));
     for (const r of pp.regions) {
       const reg = el('div', 'vregion');
       reg.dataset.vregion = String(r.id);
@@ -3299,29 +4658,863 @@
       (r.lines || []).forEach((ln, i) => {
         if (Array.isArray(ln)) reg.appendChild(buildStrictLine(ln, i, r, lookup, layer, ws));
       });
+      if (r.flow && flowKeys && !stackOn) {
+        const blk = buildFlowBlock(r, flowKeys, ms);
+        if (blk) { reg.appendChild(blk); flowSlots.push({ div: blk, r }); }
+      }
       sheet.appendChild(reg);
     }
-    for (const o of pp.ornaments || []) sheet.appendChild(buildOrnament(o));
+    // The printed dividers of a margin column belong to the fixed slots: the stack draws its own (spec §9.12).
+    const inCol = o => o && o.k === 'glyph-rule' && Array.isArray(o.b) &&
+      Object.values(plan.cols).some(c => Math.min(+o.b[2], c.x1) - Math.max(+o.b[0], c.x0) > 1);
+    for (const o of pp.ornaments || []) if (!(stackOn && inCol(o))) sheet.appendChild(buildOrnament(o));
+    if (ms) addTranslatedSheetMarks(sheet, pp, ms);
+    if (ms && flowKeys) insertTranslatedKeys(sheet, pp, flowKeys, faces);
 
     await Promise.all(faces.map(f => ensureWebFont(f.wf)));
     await document.fonts.ready;
+    let lowestPt = 0;
+    for (const rg of pp.regions) {
+      const bls = (Array.isArray(rg.lines) ? rg.lines : []).filter(Array.isArray).map(l => +l[0]);
+      if (!bls.length) continue;
+      const f = faces[rg.face != null ? rg.face : 0];
+      lowestPt = Math.max(lowestPt, Math.max(...bls) + 0.25 * (f ? f.size : 0));
+    }
     const anchored = anchorWords(sheet, faces, edition, pxPerPt);
     // Lines made of anchored words are fitted by word gap alone (fitStrictLines);
     // the advance model (k) only serves lines that could not be anchored.
-    const fitCounts = fitStrictLines(sheet, pxPerPt, makeAdvanceModel(faces, edition, pxPerPt), anchored);
+    const fitCounts = fitStrictLines(sheet, pxPerPt, makeAdvanceModel(faces, edition, pxPerPt), anchored, !!ms);
     fitCounts.anchoredWords = anchored;
-    fitCounts.snapCompensated = compensateBaselineSnap(sheet);
+    // A translated sheet keeps every line at its layer baseline: the whole-pixel paint snap (up to 0.5 px) would
+    // undo the ink clearance the layout leaves between lines (T2d item 3).
+    fitCounts.snapCompensated = ms ? 0 : compensateBaselineSnap(sheet);
+    // Apparatus slots are fitted last, against the final printed line geometry. The entries of a block
+    // are one chain over its slots in reading order: the first slot takes them, the next takes the
+    // overflow, and what is left goes to the continuation sheet (spec §9.8).
+    if (stackOn) {
+      const st = await renderMarginStack(sheet, pp, plan, flowKeys, faces, pxPerPt, lowestPt, ms);
+      let moved = st.moved;
+      if (ms && !ms.last) moved = [];
+      const apparatusConts = moved.length
+        ? buildApparatusContinuation(sheet, moved, faces, container, env,
+          { unslotted: [], face: 0, titleFace: 0, pw, ppt: pxPerPt, sheetHPt: sheet.getBoundingClientRect().height / pxPerPt,
+            dir: ms ? ms.dir : 'rtl', lang: ms ? ms.lang : 'he', contLabel: ms ? ` ${ms.titles.cont}` : null,
+            fontVars: ms ? { '--font-gemara': tsFamily(ms.lang, 'gem'), '--font-rashi': tsFamily(ms.lang, 'comm') } : null,
+            cols: (ms && ms.dir === 'ltr' ? [0, 1] : [1, 0]).map(i => (i === 0 ? { x0: TSHEET.X0F, x1: pw / 2 - 8 } : { x0: pw / 2 + 8, x1: pw - TSHEET.X0F })) })
+        : [];
+      const chk = !ms ? apparatusDiagnostics(sheet, apparatusConts, flowKeys) : null;
+      return { sheets: [sheet, ...apparatusConts], pxPerPt, fitCounts, apparatusFit: st.diag,
+        apparatusUnplaced: chk ? chk.unplaced : null, apparatusDuplicated: chk ? chk.duplicated : null,
+        apparatusOffSheet: chk ? chk.offSheet : null, apparatusOverlap: chk ? chk.overlap : null,
+        apparatusOrnamentCross: chk ? chk.ornamentCross : null, marginStack: true };
+    }
+    const nodesByBlock = {};
+    if (isLayout && flowKeys) for (const b of APP_BLOCKS) nodesByBlock[b] = apparatusNodes(b, flowKeys[b] ? flowKeys[b].entries : []);
+    const fitRes = fitApparatusSlots(sheet, flowSlots, faces, pxPerPt, lowestPt, nodesByBlock);
+    const apparatusFit = fitRes.diag;
+    // Blocks with entries but no flow slot in the layout (spec §9.4 gap): all entries go to the continuation.
+    const placedKeys = new Set(flowSlots.map(x => apparatusKeyOf(x.r.flow)));
+    const unslotted = isLayout && flowKeys
+      ? APP_BLOCKS.filter(b => flowKeys[b] && flowKeys[b].entries.length && !placedKeys.has(b)).map(block => ({ block, nodes: apparatusNodes(block, flowKeys[block].entries) }))
+      : [];
+    const ref0 = flowSlots.length ? flowSlots[0].r : null;
+    // Translated page: only the last sheet builds the continuation; earlier sheets carry their leftovers on.
+    let movedHere = fitRes.moved, unslottedHere = unslotted;
+    if (ms && !ms.last) { ms.carryMoved.push(...fitRes.moved); ms.carryUnslotted.push(...unslotted); movedHere = []; unslottedHere = []; }
+    else if (ms) { movedHere = [...ms.carryMoved, ...fitRes.moved]; unslottedHere = [...ms.carryUnslotted, ...unslotted]; }
+    const apparatusConts = movedHere.length || unslottedHere.length
+      ? buildApparatusContinuation(sheet, movedHere, faces, container, env,
+        { unslotted: unslottedHere, face: ref0 && ref0.face != null ? ref0.face : 0, titleFace: ref0 && ref0.titleFace != null ? ref0.titleFace : 0,
+          pw, ppt: pxPerPt, sheetHPt: sheet.getBoundingClientRect().height / pxPerPt })
+      : [];
+    // Nothing silently dropped, duplicated, off the sheet or over ink: counted per page (all must be 0).
+    // A translated page is counted over all its sheets by renderStrictSheets instead.
+    const apparatusCheck = isLayout && flowKeys && !ms ? apparatusDiagnostics(sheet, apparatusConts, flowKeys) : null;
+    const apparatusUnplaced = apparatusCheck ? apparatusCheck.unplaced : null;
+    const apparatusDuplicated = apparatusCheck ? apparatusCheck.duplicated : null;
+    const apparatusOffSheet = apparatusCheck ? apparatusCheck.offSheet : null;
+    const apparatusOverlap = apparatusCheck ? apparatusCheck.overlap : null;
+    const apparatusOrnamentCross = apparatusCheck ? apparatusCheck.ornamentCross : null;
+    return { sheets: [sheet, ...apparatusConts], pxPerPt, fitCounts, apparatusFit, apparatusUnplaced,
+      apparatusDuplicated, apparatusOffSheet, apparatusOverlap, apparatusOrnamentCross };
+  }
 
-    const H = sheet.getBoundingClientRect().height;
-    core._vilnaPlan = null;
-    core._vilnaCtx = null;
-    core._vilnaResult = {
-      policy: 'strict-vilna', rounds: 0, converged: true, scale: 1,
-      maxEnd: H, targetCoreH: H, pxPerPt, fit: fitCounts,
+  /**
+   * Engine labels of a translated sheet (spec §10.6): the sheet marker "<Tractate> <daf> · j/N" and, on
+   * each commentary column that starts here, its title, or "(cont.)" when the column continues.
+   */
+  function addTranslatedSheetMarks(sheet, pp, ms) {
+    const head = el('div', 'tsheet-head f0');
+    head.textContent = `${pp.tractateKey} ${pp.daf}${pp.side} · ${ms.j + 1}/${ms.N}`;
+    head.style.left = 'calc(var(--pt) * 58)';
+    head.style.top = 'calc(var(--pt) * 14)';
+    head.style.fontSize = 'calc(var(--pt) * 7)';
+    sheet.appendChild(head);
+    for (const id of ['inner', 'outer']) {
+      const rg = (pp.regions || []).find(r => r && r.id === id && Array.isArray(r.lines) && r.lines.some(Array.isArray));
+      if (!rg) continue;
+      const x0 = Math.min(...rg.lines.filter(Array.isArray).map(l => +l[1]));
+      const stream = id === 'inner' ? 'rashi' : 'tosafot';
+      const t = el('div', `tsheet-title f${rg.face != null ? rg.face : 1}`);
+      t.textContent = pp.carryIn && pp.carryIn[stream] ? ms.titles.cont : ms.titles[stream];
+      t.style.left = `calc(var(--pt) * ${x0.toFixed(3)})`;
+      t.style.top = 'calc(var(--pt) * 30)';
+      t.style.fontSize = 'calc(var(--pt) * 6.5)';
+      sheet.appendChild(t);
+    }
+  }
+
+  /** Text position (text node, offset) of word k (whitespace-separated) of a rendered line, or null. */
+  function lineWordStart(vl, k) {
+    const tw = document.createTreeWalker(vl, NodeFilter.SHOW_TEXT);
+    const nodes = []; let text = '';
+    while (tw.nextNode()) { nodes.push({ n: tw.currentNode, s: text.length }); text += tw.currentNode.data; }
+    const re = /\S+/g; let m, c = 0;
+    while ((m = re.exec(text))) {
+      if (c === k) {
+        const a = m.index;
+        const hit = nodes.filter(x => x.s <= a && a < x.s + x.n.data.length).pop();
+        return hit ? { node: hit.n, offset: a - hit.s } : null;
+      }
+      c++;
+    }
+    return null;
+  }
+
+  /**
+   * Key letters of a translated sheet (T2e rule): each apparatus entry shows the amud-global letter of its anchor
+   * Gemara segment as a `.ref-key` (data-target = the note id, data-seg = the segment), placed inline before the
+   * first word of that segment on the sheet that starts it. Keys of one word stand side by side. Inserted before
+   * the lines are fitted, so the fit absorbs their width in the word gaps (no overlap with other lines).
+   */
+  function insertTranslatedKeys(sheet, pp, flowKeys, faces) {
+    const gemR = (pp.regions || []).find(r => r && r.id === 'gemara' && Array.isArray(r.segStarts));
+    if (!gemR) return 0;
+    const reg = sheet.querySelector('.vregion[data-vregion="gemara"]');
+    if (!reg) return 0;
+    const vls = [...reg.querySelectorAll(':scope > .vl')];
+    const f = faces[gemR.face != null ? gemR.face : 0];
+    const ks = (f ? f.size * f.wf.sizeScale : 8) * TSHEET.KEY_EM;
+    const starts = new Map(gemR.segStarts.map(x => [x.seg, x]));
+    const groups = new Map();   // line|word -> [keys]
+    for (const b of Object.keys(flowKeys)) for (const e of flowKeys[b].entries) {
+      const st = starts.get(e.segNum);
+      if (!st) continue;
+      const g = `${st.line}|${st.word}`;
+      if (!groups.has(g)) groups.set(g, { line: st.line, word: st.word, keys: [] });
+      groups.get(g).keys.push(e);
+    }
+    let placed = 0;
+    const placedKeysOf = [];
+    for (const g of groups.values()) {
+      const vl = vls[g.line];
+      const pos = vl && lineWordStart(vl, g.word);
+      if (!pos) continue;
+      let ref = pos.node;
+      if (pos.offset > 0) ref = pos.node.splitText(pos.offset);
+      for (const e of g.keys) {
+        const key = document.createElement('span');
+        key.className = `ref-key ${e.cls || ''}`;
+        key.dataset.target = e.id;
+        key.dataset.seg = String(e.segNum);
+        key.textContent = e.letter;
+        // A key is its own inline box with its real width and a small gap, so it takes room in the word space
+        // before its word: the fit absorbs that width in the gaps (no overlap, no change of the line's width).
+        key.style.fontSize = `calc(var(--pt) * ${ks.toFixed(4)})`;
+        // The box is exactly the width the layout reserved (TSHEET.KEY_EM × size); the letter is centred in it.
+        key.style.display = 'inline-block';
+        key.style.width = `calc(var(--pt) * ${ks.toFixed(4)})`;
+        key.style.textAlign = 'center';
+        key.style.overflow = 'visible';
+        key.style.position = 'relative';
+        key.style.verticalAlign = 'baseline';
+        key.style.top = `calc(var(--pt) * ${(-0.35 * ks).toFixed(4)})`;
+        key.style.lineHeight = '1';
+        key.style.whiteSpace = 'pre';
+        ref.parentNode.insertBefore(key, ref);
+        // Separate keys of one word: a space-like gap (the same box, not a text run of letters).
+        placedKeysOf.push(key);
+        placed++;
+      }
+    }
+    return placed;
+  }
+
+  /**
+   * A translated layer/2 page (spec §10.6): each sheet is drawn as a strict page into the same container,
+   * in order. An apparatus entry goes to the sheet that shows its anchor segment (the first such sheet;
+   * the last sheet when none does); what does not fit goes to the continuation after the last sheet.
+   * Each sheet is followed by the sources note listing every stream of the page.
+   */
+  async function renderStrictSheets(container, model, pages, edition, env) {
+    const N = pages.length;
+    const lang = env.lang || 'en';
+    const T = TSHEET_I18N[lang] || TSHEET_I18N.en;
+    const full = buildKeyIndex(model);
+    const home = new Map();
+    for (const b of APP_BLOCKS) {
+      for (const e of (full[b] ? full[b].entries : [])) {
+        const j = pages.findIndex(p => (p.gemaraSegs || []).includes(e.segNum));
+        home.set(`${b}|${e.id}`, j < 0 ? N - 1 : j);
+      }
+    }
+    const dir = isLtrLang(lang) ? 'ltr' : 'rtl';
+    const carryMoved = [], carryUnslotted = [];
+    // Margin stack (spec §9.12): one size for every apparatus and margin block of the page, max(k × the largest
+    // Hebrew margin face, the margin minimum: 6.0 pt printed, yi 6.5), rounded up to 0.001 layout pt.
+    const plan = pages[0].marginPlan || null;
+    let mxFace = 0;
+    if (plan) for (const c of Object.values(plan.cols)) for (const b of c.blocks) {
+      const f = pages[0].faces && pages[0].faces[b.face];
+      if (f) mxFace = Math.max(mxFace, Number(f[1]) || 0);
+    }
+    const minL = (TSHEET.MARGIN_MIN_PT + (lang === 'yi' ? 0.5 : 0)) / TSHEET.PRINT;
+    const marginPt = Math.ceil(Math.max(mxFace, minL) * 1000 - 1e-6) / 1000;
+    // Margin text (Gilyon HaShas, Rav Nissim Gaon): one note per source segment, flowed from sheet 1 on.
+    const carry = {};
+    let textTokens = 0;
+    for (const [id, notes] of Object.entries(pages[0].marginText || {})) {
+      if (!notes || !notes.length) continue;
+      carry[id] = notes.map(n => {
+        const sp = el('span', 'marg-tnote');
+        sp.dataset.block = id;
+        sp.dataset.seg = String(n.seg + 1);
+        sp.textContent = n.text;
+        textTokens += n.n;
+        return sp;
+      });
+    }
+    const sheets = [], fit = [];
+    let pxPerPt = null;
+    for (let j = 0; j < N; j++) {
+      const ms = { j, N, lang, dir, titles: T, last: j === N - 1, carryMoved, carryUnslotted, carry, marginPt,
+        keep: (b, e) => home.get(`${b}|${e.id}`) === j };
+      const out = await renderStrict(container, model, pages[j], edition, Object.assign({}, env, { multi: ms }));
+      pxPerPt = out.pxPerPt;
+      sheets.push(...out.sheets);
+      fit.push(...out.apparatusFit);
+      if (env.note) {
+        const shownB = plan ? Object.values(plan.cols).flatMap(c => c.blocks.map(b => b.id)) : pages.flatMap(p => flowBlocksOf(p));
+        const blocks = [...new Set([...shownB, ...APP_BLOCKS])].filter(b => APP_BLOCKS.includes(b) && full[b] && full[b].entries.length);
+        appendLayoutSourcesNote(container, env.note.used, [], env.note.model, apparatusEntriesFor(env.note.src, blocks, 'he'));
+      }
+    }
+    // Every entry shown once over the whole page (the per-sheet check does not apply to a translated page).
+    const total = APP_BLOCKS.reduce((n, b) => n + (full[b] ? full[b].entries.length : 0), 0);
+    const shown = container.querySelectorAll('.marg-note').length;
+    // Off-sheet, overlap and ornament checks on every sheet (continuation sheets included).
+    let offSheet = 0, overlap = 0, ornamentCross = 0;
+    for (const s of sheets) {
+      const c = apparatusDiagnostics(s, [], null);
+      offSheet += c.offSheet; overlap += c.overlap; ornamentCross += c.ornamentCross;
+    }
+    // Margin text: every token of the printed range shown exactly once (spec §9.12).
+    let textShown = 0;
+    for (const n of container.querySelectorAll('.marg-tnote')) textShown += (n.textContent.match(/\S+/g) || []).length;
+    return { sheets, pxPerPt, fitCounts: null, apparatusFit: fit,
+      apparatusUnplaced: Math.max(0, total - shown), apparatusDuplicated: Math.max(0, shown - total), apparatusOffSheet: offSheet,
+      apparatusOverlap: overlap, apparatusOrnamentCross: ornamentCross,
+      marginTextUnplaced: Math.max(0, textTokens - textShown), marginTextDuplicated: Math.max(0, textShown - textTokens) };
+  }
+
+  // ─── Margin stacks (spec §9.12) ───
+  // A margin column runs the full core height; its blocks are set one below the other, each as its divider
+  // (between consecutive blocks), heading and notes. Nothing has a fixed height: a divider sits where the block
+  // above it ends. Printed lines, ornaments, the sheet labels and the catchword are obstacles.
+  const STACK = { GAP: 2.5, DIV_W: 49, DIV_H: 4.5, PAD_X: 1, MIN_FREE: 6 };
+
+  /** Splits note n (not in the DOM) so that its head fits fits(); returns {head, tail} or null. */
+  function splitNoteToFit(n, body, fits, minHeadLines, lineH) {
+    const tw = document.createTreeWalker(n, NodeFilter.SHOW_TEXT);
+    const cuts = [];   // word starts after the first word: {node, offset}
+    let seen = false;
+    while (tw.nextNode()) {
+      const t = tw.currentNode, d = t.data;
+      const re = /\S+/g; let m;
+      while ((m = re.exec(d))) { if (seen) cuts.push({ node: t, offset: m.index }); seen = true; }
+    }
+    if (!cuts.length) return null;
+    const part = (k, head) => {
+      const rg = document.createRange();
+      if (head) { rg.setStart(n, 0); rg.setEnd(cuts[k].node, cuts[k].offset); }
+      else { rg.setStart(cuts[k].node, cuts[k].offset); rg.setEnd(n, n.childNodes.length); }
+      const shell = n.cloneNode(false);
+      shell.appendChild(rg.cloneContents());
+      if (!head) {
+        shell.removeAttribute('id');
+        if (shell.classList.contains('marg-note')) { shell.classList.remove('marg-note'); shell.classList.add('marg-note-cont'); }
+      }
+      shell.dataset.split = '1';
+      return shell;
     };
-    console.log(`[vilna-daf] strict-vilna ${env.pol.fallback} lines=${sheet.querySelectorAll('.vl').length} ` +
-      `fit=${JSON.stringify(fitCounts)}`);
-    return { sheets: [sheet], pxPerPt, fitCounts };
+    // The largest head (in words) that fits; it must keep at least minHeadLines lines.
+    let lo = 0, hi = cuts.length - 1, best = -1, bestEl = null, bestH = 0;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const h = part(mid, true);
+      body.appendChild(h);
+      const ok = fits();
+      const hh = h.getBoundingClientRect().height;
+      h.remove();
+      if (ok) { best = mid; bestEl = h; bestH = hh; lo = mid + 1; } else hi = mid - 1;
+    }
+    if (best < 0 || bestH < minHeadLines * lineH - 0.5) return null;
+    return { head: bestEl, tail: part(best, false) };
+  }
+
+  /**
+   * Sets the margin stacks of one sheet (spec §9.12). items: {L?, R?: [{id, kind: 'flow'|'fixed', nodes, title,
+   * titleFace, face, bodyPt, top, bottom}]}, in the column's block order. With opt.spill (the last sheet of a page),
+   * what does not fit its own column goes on in the other margin column, below that column's own blocks, under
+   * its heading with opt.contLabel. Returns {leftover: [{item, nodes, side, col}], diag}: notes that did not fit.
+   */
+  function stackMargins(sheet, plan, items, ppt, opt) {
+    const sr = sheet.getBoundingClientRect();
+    const toPt = (g) => ({ t: (g.top - sr.top) / ppt, b: (g.bottom - sr.top) / ppt, l: (g.left - sr.left) / ppt, r: (g.right - sr.left) / ppt });
+    // Obstacles of the whole sheet, measured once: glyph boxes of printed lines, ornaments, sheet labels.
+    const rng = document.createRange();
+    const obst = [];
+    for (const q of sheet.querySelectorAll('.vl')) {
+      rng.selectNodeContents(q);
+      for (const g of rng.getClientRects()) if (g.width > 0 && g.height > 0) obst.push(toPt(g));
+    }
+    for (const q of sheet.querySelectorAll('.vorn, .tsheet-head, .tsheet-title')) {
+      const g = q.getBoundingClientRect();
+      if (g.width > 0 || g.height > 0) obst.push(toPt(g));
+    }
+    const bottomPt = d => (d.getBoundingClientRect().bottom - sr.top) / ppt;
+    const divider = (st, y) => {
+      const dw = Math.min(STACK.DIV_W, st.W * 0.9);
+      const dv = el('div', 'vorn vorn-glyph-rule vorn-stack');
+      dv.dataset.k = 'glyph-rule';
+      dv.setAttribute('aria-hidden', 'true');
+      dv.style.left = `calc(var(--pt) * ${(st.x0 + (st.W - dw) / 2).toFixed(3)})`;
+      dv.style.top = `calc(var(--pt) * ${y.toFixed(3)})`;
+      dv.style.width = `calc(var(--pt) * ${dw.toFixed(3)})`;
+      dv.style.height = `calc(var(--pt) * ${STACK.DIV_H})`;
+      sheet.appendChild(dv);
+      return dv;
+    };
+    // Column state: free stretches (between obstacles) and the cursor (stretch k, y).
+    const state = {};
+    for (const side of ['R', 'L']) {
+      const col = plan.cols[side];
+      if (!col) continue;
+      const x0 = col.x0, x1 = col.x1;
+      const top = col.top, bottom = opt.colBottom;
+      const blocked = obst.filter(o => o.r > x0 - STACK.PAD_X && o.l < x1 + STACK.PAD_X && o.b > top && o.t < bottom)
+        .map(o => [o.t - STACK.GAP, o.b + STACK.GAP]).sort((p, q) => p[0] - q[0]);
+      const free = [];
+      let cur = top;
+      for (const [a, b] of blocked) { if (a > cur && a - cur >= STACK.MIN_FREE) free.push([cur, a]); cur = Math.max(cur, b); }
+      if (bottom - cur >= STACK.MIN_FREE) free.push([cur, bottom]);
+      state[side] = { side, col, x0, x1, W: x1 - x0, free, k: 0, y: free.length ? free[0][0] : bottom, above: false };
+    }
+    const goNext = st => { st.k++; if (st.k < st.free.length) st.y = st.free[st.k][0]; };
+    // The cursor never moves up: a block that went on below a fixed block keeps its place above the next one.
+    const seek = (st, yy) => {
+      const y2 = Math.max(yy, st.y);
+      while (st.k < st.free.length && st.free[st.k][1] <= y2 + 1e-6) st.k++;
+      if (st.k < st.free.length) st.y = Math.max(y2, st.free[st.k][0]);
+    };
+    /** Places nodes of item it in column st from its cursor; returns the notes that did not fit. */
+    const place = (st, it, nodes, title) => {
+      let rest = nodes.slice(), first = true, dv = null, placedAny = 0, frags = 0;
+      while (rest.length && st.k < st.free.length) {
+        const iv = st.free[st.k];
+        if (st.y < iv[0]) st.y = iv[0];
+        if (st.above && !dv && first) {
+          // The divider between this block and the one above it, where the block above ends.
+          if (st.y + STACK.DIV_H > iv[1]) { goNext(st); continue; }
+          dv = divider(st, st.y);
+          st.y += STACK.DIV_H + STACK.GAP;
+          if (st.y >= iv[1]) { goNext(st); continue; }
+        }
+        const d = el('div', `vapp vapp-stack f${it.face != null ? it.face : 0}`);
+        d.dataset.flowBlock = it.id;
+        d.dataset.side = st.side;
+        d.style.left = `calc(var(--pt) * ${st.x0.toFixed(3)})`;
+        d.style.top = `calc(var(--pt) * ${st.y.toFixed(3)})`;
+        d.style.width = `calc(var(--pt) * ${st.W.toFixed(3)})`;
+        d.style.direction = opt.dir;
+        d.style.textAlign = 'justify';
+        // A translated sheet's titles, keys and verses use the language's bundled stacks (not the Hebrew ones).
+        if (opt.fontVars) for (const [k2, v] of Object.entries(opt.fontVars)) d.style.setProperty(k2, v);
+        if (first) {
+          const t = el('div', `vapp-title f${it.titleFace != null ? it.titleFace : 0}`);
+          if (it.titlePt) t.style.fontSize = `calc(var(--pt) * ${it.titlePt.toFixed(4)})`;
+          const sp = el('span', 'marg-title');
+          sp.textContent = title;
+          t.appendChild(sp);
+          d.appendChild(t);
+        }
+        const body = el('div', 'vapp-body');
+        body.style.fontSize = `calc(var(--pt) * ${it.bodyPt.toFixed(4)})`;
+        d.appendChild(body);
+        sheet.appendChild(d);
+        const lineH = parseFloat(getComputedStyle(body).fontSize) * 1.3 || 8;
+        if (bottomPt(d) > iv[1] + 1e-6) { d.remove(); goNext(st); continue; }   // the heading alone does not fit
+        let placed = 0;
+        while (rest.length) {
+          const n = rest[0];
+          body.appendChild(n);
+          if (bottomPt(d) <= iv[1] + 1e-6) { rest.shift(); placed++; continue; }
+          const h = n.getBoundingClientRect().height;
+          n.remove();
+          // A long note (3 lines or more), or margin text, is cut at a word: its head keeps >= 2 lines here
+          // (margin text: 1), the rest goes on in the next free stretch.
+          const text = n.classList.contains('marg-tnote');
+          if (text || h >= 3 * lineH - 0.5) {
+            const sp = splitNoteToFit(n, body, () => bottomPt(d) <= iv[1] + 1e-6, text ? 1 : 2, lineH);
+            if (sp) { body.appendChild(sp.head); rest[0] = sp.tail; placed++; }
+          }
+          break;
+        }
+        if (!placed) { d.remove(); goNext(st); continue; }
+        placedAny += placed; frags++;
+        first = false;
+        st.y = bottomPt(d) + STACK.GAP;
+        if (rest.length) goNext(st);
+      }
+      if (!placedAny && dv) dv.remove();
+      if (placedAny) st.above = true;
+      return { rest, placed: placedAny, frags };
+    };
+    const leftover = [], diag = [];
+    for (const side of ['R', 'L']) {
+      const st = state[side], list = items[side] || [];
+      if (!st) continue;
+      for (const it of list) {
+        if (it.kind === 'fixed') {
+          // A printed block (Hebrew margin text lines): its lines are obstacles; the next block starts below it.
+          // The divider above it sits where the block above ends, when there is room before the printed lines.
+          if (st.above && st.k < st.free.length && st.y >= st.free[st.k][0] - 1e-6 &&
+              st.y + STACK.DIV_H <= Math.min(st.free[st.k][1], it.top - STACK.GAP) + 1e-6) divider(st, st.y);
+          seek(st, it.bottom + STACK.GAP);
+          st.above = true;
+          continue;
+        }
+        if (!it.nodes || !it.nodes.length) continue;
+        const r = place(st, it, it.nodes, it.title);
+        diag.push({ block: it.id, side, placed: r.placed, left: r.rest.length, frags: r.frags });
+        if (r.rest.length) leftover.push({ item: it, nodes: r.rest, side, col: st.col });
+      }
+    }
+    if (!opt.spill) return { leftover, diag };
+    // Spill (last sheet): the other margin column takes what is left, below its own blocks.
+    let still = [];
+    for (const lo of leftover) {
+      const other = state[lo.side === 'R' ? 'L' : 'R'];
+      if (!other) { still.push(lo); continue; }
+      const r = place(other, lo.item, lo.nodes, `${lo.item.baseTitle || lo.item.title}${opt.contLabel}`);
+      diag.push({ block: lo.item.id, side: other.side, spill: true, placed: r.placed, left: r.rest.length, frags: r.frags });
+      if (r.rest.length) still.push(Object.assign({}, lo, { nodes: r.rest }));
+    }
+    // Then the free core area under the last printed line of the sheet (a short last sheet), in columns of
+    // about 120 pt between the margin columns, in reading order; only then the continuation sheet.
+    if (still.length && state.L && state.R) {
+      const ax0 = state.L.x1 + 2 * STACK.GAP, ax1 = state.R.x0 - 2 * STACK.GAP, bottom = opt.colBottom;
+      const inArea = obst.filter(o => o.r > ax0 && o.l < ax1 && o.t < bottom);
+      const top = (inArea.length ? Math.max(...inArea.map(o => o.b)) : state.L.col.top) + 3 * STACK.GAP;
+      if (bottom - top >= 30 && ax1 - ax0 >= 60) {
+        const n = Math.max(1, Math.floor((ax1 - ax0 + 3 * STACK.GAP) / (120 + 3 * STACK.GAP)));
+        const w = (ax1 - ax0 - (n - 1) * 3 * STACK.GAP) / n;
+        const area = [];
+        for (let i = 0; i < n; i++) {
+          const x0 = ax0 + i * (w + 3 * STACK.GAP);
+          area.push({ side: 'B', col: { x0, x1: x0 + w, top }, x0, x1: x0 + w, W: w, free: [[top, bottom]], k: 0, y: top, above: false });
+        }
+        if (opt.dir === 'rtl') area.reverse();
+        let ai = 0;
+        const next = [];
+        for (const lo of still) {
+          let rest = lo.nodes;
+          while (rest.length && ai < area.length) {
+            const r = place(area[ai], lo.item, rest, `${lo.item.baseTitle || lo.item.title}${opt.contLabel}`);
+            diag.push({ block: lo.item.id, side: 'B', spill: true, placed: r.placed, left: r.rest.length, frags: r.frags });
+            rest = r.rest;
+            if (rest.length) ai++;
+          }
+          if (rest.length) next.push(Object.assign({}, lo, { nodes: rest }));
+        }
+        still = next;
+      }
+    }
+    return { leftover: still, diag };
+  }
+
+  /**
+   * The margin stack of one sheet (spec §9.12): its items per column in the Hebrew block order, set by
+   * stackMargins. Hebrew page: the apparatus blocks at their face size around the printed margin text (fixed);
+   * leftovers go to the continuation. Translated sheet: every block (apparatus and margin text) at the one margin
+   * size ms.marginPt; leftovers go on in the same column of the next sheet (ms.carry), after the last sheet to the
+   * continuation. A block with entries that the Hebrew page does not print joins the column with fewer blocks.
+   */
+  async function renderMarginStack(sheet, pp, plan, flowKeys, faces, ppt, lowestPt, ms) {
+    const items = {}, seen = new Set();
+    const faceSize = fi => { const f = faces[fi != null ? fi : 0]; return f ? f.size * f.wf.sizeScale : 7; };
+    const carry = ms ? ms.carry : null;
+    const mkItem = (id, face, titleFace) => {
+      if (ms) {
+        const own = APP_BLOCKS.includes(id) && flowKeys[id] ? apparatusNodes(id, flowKeys[id].entries) : [];
+        const car = carry[id] || [];
+        delete carry[id];
+        // carried from the previous sheet: the heading says "(cont.)"
+        const contd = ms.j > 0 && car.length > 0;
+        const tf = titleFace != null ? titleFace : face;
+        const base = ms.titles[id] || APP_TITLE_HE[id] || id;
+        return { id, kind: 'flow', nodes: [...car, ...own], face, titleFace: tf, bodyPt: ms.marginPt,
+          titlePt: Math.max(ms.marginPt, Math.min(faceSize(tf), ms.marginPt * 1.3)),
+          baseTitle: base, title: contd ? `${base} ${ms.titles.cont}` : base };
+      }
+      const ents = flowKeys[id] ? flowKeys[id].entries : [];
+      return { id, kind: 'flow', nodes: ents.length ? apparatusNodes(id, ents) : [], face, titleFace,
+        bodyPt: faceSize(face), baseTitle: APP_TITLE_HE[id] || id, title: APP_TITLE_HE[id] || id };
+    };
+    for (const side of ['R', 'L']) {
+      const col = plan.cols[side];
+      if (!col) continue;
+      items[side] = [];
+      for (const b of col.blocks) {
+        if (seen.has(b.id)) continue;   // a block printed in two slots is set once, at its first slot
+        seen.add(b.id);
+        if (b.kind === 'text' && !ms) {
+          // Hebrew margin text is printed lines: a fixed block of the column when it lies in it.
+          if (Math.min(b.x1, col.x1) - Math.max(b.x0, col.x0) > 1) items[side].push({ id: b.id, kind: 'fixed', top: b.top, bottom: b.bottom });
+          continue;
+        }
+        if (b.kind === 'flow' && !APP_BLOCKS.includes(b.id)) continue;
+        items[side].push(mkItem(b.id, b.face, b.titleFace));
+      }
+    }
+    // Blocks with entries (or carried text) but no slot on the Hebrew page.
+    const sides = Object.keys(items);
+    const extra = [...APP_BLOCKS.filter(b => !seen.has(b) && flowKeys[b] && flowKeys[b].entries.length),
+      ...(ms ? Object.keys(carry).filter(id => !seen.has(id) && carry[id] && carry[id].length) : [])];
+    for (const id of [...new Set(extra)]) {
+      if (!sides.length) break;
+      const side = sides.slice().sort((p, q) => items[p].length - items[q].length)[0];
+      const ref = items[side].find(it => it.kind === 'flow') || plan.cols[side].blocks.find(b => b.kind === 'flow') || {};
+      items[side].push(mkItem(id, ref.face != null ? ref.face : 0, ref.titleFace != null ? ref.titleFace : null));
+      seen.add(id);
+    }
+    const colBottom = ms ? TSHEET.CORE_BOTTOM : Math.max(lowestPt, ...Object.values(plan.cols).flatMap(c => c.blocks.map(b => b.bottom)));
+    const fontVars = ms ? { '--font-gemara': tsFamily(ms.lang, 'gem'), '--font-rashi': tsFamily(ms.lang, 'comm') } : null;
+    // Every face the stack text needs is loaded before it is measured (a late face would reflow it).
+    const sample = [...new Set(Object.values(items).flat().flatMap(it => [it.title || '', ...(it.nodes || []).map(n => n.textContent)])
+      .join('').replace(/\s+/g, ''))].join('') || 'א';
+    const stacksUsed = new Set(faces.map(f => f.wf.css));
+    if (fontVars) { stacksUsed.add(fontVars['--font-gemara']); stacksUsed.add(fontVars['--font-rashi']); }
+    for (const st of stacksUsed) { try { await document.fonts.load(`16px ${st}`, sample); } catch (e) { /* reported by the font check */ } }
+    // A hidden probe with every item as it will be set (titles, keys, verses: bold and other faces load lazily,
+    // on first layout) makes the browser load those faces now; a face loaded later would reflow measured notes.
+    const probe = el('div', 'vapp vapp-stack');
+    probe.style.cssText = 'visibility:hidden;left:0;top:0;width:200px;';
+    if (fontVars) for (const [k2, v] of Object.entries(fontVars)) probe.style.setProperty(k2, v);
+    for (const it of Object.values(items).flat()) {
+      if (it.kind === 'fixed') continue;
+      const t = el('div', `vapp-title f${it.titleFace != null ? it.titleFace : 0}`);
+      const sp = el('span', 'marg-title'); sp.textContent = it.title; t.appendChild(sp); probe.appendChild(t);
+      const body = el('div', 'vapp-body');
+      body.style.fontSize = `calc(var(--pt) * ${it.bodyPt.toFixed(4)})`;
+      for (const n of it.nodes || []) body.appendChild(n.cloneNode(true));
+      probe.appendChild(body);
+    }
+    sheet.appendChild(probe);
+    probe.getBoundingClientRect();
+    await document.fonts.ready;
+    probe.remove();
+    const res = stackMargins(sheet, plan, items, ppt, { colBottom, dir: ms ? ms.dir : 'rtl', fontVars,
+      spill: !ms || ms.last, contLabel: ms ? ` ${ms.titles.cont}` : ' (המשך)' });
+    const moved = [];
+    for (const lo of res.leftover) {
+      if (ms && !ms.last) { carry[lo.item.id] = lo.nodes; continue; }
+      moved.push({ block: lo.item.id, nodes: lo.nodes, title: lo.item.baseTitle, titlePt: lo.item.titlePt || null,
+        bodyPt: lo.item.bodyPt, r: { box: [lo.col.x0, 0, lo.col.x1, 0], face: lo.item.face, titleFace: lo.item.titleFace } });
+    }
+    return { diag: res.diag, moved };
+  }
+
+  /** Apparatus flow slot (spec §9.4): the block heading and an empty body; fitApparatusSlots fills it. */
+  function buildFlowBlock(r, keyIdx, ms) {
+    const key = apparatusKeyOf(r.flow);
+    const ents = (keyIdx[key] && keyIdx[key].entries) || [];
+    if (!ents.length) return null; // a block with no links shows no block
+    const div = el('div', `vapp f${r.face != null ? r.face : 0}`);
+    div.dataset.flowBlock = key;
+    const [x0, t, x1, b] = r.box;
+    div.style.left = `calc(var(--pt) * ${x0})`;
+    div.style.top = `calc(var(--pt) * ${t})`;
+    div.style.width = `calc(var(--pt) * ${(x1 - x0).toFixed(3)})`;
+    div.style.height = `calc(var(--pt) * ${(b - t).toFixed(3)})`;
+    const title = (ms && ms.titles[key]) || APP_TITLE_HE[key] || key;
+    div.innerHTML = `<div class="vapp-title f${r.titleFace != null ? r.titleFace : 0}"><span class="marg-title">${title}</span></div>` +
+      `<div class="vapp-body"></div>`;
+    return div;
+  }
+
+  /** The margin notes of one block as DOM nodes, one per entry, in entry order. */
+  function apparatusNodes(block, entries) {
+    const tmp = el('div');
+    tmp.innerHTML = marginNotesHTML(entries, block === 'torahOr');
+    return [...tmp.children];
+  }
+
+  /**
+   * Fit each apparatus slot (spec §9.4). The entries of a block are one chain over its slots in reading
+   * order (spec §9.8): a slot takes the entries waiting for it and fits at the printed size inside its box;
+   * else it grows down to maxBottom, stopping at the first printed line or printed ornament below it
+   * (spec §9.7); else the font scales down to 0.75. Entries that still do not fit wait for the next slot
+   * of the chain or, from the last slot, go to the continuation sheet (`moved`).
+   */
+  function fitApparatusSlots(sheet, slots, faces, ppt, lowestPt, nodesByBlock) {
+    const out = [], moved = [];
+    // Printed obstacles, measured once per page: glyph boxes of printed lines and printed ornaments.
+    const rng = document.createRange();
+    const printed = [];
+    for (const q of sheet.querySelectorAll('.vl')) {
+      rng.selectNodeContents(q);
+      for (const g of rng.getClientRects()) if (g.width > 0 && g.height > 0) printed.push(g);
+    }
+    for (const q of sheet.querySelectorAll('.vorn')) {
+      const g = q.getBoundingClientRect();
+      if (g.width > 0 || g.height > 0) printed.push(g);
+    }
+    // Chains: per block, its slots in reading order (top first, then right to left).
+    const chains = new Map();
+    for (const s of slots) {
+      const k = apparatusKeyOf(s.r.flow);
+      if (!chains.has(k)) chains.set(k, []);
+      chains.get(k).push(s);
+    }
+    const seq = [];
+    const queue = new Map(); // block -> nodes waiting for the next slot of that block
+    for (const [k, list] of chains) {
+      list.sort((a, b) => (a.r.box[1] - b.r.box[1]) || (b.r.box[0] - a.r.box[0]));
+      list.forEach((s, i) => seq.push({ div: s.div, r: s.r, last: i === list.length - 1 }));
+      queue.set(k, (nodesByBlock && nodesByBlock[k]) || []);
+    }
+    const sTop = sheet.getBoundingClientRect().top;
+    for (const { div, r, last } of seq) {
+      const block = apparatusKeyOf(r.flow);
+      const f = faces[r.face != null ? r.face : 0];
+      const size = f ? f.size * f.wf.sizeScale : 1;
+      const body = div.querySelector(':scope > .vapp-body');
+      const waiting = queue.get(block) || [];
+      queue.set(block, []);
+      body.append(...waiting);
+      if (!waiting.length) {
+        div.remove();
+        out.push({ block, scale: 1, grewPt: 0, overflowEntries: 0, empty: true });
+        continue;
+      }
+      const top = r.box[1] * ppt;
+      const own = div.getBoundingClientRect();
+      // Growth stops at the first printed line, ornament or other block below the box in the same horizontal band.
+      let obstacleTop = Infinity;
+      const rects = printed.slice();
+      for (const q of sheet.querySelectorAll('.vapp')) {
+        if (q !== div && !div.contains(q)) rects.push(q.getBoundingClientRect());
+      }
+      const blockers = [];
+      for (const qr of rects) {
+        if (qr.right <= own.left || qr.left >= own.right) continue;
+        if (qr.top > own.top + 1) { obstacleTop = Math.min(obstacleTop, qr.top); blockers.push(qr); }
+      }
+      // A fitted note's glyph boxes may not touch a blocker (spec §9.7): the line box can end above its ink.
+      const noteTouches = n => {
+        rng.selectNodeContents(n);
+        for (const g of rng.getClientRects()) {
+          if (g.width <= 0 || g.height <= 0) continue;
+          for (const b of blockers) {
+            // The glyph box is padded by the ink overhang (up to ~1.5 px below the line box, measured on the sheet).
+            if (Math.min(g.right, b.right) - Math.max(g.left, b.left) > 0.5 && Math.min(g.bottom + 1.5, b.bottom) - Math.max(g.top - 1.5, b.top) > 0.5) return true;
+          }
+        }
+        return false;
+      };
+      const touchesBlocker = () => [...body.querySelectorAll('.marg-note')].some(noteTouches);
+      const obstacle = Number.isFinite(obstacleTop) ? (obstacleTop - sTop) / ppt : Infinity;
+      // The printed box itself never extends into an obstacle (a box past the next line is cut there).
+      const boxBottomPt = Math.min(r.box[3], obstacle);
+      const boxH = Math.max(0, (boxBottomPt - r.box[1]) * ppt);
+      const maxB = Math.min(Math.max(boxBottomPt, Math.min(r.maxBottom, lowestPt)), obstacle);
+      const growH = Math.max(boxH, maxB * ppt - top);
+      const fits = () => div.scrollHeight <= div.clientHeight + 0.5 && !touchesBlocker();
+      const set = (s, h) => { body.style.fontSize = `calc(var(--pt) * ${(size * s).toFixed(4)})`; div.style.height = `${h}px`; };
+      let scale = 1, h = boxH, overflow = 0;
+      set(1, h);
+      if (!fits()) {
+        h = growH; set(1, h);
+        if (!fits()) {
+          let ok = false;
+          for (let s = 0.9875; s >= 0.75 - 1e-9; s -= 0.0125) {
+            set(s, h);
+            if (fits()) { scale = s; ok = true; break; }
+          }
+          if (!ok) {
+            scale = 0.75; set(0.75, h);
+            const notes = [...body.querySelectorAll('.marg-note')];
+            const first = notes.findIndex(note => note.offsetTop + note.offsetHeight > h + 0.5 || noteTouches(note));
+            if (first >= 0) {
+              const nodes = notes.slice(first);
+              nodes.forEach(n => n.remove());
+              overflow = nodes.length;
+              if (last) moved.push({ r, block, nodes });
+              else queue.set(block, nodes);
+            }
+          }
+        }
+      }
+      out.push({ block, scale: Math.round(scale * 10000) / 10000,
+        grewPt: Math.round(((h - boxH) / ppt) * 1000) / 1000, overflowEntries: overflow });
+    }
+    return { diag: out, moved };
+  }
+
+  /**
+   * Continuation sheets of the apparatus blocks (spec §9.9). Overflow notes are set in the
+   * columns of the continuation sheet: a block's heading, then its notes, stacked down the column. A
+   * column that fills flows to the next column; a sheet that fills gets another continuation sheet.
+   * Nothing is set below the sheet or over another block. Returns the continuation sheets (may be none).
+   */
+  function buildApparatusContinuation(sheet, moved, faces, container, env, extra) {
+    const ppt = extra.ppt;
+    const limitPt = extra.sheetHPt - 2;
+    // Columns: the distinct x-ranges of the slots, rightmost first (Hebrew reading order).
+    const cols = [];
+    for (const m of moved) {
+      const x0 = m.r.box[0], x1 = m.r.box[2];
+      if (!cols.some(c => c.x0 === x0 && c.x1 === x1)) cols.push({ x0, x1 });
+    }
+    cols.sort((a, b) => b.x0 - a.x0);
+    if (!cols.length) cols.push({ x0: 30, x1: extra.pw - 30 });
+    // Margin stack pages (spec §9.12): two columns of the core width, in reading order.
+    if (extra.cols) cols.splice(0, cols.length, ...extra.cols);
+    const items = [
+      ...moved.map(m => ({ block: m.block, nodes: m.nodes, face: m.r.face != null ? m.r.face : 0, titleFace: m.r.titleFace, cont: true,
+        title: m.title || null, bodyPt: m.bodyPt || null, titlePt: m.titlePt || null })),
+      ...extra.unslotted.map(u => ({ block: u.block, nodes: u.nodes, face: extra.face, titleFace: extra.titleFace, cont: false })),
+    ];
+    const conts = [];
+    const newSheet = () => {
+      const cont = el('div', 'page-sheet policy-strict sheet-cont apparatus-cont');
+      cont.dataset.policy = 'strict-vilna';
+      cont.dataset.sheet = String(conts.length + 1);
+      cont.dataset.fallback = env.pol.fallback;
+      cont.setAttribute('lang', extra.lang || 'he');
+      cont.style.width = sheet.style.width;
+      cont.style.maxWidth = 'none';
+      for (const v of ['--pw', '--ph', '--pt']) cont.style.setProperty(v, sheet.style.getPropertyValue(v));
+      container.appendChild(cont); // measured below, so it must be in the page
+      conts.push(cont);
+      return cont;
+    };
+    let cur = newSheet(), ci = 0, y = 0;
+    const bottomOf = blk => (blk.getBoundingClientRect().bottom - cur.getBoundingClientRect().top) / ppt;
+    const nextColumn = () => {
+      ci += 1; y = 0;
+      if (ci >= cols.length) { cur = newSheet(); ci = 0; }
+    };
+    for (const it of items) {
+      let rest = it.nodes.slice(), frag = 0;
+      while (rest.length) {
+        const col = cols[ci];
+        const f = faces[it.face] || null;
+        const blk = el('div', `acont-block vapp-cont f${it.face}`);
+        blk.dataset.vregion = it.block;
+        blk.dataset.flowBlock = it.block;
+        if (!it.cont) blk.dataset.unslotted = '1';
+        blk.style.position = 'absolute';
+        blk.style.left = `calc(var(--pt) * ${col.x0})`;
+        blk.style.top = `calc(var(--pt) * ${y.toFixed(3)})`;
+        blk.style.width = `calc(var(--pt) * ${(col.x1 - col.x0).toFixed(3)})`;
+        blk.style.direction = extra.dir || 'rtl';
+        if (extra.fontVars) for (const [k2, v] of Object.entries(extra.fontVars)) blk.style.setProperty(k2, v);
+        blk.style.textAlign = it.bodyPt ? 'justify' : 'right';
+        const t = el('div', `vapp-title f${it.titleFace != null ? it.titleFace : 0}`);
+        if (it.titlePt) t.style.fontSize = `calc(var(--pt) * ${it.titlePt.toFixed(4)})`;
+        const tm = el('span', 'marg-title');
+        tm.textContent = `${it.title || APP_TITLE_HE[it.block] || it.block}${it.cont || frag > 0 ? (extra.contLabel || ' (המשך)') : ''}`;
+        t.appendChild(tm);
+        const body = el('div', 'vapp-body');
+        body.style.fontSize = it.bodyPt ? `calc(var(--pt) * ${it.bodyPt.toFixed(4)})`
+          : (f ? `calc(var(--pt) * ${(f.size * f.wf.sizeScale).toFixed(4)})` : '');
+        blk.appendChild(t);
+        blk.appendChild(body);
+        cur.appendChild(blk);
+        let placed = 0;
+        for (let k = 0; k < rest.length; k++) {
+          body.appendChild(rest[k]);
+          // A note taller than an empty column is kept (it is then reported as off-sheet).
+          if (bottomOf(blk) <= limitPt || (placed === 0 && y === 0)) { placed++; continue; }
+          rest[k].remove();
+          break;
+        }
+        if (placed === 0) { blk.remove(); nextColumn(); continue; }
+        y = bottomOf(blk) + 4;
+        rest = rest.slice(placed);
+        if (rest.length) { nextColumn(); frag++; }
+      }
+    }
+    return conts;
+  }
+
+  /**
+   * Apparatus checks of a layout page (spec §9.9), reported in the diagnostics: entries unplaced or
+   * duplicated against the store; notes whose box lies outside their sheet (offSheet); pairs of overlapping
+   * apparatus boxes, or apparatus boxes over printed glyph boxes (overlap); apparatus boxes over printed
+   * ornaments (ornamentCross). Boxes are the client rects of each note's and title's text.
+   */
+  function apparatusDiagnostics(sheet, conts, flowKeys) {
+    const all = [sheet, ...conts];
+    const EPS = 0.5;
+    const rng = document.createRange();
+    const boxesOf = node => {
+      rng.selectNodeContents(node);
+      return [...rng.getClientRects()].filter(g => g.width > 0 && g.height > 0)
+        .map(g => ({ l: g.left, t: g.top, r: g.right, b: g.bottom }));
+    };
+    let offSheet = 0, unplaced = 0, duplicated = 0;
+    const app = [];
+    for (const s of all) {
+      const sr = s.getBoundingClientRect();
+      for (const n of s.querySelectorAll('.marg-note, .marg-note-cont, .marg-tnote')) {
+        const nr = n.getBoundingClientRect();
+        if (nr.top < sr.top - EPS || nr.bottom > sr.bottom + EPS || nr.left < sr.left - EPS || nr.right > sr.right + EPS) offSheet++;
+        app.push({ o: n.id || `note-${app.length}`, boxes: boxesOf(n) });
+      }
+      for (const n of s.querySelectorAll('.marg-title')) app.push({ o: `title-${app.length}`, boxes: boxesOf(n) });
+    }
+    const printed = [];
+    for (const q of sheet.querySelectorAll('.vl')) printed.push(...boxesOf(q));
+    const orn = [];
+    for (const q of sheet.querySelectorAll('.vorn')) {
+      const g = q.getBoundingClientRect();
+      if (g.width > 0 || g.height > 0) orn.push({ l: g.left, t: g.top, r: g.right, b: g.bottom });
+    }
+    const hit = (a, b) => Math.min(a.r, b.r) - Math.max(a.l, b.l) > EPS && Math.min(a.b, b.b) - Math.max(a.t, b.t) > EPS;
+    const crosses = (A, list) => A.boxes.some(a => list.some(b => hit(a, b)));
+    let overlap = 0, ornamentCross = 0;
+    for (let i = 0; i < app.length; i++) {
+      const A = app[i];
+      for (let j = i + 1; j < app.length; j++) {
+        const B = app[j];
+        if (A.boxes.some(a => B.boxes.some(b => hit(a, b)))) overlap++;
+      }
+      if (crosses(A, printed)) overlap++;
+      if (crosses(A, orn)) ornamentCross++;
+    }
+    if (flowKeys) {
+      for (const b of APP_BLOCKS) {
+        const n = flowKeys[b] ? flowKeys[b].entries.length : 0;
+        let shown = 0;
+        for (const s of all) shown += s.querySelectorAll(`[data-flow-block="${b}"] .marg-note`).length;
+        unplaced += Math.max(0, n - shown);
+        duplicated += Math.max(0, shown - n);
+      }
+    }
+    return { unplaced, duplicated, offSheet, overlap, ornamentCross };
   }
 
   const FLOW_CLS = { gemara: 'gemara', inner: 'rashi', outer: 'tosafot' };
@@ -3589,7 +5782,7 @@
     }
     container.style.overflowX = sheet.getBoundingClientRect().width > container.clientWidth + 1 ? 'auto' : '';
     return Object.assign(out, {
-      sheets: cont ? [sheet, cont] : [sheet],
+      sheets: [sheet].concat(cont ? [cont] : [], out.sheets.slice(1)),
       pp2: T.pp2, edition2: T.edition2,
       anchored: {
         plan, scale: plan.scale, streams, flows, hidden: plan.hidden, extras: extrasIds,
@@ -4303,6 +6496,8 @@
      * opts: container (required), settings, reflowOnResize,
      *   layoutPolicy: 'auto' (default) | 'adaptive'
      *   profileBase:  'data/vilna-profiles' (default)
+     *   layoutBase:   'data/vilna-layout' (default) — used only when there is no local profile index
+     *                 (published build): geometry-only layout hydrated from the offline pack; false = off
      *   offlineBase:  'data/offline' (default) — optional offline text pack; false = always live Sefaria
      *   profileId:    profile id (default: index.json's default)
      *   sheetWidth:   exact sheet width in CSS px (comparison hook)
@@ -4325,6 +6520,7 @@
       this._opts = {
         layoutPolicy: opts.layoutPolicy === 'adaptive' ? 'adaptive' : 'auto',
         profileBase: String(opts.profileBase || PROFILE_BASE).replace(/\/+$/, ''),
+        layoutBase: opts.layoutBase === false ? null : String(opts.layoutBase || LAYOUT_BASE).replace(/\/+$/, ''),
         profileId: opts.profileId || null,
         sheetWidth: Number(opts.sheetWidth) > 0 ? Number(opts.sheetWidth) : null,
         interactive: opts.interactive !== false,
@@ -4346,6 +6542,10 @@
       this._state = null;
       this._profilePage = null;
       this._edition = null;
+      this._layoutUsed = false;
+      this._layoutSheets = null;
+      this._layoutGemaraSrc = null;
+      this._layoutApparatusSources = null;
       this._container.innerHTML =
         `<div class="page-sheet"><div class="loading"><span class="spinner"></span>טוען ${tractate} ${heb(page)}${side}...</div></div>`;
       this._container.dir = 'rtl';
@@ -4355,8 +6555,9 @@
       try {
         this._textStoreP = loadTextStore(tractate, page, side);
         const modelP = loadModel(tractate, page, side, settings, this._textStoreP).then(m => ({ m }), e => ({ e }));
-        let profileId = null, profilePage = null, edition = null;
+        let profileId = null, profilePage = null, edition = null, layoutFailed = false, layoutWhy = null;
         if (o.layoutPolicy !== 'adaptive') {
+          const profileIdx = await profileIndex(o.profileBase);
           profileId = await resolveProfileId(o.profileBase, o.profileId);
           if (profileId) {
             [profilePage, edition] = await Promise.all([
@@ -4365,9 +6566,27 @@
             ]);
             this._profilePage = profilePage;
             this._edition = edition;
+          } else if (!profileIdx && o.layoutBase && !(settings && settings.licenseMode === 'pd')) {
+            // Licence 'pd' never uses a layout (its text is not PD-clean): HEAD's path, no requests.
+            const lang = settings && settings.textLang ? settings.textLang : 'he';
+            const lay = await loadLayoutPage(o.layoutBase, tractate, page, side, this._textStoreP, lang,
+              settings && settings.licenseMode ? settings.licenseMode : 'all');
+            if (lay && lay.layoutUnusable) { layoutFailed = true; layoutWhy = lay.reason; }
+            else if (lay) {
+              profileId = lay.id;
+              profilePage = lay.page;
+              edition = lay.edition;
+              this._profilePage = profilePage;
+              this._edition = edition;
+              this._layoutUsed = true;
+              this._layoutSheets = lay.sheets || null;
+              this._layoutGemaraSrc = lay.gemaraSrc;
+              this._layoutApparatusSources = lay.apparatusSources;
+            }
           }
         }
-        const pol = resolvePolicy(settings, o, profilePage);
+        let pol = resolvePolicy(settings, o, profilePage);
+        if (layoutFailed && pol.reason === 'no-profile') pol = Object.assign({}, pol, { reason: layoutWhy ? `layout-unavailable:${layoutWhy}` : 'layout-unavailable' });
         if (pol.policy === 'strict-vilna') return await this._loadStrict(token, modelP, pol, profileId, profilePage, edition);
         if (pol.policy === 'anchored') {
           try {
@@ -4394,19 +6613,30 @@
       let model = r.m || null;
       const hasModel = !!(model && modelHasContent(model));
       if (!model) model = await stubModel(tractate, page, side, this.settings);
+      if (this._layoutUsed) applyLayoutGemaraSource(model, this._layoutGemaraSrc);
       const mh = hasModel ? modelHash(model) : null;
       const sefariaHashMatch = hasModel ? (!!profilePage.sefariaHash && mh === profilePage.sefariaHash) : null;
       const hasSegs = profilePage.regions.some(x => Array.isArray(x.segs) && x.segs.length);
-      const linking = sefariaHashMatch && hasSegs ? 'full' : (hasModel ? 'degraded' : 'none');
+      // A layout's segs are rebuilt from the Sefaria tokens' own segment indices (builder), so they
+      // link without a sefariaHash; local profiles keep the hash rule.
+      const trusted = !!sefariaHashMatch || (this._layoutUsed && hasSegs && hasModel);
+      const linking = trusted && hasSegs ? 'full' : (hasModel ? 'degraded' : 'none');
       if (token !== this._token) return model; // navigation moved on
       this._current = model;
-      const out = await renderStrict(this._container, model, profilePage, edition,
-        { pol, opts: this._opts, applySegs: !!sefariaHashMatch });
+      const sheetEnv = { pol, opts: this._opts, applySegs: trusted, layoutPage: this._layoutUsed,
+        lang: (this.settings && this.settings.textLang) || 'he',
+        note: this._layoutUsed && this._layoutSheets ? { used: profilePage.sourcesUsed, model, src: this._layoutApparatusSources } : null };
+      const out = this._layoutSheets
+        ? await renderStrictSheets(this._container, model, this._layoutSheets, edition, sheetEnv)
+        : await renderStrict(this._container, model, profilePage, edition, sheetEnv);
+      if (this._layoutUsed) markLayoutSheets(this._container);
       if (token !== this._token) return model;
       this._state = {
         policy: pol.policy, fallback: pol.fallback, reason: pol.reason, profileId,
         profilePage, edition, modelHash: mh, sefariaHashMatch, linking,
-        sheets: out.sheets, pxPerPt: out.pxPerPt, adaptive: null,
+        sheets: out.sheets, pxPerPt: out.pxPerPt, adaptive: null, apparatusFit: out.apparatusFit || [],
+        apparatusUnplaced: out.apparatusUnplaced,
+        apparatusChecks: apparatusChecksOf(out),
         missingStreams: () => {
           const miss = [];
           for (const rg of profilePage.regions) {
@@ -4418,7 +6648,9 @@
           return miss;
         },
       };
-      appendSourcesNote(this._container, model);
+      if (this._layoutUsed && !this._layoutSheets) appendLayoutSourcesNote(this._container, profilePage.sourcesUsed, [], model,
+        apparatusEntriesFor(this._layoutApparatusSources, renderedFlowBlocks(profilePage, model), 'he'));
+      else if (!this._layoutSheets) appendSourcesNote(this._container, model);   // layer/2: one note per sheet (renderStrictSheets)
       this._finish(out.sheets, model, model);
       if (this.reflowOnResize) this._watchResize();
       if (this._onLoad) this._onLoad(model);
@@ -4432,6 +6664,7 @@
       if (pol.plan.needsFlow && !model) throw Object.assign(new Error('model unavailable'), { code: 'no-model' });
       const hasModel = !!(model && modelHasContent(model));
       if (!model) model = await stubModel(tractate, page, side, this.settings);
+      if (this._layoutUsed) applyLayoutGemaraSource(model, this._layoutGemaraSrc);
       const baseModel = model._base || model;
       // Final flow set (design §3.5), decided once the model is known.
       const plan = pol.plan;
@@ -4454,17 +6687,23 @@
       const mh = hasModel ? modelHash(baseModel) : null;
       const sefariaHashMatch = hasModel ? (!!profilePage.sefariaHash && mh === profilePage.sefariaHash) : null;
       const hasSegs = profilePage.regions.some(x => Array.isArray(x.segs) && x.segs.length);
-      const linking = sefariaHashMatch && hasSegs ? 'full' : (hasModel ? 'degraded' : 'none');
+      // A layout's segs are rebuilt from the Sefaria tokens' own segment indices (builder), so they
+      // link without a sefariaHash; local profiles keep the hash rule.
+      const trusted = !!sefariaHashMatch || (this._layoutUsed && hasSegs && hasModel);
+      const linking = trusted && hasSegs ? 'full' : (hasModel ? 'degraded' : 'none');
       if (token !== this._token) return model; // navigation moved on
       this._current = model;
       const out = await renderAnchored(this._container, model, profilePage, edition,
         { pol: Object.assign({}, pol, { plan: Object.assign({}, plan, { flow: flows }) }), opts: this._opts,
-          applySegs: !!sefariaHashMatch, norm, flows, settings: s });
+          applySegs: trusted, norm, flows, settings: s, layoutPage: this._layoutUsed });
+      if (this._layoutUsed) markLayoutSheets(this._container);
       if (token !== this._token) return model;
       this._state = {
         policy: pol.policy, fallback: pol.fallback, reason: pol.reason, profileId,
         profilePage: out.pp2, edition: out.edition2, modelHash: mh, sefariaHashMatch, linking,
-        sheets: out.sheets, pxPerPt: out.pxPerPt, adaptive: null, anchored: out.anchored,
+        sheets: out.sheets, pxPerPt: out.pxPerPt, adaptive: null, anchored: out.anchored, apparatusFit: out.apparatusFit || [],
+        apparatusUnplaced: out.apparatusUnplaced,
+        apparatusChecks: apparatusChecksOf(out),
         missingStreams: () => {
           const miss = [];
           for (const rg of out.pp2.regions) {
@@ -4483,7 +6722,12 @@
           return miss;
         },
       };
-      appendSourcesNote(this._container, model);
+      if (this._layoutUsed) {
+        const flowBlocks = [['gemara', 'gemara'], ['inner', 'rashi'], ['outer', 'tosafot']]
+          .filter(([k]) => flows[k]).map(([, b]) => b);
+        appendLayoutSourcesNote(this._container, profilePage.sourcesUsed, flowBlocks, model,
+          apparatusEntriesFor(this._layoutApparatusSources, renderedFlowBlocks(profilePage, model), 'he'));
+      } else appendSourcesNote(this._container, model);
       this._finish(out.sheets, model, model);
       if (this.reflowOnResize) this._watchResize();
       if (this._onLoad) this._onLoad(model);
@@ -4539,6 +6783,7 @@
           return miss;
         },
       };
+      out.model.apparatusNoteEntries = adaptiveApparatusEntries(out.model);
       appendSourcesNote(this._container, out.model);
       this._finish(out.sheets, model, out.model);
       if (this.reflowOnResize) this._watchResize();
@@ -4759,6 +7004,9 @@
         ready: sheets[0].dataset.vilnaReady === '1',
         pxPerPt: strict ? st.pxPerPt : null,
         anchored: st.anchored || null,
+        apparatusFit: st.apparatusFit || [],
+        apparatusUnplaced: st.apparatusUnplaced === undefined ? null : st.apparatusUnplaced,
+        apparatusChecks: st.apparatusChecks || null,
         sheets: sheets.map((s, i) => ({ index: +(s.dataset.sheet || i), rect: relRect(s.getBoundingClientRect(), o) })),
         regions,
         fonts,
@@ -4794,6 +7042,11 @@
   VilnaDaf.modelHash = modelHash;
   VilnaDaf.profileTextHash = profileTextHash;
   VilnaDaf.tractateKey = tractateKey;
+  VilnaDaf.hydrateLayout = hydrateLayout;
+  VilnaDaf.layoutTokenStream = layoutTokenStream;
+  VilnaDaf.layoutTranslationSheet = layoutTranslationSheet;
+  VilnaDaf.tsFontsReady = tsFontsReady;
+  VilnaDaf.exportSheetLines = exportSheetLines;
   VilnaDaf._internals = { // for tests
     parseMasoretRefs, parseVerseCitation, heNum, buildPrintedAnchors,
     solve, normalizeModel, stripHtml, sanitizeHtml,

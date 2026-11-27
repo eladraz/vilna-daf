@@ -1,0 +1,994 @@
+{
+  "schema": "vilna-profile-edition/1",
+  "profileId": "vilna-ref1",
+  "edition": {
+    "name": "Vilna (Romm) page layout — geometry only"
+  },
+  "generator": {
+    "tool": "scripts/build_vilna_layout.py",
+    "version": "1"
+  },
+  "pageSizes": [
+    {
+      "w": 643.575,
+      "h": 992.575,
+      "pages": 5155
+    },
+    {
+      "w": 586.771,
+      "h": 935.432,
+      "pages": 217
+    },
+    {
+      "w": 842.0,
+      "h": 1191.0,
+      "pages": 2
+    },
+    {
+      "w": 671.921,
+      "h": 1020.921,
+      "pages": 1
+    }
+  ],
+  "typefaces": {
+    "rashi": {
+      "script": "rashi",
+      "meanAdvEm": 0.3455,
+      "advEm": {
+        "א": 0.3873,
+        "ב": 0.3332,
+        "ג": 0.3054,
+        "ד": 0.3592,
+        "ה": 0.4147,
+        "ו": 0.2206,
+        "ז": 0.1941,
+        "ח": 0.3873,
+        "ט": 0.4426,
+        "י": 0.1951,
+        "ך": 0.3332,
+        "כ": 0.3332,
+        "ל": 0.2774,
+        "ם": 0.4147,
+        "מ": 0.4426,
+        "ן": 0.2206,
+        "נ": 0.2486,
+        "ס": 0.4147,
+        "ע": 0.4147,
+        "ף": 0.3873,
+        "פ": 0.4147,
+        "ץ": 0.3054,
+        "צ": 0.2774,
+        "ק": 0.4147,
+        "ר": 0.3592,
+        "ש": 0.4147,
+        "ת": 0.4147
+      },
+      "stemV": null,
+      "ascent": null,
+      "descent": null,
+      "sample": [
+        [
+          11.2,
+          1572121
+        ],
+        [
+          7.7,
+          415435
+        ],
+        [
+          7.2,
+          156537
+        ],
+        [
+          10.9,
+          68693
+        ],
+        [
+          8.9,
+          52687
+        ],
+        [
+          6.7,
+          38105
+        ],
+        [
+          11.9,
+          36208
+        ],
+        [
+          7.9,
+          36093
+        ]
+      ],
+      "punctAdvEm": {
+        "\"": 0.3634,
+        "'": 0.221,
+        ".": 0.1937,
+        ":": 0.3067,
+        ",": 0.1953,
+        "(": 0.2588,
+        ")": 0.2561,
+        "[": 0.2587,
+        "]": 0.2582
+      }
+    },
+    "sq-text": {
+      "script": "square",
+      "meanAdvEm": 0.3719,
+      "advEm": {
+        "א": 0.443,
+        "ב": 0.3867,
+        "ג": 0.2767,
+        "ד": 0.3867,
+        "ה": 0.443,
+        "ו": 0.2204,
+        "ז": 0.1937,
+        "ח": 0.443,
+        "ט": 0.443,
+        "י": 0.1937,
+        "ך": 0.3868,
+        "כ": 0.3867,
+        "ל": 0.36,
+        "ם": 0.443,
+        "מ": 0.443,
+        "ן": 0.1937,
+        "נ": 0.2493,
+        "ס": 0.443,
+        "ע": 0.4157,
+        "ף": 0.3868,
+        "פ": 0.3867,
+        "ץ": 0.3868,
+        "צ": 0.3867,
+        "ק": 0.3867,
+        "ר": 0.36,
+        "ש": 0.5261,
+        "ת": 0.4697
+      },
+      "stemV": null,
+      "ascent": null,
+      "descent": null,
+      "sample": [
+        [
+          13.7,
+          644157
+        ],
+        [
+          11.4,
+          47503
+        ],
+        [
+          13.4,
+          34202
+        ],
+        [
+          11.2,
+          22485
+        ],
+        [
+          13.2,
+          20163
+        ],
+        [
+          12.0,
+          12582
+        ],
+        [
+          13.0,
+          11768
+        ],
+        [
+          12.7,
+          10587
+        ]
+      ],
+      "punctAdvEm": {
+        "\"": 0.3016,
+        "'": 0.1679,
+        ".": 0.1632,
+        ":": 0.2512,
+        "(": 0.2802,
+        ")": 0.2805,
+        "[": 0.2675,
+        "]": 0.2331
+      }
+    },
+    "sq-wide": {
+      "script": "square",
+      "meanAdvEm": 0.4161,
+      "advEm": {
+        "א": 0.471,
+        "ב": 0.4423,
+        "ג": 0.333,
+        "ד": 0.4146,
+        "ה": 0.471,
+        "ו": 0.2768,
+        "ז": 0.2768,
+        "ח": 0.4985,
+        "ט": 0.4985,
+        "י": 0.2493,
+        "ך": 0.4147,
+        "כ": 0.4146,
+        "ל": 0.4146,
+        "ם": 0.471,
+        "מ": 0.4985,
+        "ן": 0.2768,
+        "נ": 0.2768,
+        "ס": 0.4424,
+        "ע": 0.4424,
+        "ף": 0.4425,
+        "פ": 0.4424,
+        "ץ": 0.4427,
+        "צ": 0.4424,
+        "ק": 0.4423,
+        "ר": 0.3871,
+        "ש": 0.5803,
+        "ת": 0.471
+      },
+      "stemV": null,
+      "ascent": null,
+      "descent": null,
+      "sample": [
+        [
+          7.0,
+          459464
+        ],
+        [
+          6.7,
+          201254
+        ],
+        [
+          6.4,
+          72762
+        ],
+        [
+          5.8,
+          55532
+        ],
+        [
+          6.0,
+          17206
+        ],
+        [
+          6.2,
+          9985
+        ],
+        [
+          6.6,
+          4359
+        ],
+        [
+          7.9,
+          1319
+        ]
+      ],
+      "punctAdvEm": {
+        "\"": 0.3838,
+        "'": 0.2207,
+        ".": 0.2204,
+        ":": 0.3319,
+        ",": 0.2197,
+        "(": 0.2663,
+        ")": 0.2767,
+        "[": 0.2697,
+        "]": 0.2737
+      }
+    },
+    "sq-bold": {
+      "script": "rashi",
+      "meanAdvEm": 0.3298,
+      "advEm": {
+        "א": 0.3776,
+        "ב": 0.3202,
+        "ג": 0.263,
+        "ד": 0.321,
+        "ה": 0.3683,
+        "ו": 0.211,
+        "ז": 0.2008,
+        "ח": 0.3734,
+        "ט": 0.4146,
+        "י": 0.1986,
+        "ך": 0.3294,
+        "כ": 0.3378,
+        "ל": 0.2524,
+        "ם": 0.411,
+        "מ": 0.4218,
+        "ן": 0.1889,
+        "נ": 0.2588,
+        "ס": 0.4051,
+        "ע": 0.4261,
+        "ף": 0.3749,
+        "פ": 0.353,
+        "ץ": 0.3132,
+        "צ": 0.2841,
+        "ק": 0.3733,
+        "ר": 0.3449,
+        "ש": 0.384,
+        "ת": 0.3978
+      },
+      "stemV": null,
+      "ascent": null,
+      "descent": null,
+      "sample": [
+        [
+          11.4,
+          153621
+        ],
+        [
+          8.4,
+          14864
+        ],
+        [
+          10.9,
+          13360
+        ],
+        [
+          7.9,
+          5868
+        ],
+        [
+          8.5,
+          3504
+        ],
+        [
+          9.1,
+          2751
+        ],
+        [
+          10.7,
+          2042
+        ],
+        [
+          10.0,
+          1892
+        ]
+      ],
+      "punctAdvEm": {
+        "\"": 0.341,
+        "'": 0.2302,
+        ".": 0.1609,
+        "(": 0.2076,
+        ")": 0.2977,
+        "]": 0.1766
+      }
+    },
+    "sq-heavy": {
+      "script": "square",
+      "meanAdvEm": 0.3944,
+      "advEm": {
+        "א": 0.4701,
+        "ב": 0.4148,
+        "ג": 0.277,
+        "ד": 0.3868,
+        "ה": 0.4429,
+        "ו": 0.2491,
+        "ז": 0.221,
+        "ח": 0.4429,
+        "ט": 0.4701,
+        "י": 0.2209,
+        "ך": 0.3869,
+        "כ": 0.4429,
+        "ל": 0.3868,
+        "ם": 0.4428,
+        "מ": 0.4701,
+        "ן": 0.2209,
+        "נ": 0.277,
+        "ס": 0.4428,
+        "ע": 0.4149,
+        "ף": 0.4149,
+        "פ": 0.4429,
+        "ץ": 0.415,
+        "צ": 0.4429,
+        "ק": 0.4429,
+        "ר": 0.3868,
+        "ש": 0.5254,
+        "ת": 0.4982
+      },
+      "stemV": null,
+      "ascent": null,
+      "descent": null,
+      "sample": [
+        [
+          11.3,
+          35796
+        ],
+        [
+          7.9,
+          10535
+        ],
+        [
+          7.4,
+          9148
+        ],
+        [
+          6.9,
+          5915
+        ],
+        [
+          16.3,
+          4217
+        ],
+        [
+          9.4,
+          3883
+        ],
+        [
+          7.0,
+          3881
+        ],
+        [
+          6.7,
+          3533
+        ]
+      ],
+      "punctAdvEm": {
+        "\"": 0.3009,
+        "'": 0.1643,
+        ".": 0.1866,
+        "[": 0.2436,
+        "]": 0.2461
+      }
+    },
+    "sq-wide2": {
+      "script": "square",
+      "meanAdvEm": 0.4142,
+      "advEm": {
+        "א": 0.471,
+        "ב": 0.4152,
+        "ג": 0.3332,
+        "ד": 0.4151,
+        "ה": 0.471,
+        "ו": 0.2773,
+        "ז": 0.2772,
+        "ח": 0.4985,
+        "ט": 0.4984,
+        "י": 0.2492,
+        "ך": 0.415,
+        "כ": 0.4151,
+        "ל": 0.4151,
+        "ם": 0.471,
+        "מ": 0.4985,
+        "ן": 0.2773,
+        "נ": 0.2773,
+        "ס": 0.4424,
+        "ע": 0.4423,
+        "ף": 0.4428,
+        "פ": 0.4423,
+        "ץ": 0.4429,
+        "צ": 0.4425,
+        "ק": 0.4423,
+        "ר": 0.387,
+        "ש": 0.5824,
+        "ת": 0.4423
+      },
+      "stemV": null,
+      "ascent": null,
+      "descent": null,
+      "sample": [
+        [
+          7.0,
+          37641
+        ],
+        [
+          7.9,
+          36162
+        ],
+        [
+          7.4,
+          15734
+        ],
+        [
+          7.2,
+          5854
+        ],
+        [
+          6.7,
+          2783
+        ],
+        [
+          7.1,
+          2707
+        ],
+        [
+          6.6,
+          1688
+        ],
+        [
+          7.6,
+          779
+        ]
+      ],
+      "punctAdvEm": {
+        "\"": 0.4483,
+        "'": 0.2426,
+        ".": 0.2421,
+        ",": 0.2361,
+        "[": 0.2952,
+        "]": 0.3028
+      }
+    },
+    "sq-tiny": {
+      "script": "square",
+      "meanAdvEm": 0.4903,
+      "advEm": {
+        "א": 0.582,
+        "ב": 0.5262,
+        "ג": 0.4151,
+        "ד": 0.4712,
+        "ה": 0.582,
+        "ו": 0.3328,
+        "ז": 0.3052,
+        "ח": 0.5537,
+        "ט": 0.5537,
+        "י": 0.3327,
+        "ך": 0.469,
+        "כ": 0.5261,
+        "ל": 0.5261,
+        "ם": 0.5535,
+        "מ": 0.5535,
+        "ן": 0.2852,
+        "נ": 0.3329,
+        "ס": 0.5261,
+        "ע": 0.5535,
+        "ף": 0.519,
+        "פ": 0.5261,
+        "ץ": 0.471,
+        "צ": 0.526,
+        "ק": 0.5262,
+        "ר": 0.4712,
+        "ש": 0.6362,
+        "ת": 0.582
+      },
+      "stemV": null,
+      "ascent": null,
+      "descent": null,
+      "sample": [
+        [
+          4.9,
+          14229
+        ],
+        [
+          5.4,
+          9789
+        ],
+        [
+          5.5,
+          5143
+        ],
+        [
+          7.0,
+          3129
+        ],
+        [
+          5.2,
+          1725
+        ],
+        [
+          4.5,
+          1519
+        ],
+        [
+          5.9,
+          876
+        ],
+        [
+          5.0,
+          764
+        ]
+      ],
+      "punctAdvEm": {
+        "\"": 0.4448,
+        ".": 0.311,
+        ":": 0.2924,
+        "(": 0.3204
+      }
+    },
+    "sq-alt": {
+      "script": "rashi",
+      "meanAdvEm": 0.3497,
+      "advEm": {
+        "א": 0.38,
+        "ב": 0.3747,
+        "ג": 0.294,
+        "ד": 0.3534,
+        "ה": 0.3979,
+        "ו": 0.2188,
+        "ז": 0.2125,
+        "ח": 0.398,
+        "ט": 0.4417,
+        "י": 0.199,
+        "ך": 0.3916,
+        "כ": 0.3597,
+        "ל": 0.2911,
+        "ם": 0.438,
+        "מ": 0.4117,
+        "ן": 0.2097,
+        "נ": 0.2711,
+        "ס": 0.4497,
+        "ע": 0.43,
+        "ף": 0.3945,
+        "פ": 0.3661,
+        "ץ": 0.3003,
+        "צ": 0.2711,
+        "ק": 0.3917,
+        "ר": 0.3977,
+        "ש": 0.3883,
+        "ת": 0.4087
+      },
+      "stemV": null,
+      "ascent": null,
+      "descent": null,
+      "sample": [
+        [
+          9.8,
+          4393
+        ],
+        [
+          8.3,
+          2136
+        ],
+        [
+          5.8,
+          632
+        ],
+        [
+          7.2,
+          466
+        ],
+        [
+          7.6,
+          332
+        ],
+        [
+          7.4,
+          140
+        ],
+        [
+          9.2,
+          12
+        ]
+      ],
+      "punctAdvEm": {
+        ")": 0.2383,
+        "]": 0.2125
+      }
+    },
+    "nikud": {
+      "script": "square",
+      "meanAdvEm": 0.5492,
+      "advEm": {
+        "א": 0.6771,
+        "ב": 0.5595,
+        "ג": 0.4264,
+        "ד": 0.5729,
+        "ה": 0.6541,
+        "ו": 0.3323,
+        "ז": 0.3304,
+        "ח": 0.6234,
+        "ט": 0.6138,
+        "י": 0.3049,
+        "ך": 0.5434,
+        "כ": 0.5727,
+        "ל": 0.5848,
+        "ם": 0.624,
+        "מ": 0.6532,
+        "ן": 0.3048,
+        "נ": 0.3727,
+        "ס": 0.5846,
+        "ע": 0.6239,
+        "ף": 0.5181,
+        "פ": 0.5437,
+        "ץ": 0.6118,
+        "צ": 0.6246,
+        "ק": 0.5731,
+        "ר": 0.5598,
+        "ש": 0.771,
+        "ת": 0.6661
+      },
+      "note": "advances derived by least squares from ground-truth word extents (23083 words, rms residual 5.3/1000 em)",
+      "punctAdvEm": {
+        ":": 0.2162
+      }
+    },
+    "punct": {
+      "script": "square",
+      "meanAdvEm": null,
+      "advEm": {},
+      "note": "family-derived"
+    },
+    "ornament": {
+      "script": "square",
+      "meanAdvEm": null,
+      "advEm": {},
+      "note": "family-derived"
+    }
+  },
+  "webFonts": {
+    "rashi": {
+      "family": "RashiScript",
+      "file": "fonts/NotoRashiHebrew-hebrew.woff2",
+      "sha256": "1e5e568b41c015c011d5e378bf9c617c74432ed3bbb1574c292a9eb2927cc0ed",
+      "wght": 750,
+      "sizeScale": 0.7275,
+      "baselineShiftEm": 0.03,
+      "fitted": true,
+      "fit": {
+        "method": "frequency-weighted least squares of per-letter advances (web font measured in Chromium 148.0.7778.96 at this wght) vs reference /Widths",
+        "advRmseEm": 0.024,
+        "advRelErr": 0.0724,
+        "advanceOptimalWght": 600,
+        "note": "weight fixed by typeface role (advances barely constrain weight); sizeScale<1 matches widths but shrinks glyph height"
+      },
+      "inkShiftXEm": -0.01,
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)",
+      "baselineShiftBySize": {
+        "6.48": 0.0102,
+        "6.49": 0.0099,
+        "6.72": -0.0063,
+        "7.04": -0.0103,
+        "7.32": 0.006,
+        "7.71": -0.006,
+        "7.92": -0.0123,
+        "8.05": -0.0092,
+        "8.40": 0.0093,
+        "8.94": -0.0087,
+        "9.36": -0.0073,
+        "9.84": 0.004,
+        "10.20": -0.0034,
+        "10.39": 0.0112,
+        "10.73": 0.0118,
+        "11.40": -0.006,
+        "11.88": 0.0048
+      }
+    },
+    "sq-text": {
+      "family": "FrankRuhl",
+      "file": "fonts/FrankRuhlLibre-hebrew.woff2",
+      "sha256": "acdf9ed0a3fc287df8401d796892c1f72118f291e510e38328396f48e200b08c",
+      "wght": 650,
+      "sizeScale": 0.7886,
+      "baselineShiftEm": 0.028,
+      "fitted": true,
+      "fit": {
+        "method": "frequency-weighted least squares of per-letter advances (web font measured in Chromium 148.0.7778.96 at this wght) vs reference /Widths",
+        "advRmseEm": 0.0277,
+        "advRelErr": 0.0772,
+        "advanceOptimalWght": 300,
+        "note": "weight fixed by typeface role (advances barely constrain weight); sizeScale<1 matches widths but shrinks glyph height"
+      },
+      "inkShiftXEm": -0.011,
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)",
+      "baselineShiftBySize": {
+        "7.44": -0.0097,
+        "11.25": 0.0134,
+        "11.37": 0.0124,
+        "11.40": 0.009,
+        "12.00": 0.0062,
+        "12.66": 0.0185,
+        "12.96": 0.0063,
+        "13.20": 0.0057,
+        "13.44": 0.0044,
+        "13.68": 0.0038,
+        "22.80": 0.0201,
+        "22.86": 0.0029
+      }
+    },
+    "sq-bold": {
+      "family": "RashiScript",
+      "file": "fonts/NotoRashiHebrew-hebrew.woff2",
+      "sha256": "1e5e568b41c015c011d5e378bf9c617c74432ed3bbb1574c292a9eb2927cc0ed",
+      "wght": 900,
+      "sizeScale": 0.6779,
+      "baselineShiftEm": 0.059,
+      "fitted": true,
+      "fit": {
+        "method": "frequency-weighted least squares of per-letter advances (web font measured in Chromium 148.0.7778.96 at this wght) vs reference /Widths",
+        "advRmseEm": 0.0213,
+        "advRelErr": 0.0676,
+        "advanceOptimalWght": 850,
+        "note": "weight fixed by typeface role (advances barely constrain weight); sizeScale<1 matches widths but shrinks glyph height"
+      },
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)",
+      "baselineShiftBySize": {
+        "6.36": 0.0104,
+        "8.40": -0.0052
+      }
+    },
+    "sq-heavy": {
+      "family": "FrankRuhl",
+      "file": "fonts/FrankRuhlLibre-hebrew.woff2",
+      "sha256": "acdf9ed0a3fc287df8401d796892c1f72118f291e510e38328396f48e200b08c",
+      "wght": 800,
+      "sizeScale": 0.8221,
+      "baselineShiftEm": 0.0256,
+      "fitted": true,
+      "fit": {
+        "method": "frequency-weighted least squares of per-letter advances (web font measured in Chromium 148.0.7778.96 at this wght) vs reference /Widths",
+        "advRmseEm": 0.023,
+        "advRelErr": 0.0605,
+        "advanceOptimalWght": 400,
+        "note": "weight fixed by typeface role (advances barely constrain weight); sizeScale<1 matches widths but shrinks glyph height"
+      },
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)",
+      "baselineShiftBySize": {
+        "6.86": 0.0124,
+        "7.44": -0.01,
+        "7.92": -0.0064,
+        "8.40": -0.0057,
+        "8.46": -0.0101,
+        "9.42": -0.0033,
+        "11.33": 0.0049,
+        "13.92": -0.0177,
+        "16.32": -0.0089,
+        "16.38": -0.0092
+      }
+    },
+    "sq-wide": {
+      "family": "FrankRuhl",
+      "file": "fonts/FrankRuhlLibre-hebrew.woff2",
+      "sha256": "acdf9ed0a3fc287df8401d796892c1f72118f291e510e38328396f48e200b08c",
+      "wght": 700,
+      "sizeScale": 0.8688,
+      "baselineShiftEm": -0.014,
+      "fitted": true,
+      "fit": {
+        "method": "frequency-weighted least squares of per-letter advances (web font measured in Chromium 148.0.7778.96 at this wght) vs reference /Widths",
+        "advRmseEm": 0.0195,
+        "advRelErr": 0.0488,
+        "advanceOptimalWght": 900,
+        "note": "weight fixed by typeface role (advances barely constrain weight); sizeScale<1 matches widths but shrinks glyph height"
+      },
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)",
+      "baselineShiftBySize": {
+        "6.04": -0.0083,
+        "6.36": 0.0069,
+        "6.60": 0.0054,
+        "6.72": 0.0044
+      }
+    },
+    "sq-wide2": {
+      "family": "FrankRuhl",
+      "file": "fonts/FrankRuhlLibre-hebrew.woff2",
+      "sha256": "acdf9ed0a3fc287df8401d796892c1f72118f291e510e38328396f48e200b08c",
+      "wght": 750,
+      "sizeScale": 0.8635,
+      "baselineShiftEm": -0.0126,
+      "fitted": true,
+      "fit": {
+        "method": "frequency-weighted least squares of per-letter advances (web font measured in Chromium 148.0.7778.96 at this wght) vs reference /Widths",
+        "advRmseEm": 0.0211,
+        "advRelErr": 0.0532,
+        "advanceOptimalWght": 900,
+        "note": "weight fixed by typeface role (advances barely constrain weight); sizeScale<1 matches widths but shrinks glyph height"
+      },
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)",
+      "baselineShiftBySize": {
+        "6.72": 0.0144,
+        "7.20": -0.0076
+      }
+    },
+    "sq-tiny": {
+      "family": "FrankRuhl",
+      "file": "fonts/FrankRuhlLibre-hebrew.woff2",
+      "sha256": "acdf9ed0a3fc287df8401d796892c1f72118f291e510e38328396f48e200b08c",
+      "wght": 500,
+      "sizeScale": 1.0,
+      "baselineShiftEm": 0.0177,
+      "fitted": true,
+      "fit": {
+        "method": "frequency-weighted least squares of per-letter advances (web font measured in Chromium 148.0.7778.96 at this wght) vs reference /Widths",
+        "advRmseEm": 0.0217,
+        "advRelErr": 0.0443,
+        "advanceOptimalWght": 600,
+        "note": "weight fixed by typeface role (advances barely constrain weight); sizeScale<1 matches widths but shrinks glyph height"
+      },
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)",
+      "baselineShiftBySize": {
+        "5.40": -0.0062,
+        "5.46": -0.0094
+      }
+    },
+    "sq-alt": {
+      "family": "RashiScript",
+      "file": "fonts/NotoRashiHebrew-hebrew.woff2",
+      "sha256": "1e5e568b41c015c011d5e378bf9c617c74432ed3bbb1574c292a9eb2927cc0ed",
+      "wght": 600,
+      "sizeScale": 0.7323,
+      "baselineShiftEm": 0.02,
+      "fitted": true,
+      "fit": {
+        "method": "frequency-weighted least squares of per-letter advances (web font measured in Chromium 148.0.7778.96 at this wght) vs reference /Widths",
+        "advRmseEm": 0.015,
+        "advRelErr": 0.045,
+        "advanceOptimalWght": 400,
+        "note": "weight fixed by typeface role (advances barely constrain weight); sizeScale<1 matches widths but shrinks glyph height"
+      },
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)",
+      "baselineShiftBySize": {
+        "7.17": 0.0052,
+        "7.60": 0.0118
+      }
+    },
+    "nikud": {
+      "family": "FrankRuhl",
+      "file": "fonts/FrankRuhlLibre-hebrew.woff2",
+      "sha256": "acdf9ed0a3fc287df8401d796892c1f72118f291e510e38328396f48e200b08c",
+      "wght": 600,
+      "sizeScale": 1.1,
+      "baselineShiftEm": 0.0,
+      "fitted": true,
+      "fit": {
+        "method": "frequency-weighted least squares of per-letter advances (web font measured in Chromium 148.0.7778.96 at this wght) vs reference /Widths",
+        "advRmseEm": 0.0342,
+        "advRelErr": 0.0628,
+        "advanceOptimalWght": 400,
+        "note": "weight fixed by typeface role (advances barely constrain weight); sizeScale<1 matches widths but shrinks glyph height"
+      },
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)"
+    },
+    "punct": {
+      "family": "FrankRuhl",
+      "file": "fonts/FrankRuhlLibre-hebrew.woff2",
+      "sha256": "acdf9ed0a3fc287df8401d796892c1f72118f291e510e38328396f48e200b08c",
+      "wght": 500,
+      "sizeScale": 0.8,
+      "baselineShiftEm": 0.0,
+      "fitted": false,
+      "rasterFit": "raster fit: wght + baselineShiftEm (iteration 2), nikud sizeScale (iteration 3) and per-typeface wght / baselineShiftEm from the per-run raster audit (iteration 4) chosen by ink IoU on 12 calibration amudim, validated on 12 held-out amudim (harness/out/iter2-sweep, iter3-sweep, iter4-sweep results.jsonl)"
+    },
+    "ornament": {
+      "family": "FrankRuhl",
+      "file": "fonts/FrankRuhlLibre-hebrew.woff2",
+      "sha256": "acdf9ed0a3fc287df8401d796892c1f72118f291e510e38328396f48e200b08c",
+      "wght": 400,
+      "sizeScale": 1.0,
+      "baselineShiftEm": 0.0,
+      "fitted": false
+    }
+  },
+  "defaults": {
+    "gemara": {
+      "face": "sq-text",
+      "size": 13.68,
+      "leading": 11.85
+    },
+    "wrap": {
+      "face": "rashi",
+      "size": 11.16,
+      "leading": 10.44
+    },
+    "margin": {
+      "face": "rashi",
+      "size": 7.2,
+      "leading": 7.2
+    },
+    "columns644": {
+      "core": [
+        128.94,
+        548.4
+      ],
+      "gemara3col": [
+        253.62,
+        423.6
+      ],
+      "marginOuter": [
+        58.08,
+        120.58
+      ],
+      "marginInner": [
+        556.92,
+        619.3
+      ],
+      "gutter": 11.4
+    }
+  },
+  "rights": {
+    "layoutOnly": true,
+    "textFrom": "data/offline (Sefaria)"
+  },
+  "sefariaAttribution": "Segment mapping and comparison text: Sefaria (sefaria.org), see LICENSE.md",
+  "profileBytes": {
+    "pages": 5375,
+    "total": 174747869,
+    "mean": 32511
+  }
+}
