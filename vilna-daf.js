@@ -3053,7 +3053,21 @@
       page: pg.page, side: pg.side, chapter: pg.chapter,
       gemara: he.gemara || [], rashi: he.rashi || [], tosafot: he.tosafot || [],
       links: pg.links || {}, extras,
+      columnLabels: pg.columnLabels || null,
     };
+  }
+
+  /**
+   * Name of an inner/outer commentary column (store block 'rashi' / 'tosafot') on a page whose columns
+   * hold other commentaries (page.columnLabels, e.g. Shekalim: Korban HaEdah / Penei Moshe), or null.
+   * Only while the user has not swapped the column's commentary in Settings.
+   */
+  function columnLabel(model, block, ltr) {
+    const cl = model && model.columnLabels && model.columnLabels[block];
+    if (!cl) return null;
+    const st = model.settings;
+    if (st && st[block === 'rashi' ? 'inner' : 'outer'] !== DEFAULT_SETTINGS[block === 'rashi' ? 'inner' : 'outer']) return null;
+    return (ltr ? cl.en : cl.he) || cl.he || cl.en || null;
   }
 
   async function loadModel(tractate, page, side, settings, storeP = loadTextStore(tractate, page, side)) {
@@ -3483,6 +3497,9 @@
       if (i === 0 && model.chapter && model.chapter.startsHere && model.chapter.startSeg === 1) {
         if (model.chapterBoxName) boxWord = model.chapterBoxName;   // translated page: the box shows the chapter's name, the text keeps its first word
         else {
+          // Yerushalmi (Shekalim) chapters open with a bold "משנה:" label: the box takes the first word
+          // of the text itself, the label is dropped (the printed page marks the Mishnah elsewhere).
+          segHtml = segHtml.replace(OPENER_LABEL_RE, '');
           const ext = extractFirstWord(segHtml);
           if (ext) { boxWord = ext.word; segHtml = ext.rest; }
         }
@@ -3491,6 +3508,8 @@
     }
     return { html, boxWord };
   }
+
+  const OPENER_LABEL_RE = /^\s*<(strong|b)>\s*(?:<big>)?\s*(?:משנה|הלכה|מתני׳|מתני')\s*[:׃]?\s*(?:<\/big>)?\s*<\/\1>\s*/;
 
   /** Remove the first word from a segment's HTML, returning {word, rest}. */
   function extractFirstWord(segHtml) {
@@ -3655,8 +3674,8 @@
     for (const block of shownBlocks || []) {
       const src = srcs[block];
       if (!src) continue;
-      const name = ltr ? (SRC_BLOCK_EN[block] || block.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()))
-        : SRC_BLOCK_HE[block] || (EXTRA_COMMENTARIES.find(e => e.id === block) || {}).he || block;
+      const name = columnLabel(model, block, ltr) || (ltr ? (SRC_BLOCK_EN[block] || block.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()))
+        : SRC_BLOCK_HE[block] || (EXTRA_COMMENTARIES.find(e => e.id === block) || {}).he || block);
       const lic = src.license ? ` · ${src.license}` : '';
       const line = el('div', 'daf-src-line');
       line.dataset.noteBlock = block;
@@ -4330,7 +4349,7 @@
       results[results.length - 1] = c.res;
       if (!c.any) { capped = true; break; } // nothing cuttable: sheet runs long, nothing lost
       const n = sheets.length;
-      const continued = ['gemara', 'rashi', 'tosafot'].filter(k => c.carry[k].length).map(k => STREAM_LABEL[k]);
+      const continued = ['gemara', 'rashi', 'tosafot'].filter(k => c.carry[k].length).map(k => columnLabel(model, k, false) || STREAM_LABEL[k]);
       const N = buildContSheet(model, s, L, n, continued);
       N.index = n;
       N.sheet.dataset.sheet = String(n);

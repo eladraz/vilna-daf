@@ -119,7 +119,14 @@ removed: `grep -l '"special":true' data/offline/*/*.json`).
   versions as listed per page. Attribution to Sefaria,
   Hebrew Wikisource and the version's contributors is required, and adaptations stay CC-BY-SA.
   The print-layout texts are recorded per page in `printSources`.
-- **CC-BY:** Tosafot translation by Jan Buckler (English).
+- **CC-BY:** Tosafot translation by Jan Buckler (English); and *The Jerusalem Talmud*, edition and
+  translation with commentary by Heinrich W. Guggenheimer (Berlin, De Gruyter, 1999-2015), Hebrew and English,
+  via Sefaria: the text of Shekalim on pages 2a-22b (in the Vilna Shas this tractate is the Jerusalem Talmud
+  printed with Bavli-style page numbers, mapped from Sefaria's "Daf Yomi" alternative structure; built by
+  `scripts/fetch_shekalim.py`). Attribution to Guggenheimer, De Gruyter and Sefaria is required; recorded as
+  `special: true` like the other CC-BY text.
+- **Public Domain (Shekalim commentaries):** *Korban HaEdah* and *Penei Moshe* on the Jerusalem Talmud, Hebrew
+  ("Piotrków, 1898-1900" on Sefaria), shown in the two commentary columns of Shekalim.
 - **CC-BY-NC:** William Davidson Edition (Hebrew/Aramaic and English) of the Talmud — non-commercial use only.
 - **Public Domain (apparatus verses):** "Tanach with Ta'amei Hamikra" (Hebrew verses, niqqud and
   cantillation removed); "The Holy Scriptures: A New Translation (JPS 1917)" (English verses); "Bible du

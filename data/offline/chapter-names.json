@@ -3130,5 +3130,87 @@
 "yi": "תינוקת",
 "at": "64b"
 }
+],
+"Shekalim": [
+{
+"he": "באחד באדר",
+"en": "Be'Echad BeAdar",
+"ru": "Беэхад Беадар",
+"fr": "Be'ehad Beadar",
+"es": "Be'ejad Beadar",
+"ko": "베에하드 베아다르",
+"yi": "באחד באדר",
+"at": "2a"
+},
+{
+"he": "מצרפין שקלים",
+"en": "Matzrefin Shekalim",
+"ru": "Мацрефин Шекалим",
+"fr": "Matsrefin Chekalim",
+"es": "Matzrefin Shekalim",
+"ko": "마츠레핀 셰카림",
+"yi": "מצרפין שקלים",
+"at": "5a"
+},
+{
+"he": "בשלשה פרקים",
+"en": "BiShlosha Perakim",
+"ru": "Бишлоша Пераким",
+"fr": "Bichlocha Perakim",
+"es": "Bishlosha Perakim",
+"ko": "비스로샤 페라킴",
+"yi": "בשלשה פרקים",
+"at": "7b"
+},
+{
+"he": "התרומה",
+"en": "HaTerumah",
+"ru": "Хатерума",
+"fr": "Haterouma",
+"es": "Hateruma",
+"ko": "하테루마",
+"yi": "התרומה",
+"at": "9b"
+},
+{
+"he": "אילו הן",
+"en": "Eilu Hen",
+"ru": "Эйлу Хен",
+"fr": "Eilou Hen",
+"es": "Eilu Hen",
+"ko": "에이루 헨",
+"yi": "אילו הן",
+"at": "13a"
+},
+{
+"he": "שלשה עשר",
+"en": "Shelosha Asar",
+"ru": "Шелоша Асар",
+"fr": "Chelocha Assar",
+"es": "Shelosha Asar",
+"ko": "셰로샤 아사르",
+"yi": "שלשה עשר",
+"at": "15b"
+},
+{
+"he": "מעות שנמצאו",
+"en": "Maot SheNimtzeu",
+"ru": "Маот Шенимцеу",
+"fr": "Maot Chenimtseou",
+"es": "Maot Shenimtzeu",
+"ko": "마오트 셰니므체우",
+"yi": "מעות שנמצאו",
+"at": "19a"
+},
+{
+"he": "כל הרוקין",
+"en": "Kol HaRukin",
+"ru": "Кол Харукин",
+"fr": "Kol Haroukin",
+"es": "Kol Harukin",
+"ko": "콜 하루킨",
+"yi": "כל הרוקין",
+"at": "21a"
+}
 ]
 }
